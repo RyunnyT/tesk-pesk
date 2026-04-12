@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tesk 테스트 셋업</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+const firebaseConfig = {
+  apiKey:"AIzaSyA41ZYobXjCtGcSN8N7UJ2XkzrH9ef39EY",
+  authDomain:"tesk-pesk.firebaseapp.com",
+  projectId:"tesk-pesk",
+  storageBucket:"tesk-pesk.firebasestorage.app",
+  messagingSenderId:"619304025482",
+  appId:"1:619304025482:web:27d72258009ec6b9d49c73"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+window._db=db; window._fsDoc=doc; window._fsSetDoc=setDoc; window._fsGetDoc=getDoc;
+window._fbReady=true;
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:#f4f3ef;font-family:'Geist',sans-serif;padding:20px;}
+.card{background:#fff;border-radius:20px;padding:40px;max-width:480px;width:100%;
+  box-shadow:0 8px 40px rgba(0,0,0,0.10);border:1px solid rgba(0,0,0,0.07);}
+h1{font-size:22px;font-weight:900;margin-bottom:6px;}
+.sub{font-size:13px;color:#6b6760;margin-bottom:28px;line-height:1.6;}
+.info-box{background:#f8f7f4;border-radius:12px;padding:18px 20px;margin-bottom:24px;
+  font-size:13px;line-height:2;}
+.info-box strong{font-weight:800;}
+.label{font-size:11px;color:#b5b2ab;font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
+.value{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;}
+.row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;
+  border-bottom:1px solid rgba(0,0,0,0.05);}
+.row:last-child{border-bottom:none;}
+.btn{width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:700;
+  border:none;cursor:pointer;font-family:inherit;transition:all .15s;}
+.btn-main{background:#1a472a;color:#fff;}
+.btn-main:hover{background:#2d7a47;}
+.btn-main:disabled{background:#b5b2ab;cursor:not-allowed;}
+.result{margin-top:20px;padding:16px;border-radius:12px;font-size:13px;
+  line-height:1.7;display:none;}
+.result.success{background:#e8f5ec;color:#1a472a;border:1px solid rgba(26,71,42,.15);}
+.result.error{background:#fdf0ed;color:#d94f2a;border:1px solid rgba(217,79,42,.15);}
+.result.show{display:block;}
+.link{display:block;text-align:center;margin-top:14px;font-size:12px;color:#6b6760;}
+.link a{color:#1a3a72;font-weight:600;}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🧪 테스트 데이터 셋업</h1>
+  <p class="sub">아래 버튼을 누르면 Firebase에 테스트 학급과 학생 계정이 자동으로 생성돼요.</p>
+
+  <div class="info-box">
+    <div class="row">
+      <span class="label">학급 코드</span>
+      <span class="value" style="letter-spacing:4px;">202600</span>
+    </div>
+    <div class="row">
+      <span class="label">학급 이름</span>
+      <span class="value">테스트반</span>
+    </div>
+    <div class="row">
+      <span class="label">담당 교사</span>
+      <span class="value">최승륜</span>
+    </div>
+    <div class="row">
+      <span class="label">학생 이름</span>
+      <span class="value">테스트학생</span>
+    </div>
+    <div class="row">
+      <span class="label">학생 아이디</span>
+      <span class="value">test01</span>
+    </div>
+    <div class="row">
+      <span class="label">학생 비밀번호</span>
+      <span class="value">1234</span>
+    </div>
+  </div>
+
+  <button class="btn btn-main" id="setup-btn" onclick="runSetup()">🚀 테스트 데이터 생성</button>
+
+  <div class="result" id="result"></div>
+
+  <p class="link">생성 후 → <a href="landing.html">landing.html</a>에서 테스트해보세요</p>
+</div>
+
+<script>
+const ROOM_ID = 'test-room-202600';
+
+async function runSetup(){
+  const btn = document.getElementById('setup-btn');
+  const result = document.getElementById('result');
+  btn.textContent = '생성 중...';
+  btn.disabled = true;
+  result.className = 'result';
+
+  function wait(){ return new Promise(r=>{ if(window._fbReady) r(); else setTimeout(()=>wait().then(r), 200); }); }
+  await wait();
+
+  try{
+    const db = window._db;
+
+    // 1. 학급 info/meta
+    await window._fsSetDoc(
+      window._fsDoc(db, 'classrooms', ROOM_ID, 'info', 'meta'),
+      { classCode:'202600', className:'테스트반', teacherName:'최승륜',
+        createdAt: new Date().toISOString() }
+    );
+
+    // 1-b. classCodes 역방향 조회 문서 (코드 → roomId)
+    await window._fsSetDoc(
+      window._fsDoc(db, 'classCodes', '202600'),
+      { roomId: ROOM_ID, className:'테스트반', createdAt: new Date().toISOString() }
+    );
+
+    // 2. 학생 목록 (tesk-students)
+    await window._fsSetDoc(
+      window._fsDoc(db, 'classrooms', ROOM_ID, 'data', 'tesk-students'),
+      { value: [{ num:1, name:'테스트학생', points:150, salary:0 }],
+        updatedAt: new Date().toISOString() }
+    );
+
+    // 3. 학생 계정 (tesk-accounts)
+    await window._fsSetDoc(
+      window._fsDoc(db, 'classrooms', ROOM_ID, 'data', 'tesk-accounts'),
+      { value: { "1": { id:'test01', pw:'1234', pwChanged:false } },
+        updatedAt: new Date().toISOString() }
+    );
+
+    // 4. 빈 미션/배지 초기화
+    await window._fsSetDoc(
+      window._fsDoc(db, 'classrooms', ROOM_ID, 'data', 'tesk-missions'),
+      { value: [], updatedAt: new Date().toISOString() }
+    );
+    await window._fsSetDoc(
+      window._fsDoc(db, 'classrooms', ROOM_ID, 'data', 'tesk-student-badges'),
+      { value: {}, updatedAt: new Date().toISOString() }
+    );
+    await window._fsSetDoc(
+      window._fsDoc(db, 'classrooms', ROOM_ID, 'data', 'tesk-jobs'),
+      { value: [], updatedAt: new Date().toISOString() }
+    );
+
+    result.innerHTML = `
+      ✅ <strong>테스트 데이터 생성 완료!</strong><br><br>
+      📌 학급 코드: <strong style="letter-spacing:3px;">202600</strong><br>
+      👤 아이디: <strong>test01</strong> &nbsp;/&nbsp; 비밀번호: <strong>1234</strong><br><br>
+      landing.html에서 코드 202600 입력 → test01 / 1234 로 로그인해보세요!
+    `;
+    result.className = 'result success show';
+    btn.textContent = '✅ 생성 완료';
+
+  }catch(e){
+    result.innerHTML = '⚠️ 오류 발생: ' + e.message;
+    result.className = 'result error show';
+    btn.textContent = '🚀 테스트 데이터 생성';
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

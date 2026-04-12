@@ -1,0 +1,2308 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pesk — 나의 성장 공간</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/pretendard@latest/dist/web/static/pretendard.css" rel="stylesheet">
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+const firebaseConfig = {
+  apiKey:"AIzaSyA41ZYobXjCtGcSN8N7UJ2XkzrH9ef39EY",
+  authDomain:"tesk-pesk.firebaseapp.com",
+  projectId:"tesk-pesk",
+  storageBucket:"tesk-pesk.firebasestorage.app",
+  messagingSenderId:"619304025482",
+  appId:"1:619304025482:web:27d72258009ec6b9d49c73"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+window._db=db; window._fsDoc=doc; window._fsGetDoc=getDoc;
+window._fsSetDoc=setDoc; window._fsOnSnapshot=onSnapshot;
+window._fsCollection=collection; window._fbReady=true;
+</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f5f6fa;
+  --surface:#ffffff;
+  --card:#ffffff;
+  --border:#eeeef8;
+  --text:#1a1a2e;
+  --sub:#6b7280;
+  --hint:#b0b7c3;
+  --pesk:#4f8ef7;
+  --pesk-m:#3b7fee;
+  --pesk-l:#eef4ff;
+  --pesk-d:#1d5bbf;
+  --gold:#f59e0b;
+  --gold-l:#fffbeb;
+  --green:#22c55e;
+  --green-l:#f0fdf4;
+  --coral:#ef4444;
+  --coral-l:#fef2f2;
+  --purple:#7c3aed;
+  --purple-l:#f5f3ff;
+  --teal:#14b8a6;
+  --teal-l:#f0fdfa;
+  --radius:20px;
+  --radius-sm:14px;
+  --shadow:0 2px 20px rgba(79,142,247,0.1);
+  --shadow-sm:0 1px 6px rgba(0,0,0,0.06);
+}
+html,body{min-height:100vh;font-family:'Pretendard','Geist',sans-serif;
+  background:var(--bg);color:var(--text);overflow-x:hidden;}
+
+/* ── 헤더 ── */
+.header{
+  position:sticky;top:0;z-index:100;
+  background:rgba(255,255,255,0.9);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  padding:14px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);
+}
+.header-logo{
+  font-family:'Geist',sans-serif;font-weight:900;font-size:20px;
+  background:linear-gradient(135deg,var(--pesk),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.header-class{font-size:12px;color:var(--sub);}
+.header-back{
+  font-size:12px;color:var(--sub);cursor:pointer;text-decoration:none;
+  padding:6px 14px;border-radius:99px;
+  background:var(--bg);border:1px solid var(--border);
+  transition:all .15s;
+}
+.header-back:hover{background:var(--pesk-l);color:var(--pesk);}
+
+/* ── 접근 불가 ── */
+.no-access{max-width:400px;margin:80px auto;padding:0 20px;text-align:center;}
+.no-access-icon{font-size:48px;margin-bottom:16px;}
+.no-access-title{font-size:20px;font-weight:800;margin-bottom:8px;}
+.no-access-desc{font-size:13px;color:var(--sub);margin-bottom:24px;line-height:1.6;}
+
+/* ── 로딩 ── */
+.loading{text-align:center;padding:80px 20px;color:var(--sub);}
+.loading .spin{font-size:36px;display:block;animation:spin 1s linear infinite;margin-bottom:14px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── 메인 레이아웃 ── */
+.main{max-width:480px;margin:0 auto;padding:20px 16px 40px;}
+
+/* ── 프로필 카드 ── */
+.profile-card{
+  background:linear-gradient(135deg,var(--pesk) 0%,var(--purple) 100%);
+  border-radius:var(--radius);
+  padding:22px;
+  margin-bottom:14px;
+  color:#fff;
+  position:relative;
+  overflow:hidden;
+}
+.profile-card::before{
+  content:'';position:absolute;
+  width:160px;height:160px;
+  background:rgba(255,255,255,0.08);
+  border-radius:50%;
+  top:-50px;right:-40px;
+}
+.profile-card::after{
+  content:'';position:absolute;
+  width:100px;height:100px;
+  background:rgba(255,255,255,0.06);
+  border-radius:50%;
+  bottom:-30px;left:20px;
+}
+.profile-top{
+  display:flex;align-items:center;gap:14px;
+  margin-bottom:18px;position:relative;z-index:1;
+}
+.avatar{
+  width:56px;height:56px;border-radius:50%;
+  background:rgba(255,255,255,0.25);
+  border:2px solid rgba(255,255,255,0.5);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;font-weight:800;flex-shrink:0;
+  color:#fff;
+}
+.profile-name-wrap{flex:1;}
+.profile-name{font-size:20px;font-weight:800;color:#fff;margin-bottom:2px;}
+.profile-class{font-size:12px;color:rgba(255,255,255,0.75);}
+.profile-lv{
+  background:rgba(255,255,255,0.2);
+  border:1px solid rgba(255,255,255,0.35);
+  border-radius:12px;padding:8px 12px;text-align:center;flex-shrink:0;
+}
+.profile-lv .lv-label{font-size:9px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,0.75);}
+.profile-lv .lv-num{font-family:'Geist',sans-serif;font-size:24px;font-weight:900;color:#fff;line-height:1.1;}
+
+/* 배지 행 */
+.profile-badges{
+  position:relative;z-index:1;
+  background:rgba(255,255,255,0.15);
+  border-radius:var(--radius-sm);
+  padding:12px 14px;
+  margin-bottom:10px;
+}
+.pb-label{font-size:10px;font-weight:700;color:rgba(255,255,255,0.7);letter-spacing:.06em;margin-bottom:8px;}
+.pb-items{display:flex;gap:6px;flex-wrap:wrap;}
+.pb-badge{
+  background:rgba(255,255,255,0.25);
+  border:1px solid rgba(255,255,255,0.35);
+  border-radius:99px;
+  padding:4px 10px;
+  font-size:11px;font-weight:600;color:#fff;
+  display:flex;align-items:center;gap:4px;
+}
+.pb-empty{font-size:11px;color:rgba(255,255,255,0.55);font-style:italic;}
+
+/* 직업 행 */
+.profile-job{
+  position:relative;z-index:1;
+  display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,0.15);
+  border-radius:var(--radius-sm);
+  padding:10px 14px;
+}
+.pj-icon{font-size:16px;}
+.pj-name{font-size:13px;font-weight:700;color:#fff;}
+.pj-salary{font-size:11px;color:rgba(255,255,255,0.7);}
+.pj-empty{font-size:12px;color:rgba(255,255,255,0.6);font-style:italic;}
+
+/* ── 알림 섹션 ── */
+.notif-section{
+  background:var(--card);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);
+  padding:16px;
+  margin-bottom:14px;
+  border:1px solid var(--border);
+}
+.notif-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;
+}
+.notif-title{font-size:13px;font-weight:800;color:var(--text);}
+.notif-clear{font-size:11px;color:var(--sub);cursor:pointer;border:none;background:none;font-family:inherit;}
+.notif-item{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:10px 0;
+  border-bottom:1px solid var(--border);
+}
+.notif-item:last-child{border-bottom:none;}
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--pesk);flex-shrink:0;margin-top:4px;}
+.notif-dot.read{background:var(--hint);}
+.notif-msg{font-size:12px;color:var(--text);line-height:1.5;flex:1;}
+.notif-time{font-size:10px;color:var(--hint);white-space:nowrap;}
+.notif-dismiss{background:none;border:none;color:var(--hint);font-size:14px;cursor:pointer;padding:0 2px;flex-shrink:0;line-height:1;}
+.notif-dismiss:hover{color:var(--danger,#e74c3c);}
+.notif-empty{font-size:12px;color:var(--hint);text-align:center;padding:8px 0;}
+
+/* ── 탭 바 ── */
+.tab-bar{
+  display:flex;gap:6px;
+  background:var(--card);
+  border-radius:var(--radius);
+  padding:6px;
+  margin-bottom:14px;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  box-shadow:var(--shadow-sm);
+  border:1px solid var(--border);
+}
+.tab-bar::-webkit-scrollbar{display:none;}
+.tab-btn{
+  flex:1;flex-shrink:0;
+  padding:9px 10px;
+  border-radius:var(--radius-sm);
+  border:none;background:none;
+  color:var(--sub);font-size:11px;font-weight:700;
+  cursor:pointer;transition:all .18s;
+  font-family:inherit;white-space:nowrap;
+  min-width:56px;
+}
+.tab-btn.active{
+  background:var(--pesk);
+  color:#fff;
+  box-shadow:0 2px 8px rgba(79,142,247,0.35);
+}
+.tab-btn:not(.active):hover{background:var(--bg);}
+
+/* ── 공통 카드 ── */
+.w-card{
+  background:var(--card);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);
+  border:1px solid var(--border);
+  margin-bottom:12px;
+  overflow:hidden;
+}
+.w-card-header{
+  padding:16px 18px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.w-card-title{font-size:13px;font-weight:800;color:var(--text);}
+.w-card-body{padding:14px 18px;}
+
+.section-title{
+  font-size:11px;font-weight:800;color:var(--hint);
+  letter-spacing:.07em;text-transform:uppercase;
+  margin-bottom:10px;margin-top:4px;
+}
+
+/* ── 미션 ── */
+.mission-list{display:flex;flex-direction:column;gap:8px;}
+.mission-item{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:14px 16px;
+  display:flex;align-items:center;gap:12px;
+  box-shadow:var(--shadow-sm);
+  transition:all .15s;
+}
+.mission-item:hover{border-color:var(--pesk);box-shadow:0 2px 12px rgba(79,142,247,0.12);}
+.mission-item.done{opacity:.55;}
+.mission-icon-wrap{
+  width:40px;height:40px;border-radius:12px;
+  background:var(--pesk-l);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;
+}
+.mission-item.done .mission-icon-wrap{background:var(--green-l);}
+.mission-info{flex:1;}
+.mission-info .title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.mission-info .desc{font-size:11px;color:var(--sub);}
+.mission-reward{
+  font-family:'Geist',sans-serif;font-size:12px;font-weight:800;
+  color:var(--gold);flex-shrink:0;
+  background:var(--gold-l);padding:4px 8px;border-radius:8px;
+}
+.mission-check{
+  width:24px;height:24px;border-radius:50%;
+  border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;transition:all .15s;
+  font-size:12px;
+}
+.mission-item.done .mission-check{background:var(--green);border-color:var(--green);color:#fff;}
+
+/* ── 랭킹 ── */
+.rank-list{display:flex;flex-direction:column;gap:8px;}
+.rank-item{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:12px 16px;
+  display:flex;align-items:center;gap:12px;
+  box-shadow:var(--shadow-sm);
+}
+.rank-item.me{
+  border-color:var(--pesk);
+  background:var(--pesk-l);
+  box-shadow:0 2px 12px rgba(79,142,247,0.15);
+}
+.rank-num-wrap{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.rank-item:nth-child(1) .rank-num-wrap{background:#fff8e0;}
+.rank-item:nth-child(2) .rank-num-wrap{background:#f5f5f5;}
+.rank-item:nth-child(3) .rank-num-wrap{background:#fff0e0;}
+.rank-num{font-family:'Geist',sans-serif;font-weight:900;font-size:14px;color:var(--sub);}
+.rank-item:nth-child(1) .rank-num{color:var(--gold);}
+.rank-item:nth-child(2) .rank-num{color:#9ca3af;}
+.rank-item:nth-child(3) .rank-num{color:#d97706;}
+.rank-name{flex:1;font-size:13px;font-weight:700;color:var(--text);}
+.rank-pts{
+  font-family:'Geist',sans-serif;font-size:13px;font-weight:800;
+  color:var(--gold);
+  background:var(--gold-l);padding:4px 10px;border-radius:8px;
+}
+
+/* ── 글쓰기 ── */
+.writing-form{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:18px;margin-bottom:12px;
+  box-shadow:var(--shadow-sm);
+}
+.writing-form input,.writing-form textarea{
+  width:100%;padding:11px 14px;
+  border:1.5px solid var(--border);border-radius:12px;
+  font-size:13px;font-family:inherit;
+  background:var(--bg);color:var(--text);
+  outline:none;margin-bottom:10px;resize:vertical;
+}
+.writing-form input:focus,.writing-form textarea:focus{border-color:var(--pesk);}
+.writing-form textarea{min-height:120px;line-height:1.6;}
+.writing-item{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:8px;
+  box-shadow:var(--shadow-sm);
+}
+.writing-item .w-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px;}
+.writing-item .w-meta{font-size:11px;color:var(--sub);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.writing-item .w-feedback{
+  margin-top:12px;padding:14px;border-radius:12px;
+  background:var(--pesk-l);border:1px solid rgba(79,142,247,0.2);
+}
+.writing-item .w-feedback .fb-label{
+  font-size:10px;font-weight:800;color:var(--pesk);
+  letter-spacing:.06em;margin-bottom:6px;
+}
+.writing-item .w-feedback .fb-text{font-size:12px;line-height:1.7;color:var(--text);}
+.status-badge{
+  display:inline-flex;align-items:center;padding:3px 9px;border-radius:99px;
+  font-size:10px;font-weight:700;
+}
+.status-badge.pending{background:var(--gold-l);color:var(--gold);}
+.status-badge.reviewed{background:var(--green-l);color:var(--green);}
+
+/* ── 상담 ── */
+.sub-tab-bar{
+  display:flex;gap:6px;margin-bottom:14px;
+  background:var(--bg);border-radius:12px;padding:4px;
+}
+.sub-tab-btn{
+  flex:1;padding:8px;border-radius:8px;border:none;
+  background:none;color:var(--sub);font-size:12px;font-weight:700;
+  cursor:pointer;font-family:inherit;transition:all .15s;
+}
+.sub-tab-btn.active{background:var(--pesk);color:#fff;}
+.counsel-form{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:18px;
+  box-shadow:var(--shadow-sm);
+}
+.counsel-form textarea{
+  width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:12px;
+  font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);
+  outline:none;resize:vertical;min-height:100px;line-height:1.6;
+}
+.counsel-form textarea:focus{border-color:var(--pesk);}
+.counsel-form .form-label{
+  font-size:11px;font-weight:800;color:var(--sub);
+  letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;display:block;
+}
+.counsel-form .form-group{margin-bottom:14px;}
+.counsel-request-item{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:8px;
+  box-shadow:var(--shadow-sm);
+}
+.counsel-request-item .cr-reason{font-size:12px;line-height:1.5;margin-top:4px;color:var(--text);}
+
+/* OCEAN */
+.ocean-question{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:16px;margin-bottom:8px;
+  box-shadow:var(--shadow-sm);
+}
+.ocean-question .q-trait{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;}
+.ocean-question .q-text{font-size:13px;font-weight:600;margin-bottom:12px;line-height:1.5;color:var(--text);}
+.ocean-scale{display:flex;gap:4px;}
+.ocean-scale label{flex:1;text-align:center;}
+.ocean-scale input[type=radio]{display:none;}
+.ocean-scale .scale-btn{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;aspect-ratio:1;border-radius:10px;
+  background:var(--bg);border:1.5px solid var(--border);
+  font-size:13px;font-weight:700;cursor:pointer;
+  transition:all .15s;color:var(--sub);
+}
+.ocean-scale input[type=radio]:checked + .scale-btn{background:var(--pesk);border-color:var(--pesk);color:#fff;}
+.ocean-result-card{
+  background:var(--card);border:1.5px solid var(--pesk);
+  border-radius:var(--radius);padding:18px;margin-bottom:12px;
+  box-shadow:var(--shadow);
+}
+.ocean-type{font-family:'Geist',sans-serif;font-size:28px;font-weight:900;color:var(--pesk);letter-spacing:2px;margin-bottom:10px;}
+.ocean-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.ocean-bar-label{font-size:11px;color:var(--sub);width:60px;flex-shrink:0;}
+.ocean-bar-track{flex:1;height:7px;background:var(--bg);border-radius:99px;overflow:hidden;}
+.ocean-bar-fill{height:100%;border-radius:99px;}
+.ocean-bar-val{font-size:11px;font-weight:800;width:20px;text-align:right;flex-shrink:0;}
+
+/* 친구 칩 */
+.friend-chip-wrap{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.friend-chip{
+  padding:5px 12px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;
+  border:1.5px solid var(--border);background:var(--bg);color:var(--sub);transition:all .15s;
+}
+.friend-chip.liked{border-color:var(--pesk);background:var(--pesk-l);color:var(--pesk-m);}
+.friend-chip.disliked{border-color:var(--coral);background:var(--coral-l);color:var(--coral);}
+
+/* ── 학급은행 ── */
+.bank-coin-card{
+  background:linear-gradient(135deg,var(--pesk) 0%,var(--purple) 100%);
+  border-radius:var(--radius);padding:22px 24px;
+  margin-bottom:12px;color:#fff;
+  position:relative;overflow:hidden;
+}
+.bank-coin-card::before{
+  content:'';position:absolute;
+  width:140px;height:140px;
+  background:rgba(255,255,255,0.07);
+  border-radius:50%;top:-50px;right:-30px;
+}
+.bcc-label{font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);letter-spacing:.06em;margin-bottom:6px;position:relative;z-index:1;}
+.bcc-amount{font-family:'Geist',sans-serif;font-size:36px;font-weight:900;color:#fff;line-height:1;position:relative;z-index:1;}
+.bcc-sub{font-size:11px;color:rgba(255,255,255,0.65);margin-top:4px;position:relative;z-index:1;}
+
+.bank-section{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);margin-bottom:12px;
+  box-shadow:var(--shadow-sm);overflow:hidden;
+}
+.bank-section-header{
+  padding:14px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.bank-section-title{font-size:13px;font-weight:800;color:var(--text);}
+.bank-section-badge{
+  font-size:10px;font-weight:700;padding:3px 8px;border-radius:99px;
+  background:var(--pesk-l);color:var(--pesk);
+}
+.bank-section-body{padding:14px 18px;}
+
+/* 투자 포트폴리오 행 */
+.port-item{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 0;border-bottom:1px solid var(--border);
+}
+.port-item:last-child{border-bottom:none;}
+.port-icon{
+  width:36px;height:36px;border-radius:10px;
+  background:var(--pesk-l);display:flex;align-items:center;
+  justify-content:center;font-size:16px;flex-shrink:0;
+}
+.port-name{flex:1;}
+.port-name .pn-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:1px;}
+.port-name .pn-qty{font-size:11px;color:var(--sub);}
+.port-value{text-align:right;}
+.port-value .pv-amount{font-family:'Geist',sans-serif;font-size:14px;font-weight:900;}
+.port-value .pv-amount.up{color:var(--green);}
+.port-value .pv-amount.down{color:var(--coral);}
+.port-value .pv-change{font-size:10px;font-weight:700;}
+.port-value .pv-change.up{color:var(--green);}
+.port-value .pv-change.down{color:var(--coral);}
+
+/* 주식 매매 */
+.stock-list-item{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:8px;
+  box-shadow:var(--shadow-sm);
+}
+.stock-list-item .s-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+.stock-list-item .s-name{font-size:13px;font-weight:800;color:var(--text);}
+.stock-list-item .s-code{font-size:10px;color:var(--hint);margin-top:1px;}
+.stock-list-item .s-price{font-family:'Geist',sans-serif;font-size:18px;font-weight:900;color:var(--text);}
+.stock-list-item .s-holding{font-size:10px;color:var(--pesk);font-weight:700;background:var(--pesk-l);padding:2px 7px;border-radius:99px;}
+.stock-buy-form{display:flex;gap:6px;align-items:center;}
+.stock-buy-form input{
+  flex:1;padding:8px 12px;
+  border:1.5px solid var(--border);border-radius:10px;
+  background:var(--bg);color:var(--text);font-size:12px;font-family:inherit;outline:none;
+  max-width:90px;
+}
+.stock-buy-form input:focus{border-color:var(--pesk);}
+.stock-btn{
+  padding:8px 14px;border-radius:10px;border:none;
+  font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;
+}
+.stock-btn.buy{background:var(--green-l);color:var(--green);border:1.5px solid var(--green);}
+.stock-btn.buy:hover{background:var(--green);color:#fff;}
+.stock-btn.sell{background:var(--coral-l);color:var(--coral);border:1.5px solid var(--coral);}
+.stock-btn.sell:hover{background:var(--coral);color:#fff;}
+.stock-search{
+  width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:12px;
+  background:var(--bg);color:var(--text);font-size:13px;font-family:inherit;
+  outline:none;margin-bottom:10px;
+}
+.stock-search:focus{border-color:var(--pesk);}
+
+/* 구매 물품 행 */
+.purchase-item{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 0;border-bottom:1px solid var(--border);
+}
+.purchase-item:last-child{border-bottom:none;}
+.pi-icon{width:34px;height:34px;border-radius:10px;background:var(--purple-l);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.pi-info{flex:1;}
+.pi-name{font-size:13px;font-weight:700;color:var(--text);}
+.pi-date{font-size:10px;color:var(--sub);margin-top:1px;}
+.pi-price{font-family:'Geist',sans-serif;font-size:13px;font-weight:800;color:var(--coral);}
+
+/* 자산 내역 행 */
+.txn-item{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 0;border-bottom:1px solid var(--border);
+}
+.txn-item:last-child{border-bottom:none;}
+.txn-type{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.txn-type.earn{background:var(--green-l);}
+.txn-type.spend{background:var(--coral-l);}
+.txn-info{flex:1;}
+.txn-desc{font-size:13px;font-weight:700;color:var(--text);}
+.txn-date{font-size:10px;color:var(--sub);margin-top:1px;}
+.txn-amount{font-family:'Geist',sans-serif;font-size:14px;font-weight:900;}
+.txn-amount.earn{color:var(--green);}
+.txn-amount.spend{color:var(--coral);}
+
+/* ── 공통 버튼 ── */
+.pesk-btn{
+  padding:12px 18px;border-radius:12px;border:none;
+  font-size:13px;font-weight:700;cursor:pointer;
+  font-family:inherit;transition:all .18s;width:100%;margin-top:8px;
+}
+.pesk-btn.primary{background:var(--pesk);color:#fff;box-shadow:0 2px 8px rgba(79,142,247,0.3);}
+.pesk-btn.primary:hover{background:var(--pesk-m);}
+.pesk-btn.secondary{background:var(--bg);color:var(--text);border:1.5px solid var(--border);}
+.pesk-btn.secondary:hover{border-color:var(--pesk);color:var(--pesk);}
+.pesk-btn.primary:disabled{background:var(--hint);cursor:not-allowed;box-shadow:none;}
+.empty-state{text-align:center;padding:28px 16px;color:var(--hint);font-size:13px;line-height:1.6;}
+.empty-state .empty-icon{font-size:28px;margin-bottom:8px;display:block;}
+
+/* ── 아침 글쓰기 팝업 ── */
+.morning-overlay{
+  position:fixed;inset:0;z-index:999;
+  background:rgba(26,26,46,0.5);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  backdrop-filter:blur(4px);
+}
+.morning-popup{
+  background:#fff;border-radius:var(--radius);
+  padding:28px 24px;max-width:340px;width:100%;
+  text-align:center;
+  animation:popIn .35s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn{from{opacity:0;transform:scale(.85);}to{opacity:1;transform:scale(1);}}
+.morning-popup .mp-emoji{font-size:48px;margin-bottom:14px;display:block;}
+.morning-popup .mp-title{font-size:18px;font-weight:900;color:var(--text);margin-bottom:8px;}
+.morning-popup .mp-desc{font-size:13px;color:var(--sub);line-height:1.6;margin-bottom:20px;}
+.morning-popup .mp-btn{
+  display:block;width:100%;padding:13px;border-radius:12px;border:none;
+  background:var(--pesk);color:#fff;font-size:14px;font-weight:800;
+  cursor:pointer;font-family:inherit;margin-bottom:8px;
+  box-shadow:0 3px 10px rgba(79,142,247,0.35);
+}
+.morning-popup .mp-later{
+  display:block;width:100%;padding:11px;border-radius:12px;border:1.5px solid var(--border);
+  background:none;color:var(--sub);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
+}
+
+/* ── 알림 토스트 ── */
+@keyframes fadeDown{
+  from{opacity:0;transform:translateX(-50%) translateY(-10px);}
+  to{opacity:1;transform:translateX(-50%) translateY(0);}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-logo">Pesk</div>
+  <div class="header-class" id="header-class">우리 반</div>
+  <a class="header-back" href="landing.html">나가기 →</a>
+</header>
+
+<div id="app">
+  <div class="loading"><span class="spin">✨</span>불러오는 중...</div>
+</div>
+
+<script>
+const roomId = localStorage.getItem('pesk-room-id') || '';
+const className = localStorage.getItem('pesk-class-name') || '우리 반';
+let myStudentNum = parseInt(localStorage.getItem('pesk-student-num') || '0');
+let myStudentName = localStorage.getItem('pesk-student-name') || '';
+let students = [];
+let missions = [];
+let badges = [];
+let jobs = [];
+let studentBadges = {};
+let myMissions = {};
+let peskWritings = [];
+let stockPrices = {};
+let myPortfolio = [];
+let mySurvey = null;
+let myPendingCounsel = false;
+let myPurchases = [];   // 구매 물품
+let shopItems = [];     // 학급 상점 물품
+let allSurveys = {};    // 전체 교우관계 설문 (사회연결망 분석용)
+
+// 로컬 알림 목록
+const NOTIF_KEY = () => 'pesk-notifs-' + roomId + '-' + myStudentNum;
+let localNotifs = [];
+
+// 거래 내역
+const TXN_KEY = () => 'pesk-txns-' + roomId + '-' + myStudentNum;
+let localTxns = [];
+
+const uid = () => Math.random().toString(36).slice(2,9);
+
+document.getElementById('header-class').textContent = className;
+
+// Firebase 준비 후 시작
+function waitFirebase(cb, tries=0){
+  if(window._fbReady) cb();
+  else if(tries<30) setTimeout(()=>waitFirebase(cb,tries+1),200);
+  else renderError('Firebase 연결 실패. 새로고침해주세요.');
+}
+
+function renderError(msg){
+  document.getElementById('app').innerHTML='<div class="loading">'+msg+'</div>';
+}
+
+// 기본 주식 시세 (교사가 아직 시장을 초기화하지 않았을 때 폴백)
+const _DEFAULT_STOCKS = [
+  ['005930','삼성전자',7500],['000660','SK하이닉스',13500],['373220','LG에너지솔루션',40000],
+  ['207940','삼성바이오로직스',90000],['006400','삼성SDI',45000],['051910','LG화학',45000],
+  ['005380','현대자동차',25000],['000270','기아',10000],['035420','NAVER',22000],
+  ['035720','카카오',5500],['105560','KB금융',7500],['055550','신한지주',4800],
+  ['086790','하나금융지주',6500],['316140','우리금융지주',1600],['017670','SK텔레콤',5500],
+  ['030200','KT',4000],['034730','SK',17000],['010130','고려아연',55000],
+  ['003550','LG','8500'],['066570','LG전자',11500],['012330','현대모비스',25000],
+  ['028260','삼성물산',15000],['009150','삼성전기',15000],['018260','삼성에스디에스',16000],
+  ['032830','삼성생명',8800],['003670','포스코퓨처엠',20000],['000810','삼성화재',32000],
+  ['036570','엔씨소프트',21000],['251270','넷마블',5500],['259960','크래프톤',30000],
+];
+function _defaultStockPrices(){
+  const o={};
+  _DEFAULT_STOCKS.forEach(([code,,price])=>{ o[code]=Number(price); });
+  return o;
+}
+
+// 데이터 로드
+async function loadData(){
+  try{
+    const db=window._db;
+    const keys=['tesk-students','tesk-missions','tesk-student-badges','tesk-jobs',
+                'pesk-writings','tesk-stock-prices','pesk-portfolios',
+                'tesk-counsel-requests','pesk-peer-survey','pesk-purchases','tesk-shop',
+                'tesk-bank-plans','tesk-bank-badge-bonus'];
+    const snaps=await Promise.all(keys.map(k=>
+      window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data',k))
+    ));
+    students         = snaps[0].exists() ? snaps[0].data().value : [];
+    missions         = snaps[1].exists() ? snaps[1].data().value : [];
+    studentBadges    = snaps[2].exists() ? snaps[2].data().value : {};
+    jobs             = snaps[3].exists() ? snaps[3].data().value : [];
+
+    const allWritings  = snaps[4].exists() ? snaps[4].data().value : [];
+    peskWritings = allWritings.filter(w => parseInt(w.studentNum) === myStudentNum);
+
+    stockPrices      = snaps[5].exists() ? snaps[5].data().value : {};
+    const allPortfolios = snaps[6].exists() ? snaps[6].data().value : {};
+    myPortfolio      = allPortfolios[myStudentNum] || [];
+
+    const allCounsel = snaps[7].exists() ? snaps[7].data().value : [];
+    myPendingCounsel = allCounsel.some(r => parseInt(r.studentNum)===myStudentNum && r.status==='pending');
+
+    allSurveys       = snaps[8].exists() ? snaps[8].data().value : {};
+    mySurvey         = allSurveys[myStudentNum] || null;
+
+    const allPurchases = snaps[9].exists() ? snaps[9].data().value : [];
+    myPurchases = allPurchases.filter(p => parseInt(p.studentNum) === myStudentNum);
+
+    shopItems        = snaps[10].exists() ? snaps[10].data().value : [];
+    if(snaps[11] && snaps[11].exists()){
+      const v = snaps[11].data().value;
+      if(Array.isArray(v) && v.length) BANK_PLANS = v;
+    }
+    if(snaps[12] && snaps[12].exists()){
+      const b = snaps[12].data().value;
+      if(typeof b === 'number') bankBadgeBonus = b;
+    }
+    // 주식 시세가 비어있으면 기본 코스피 종목 폴백
+    if(!stockPrices || Object.keys(stockPrices).length===0){
+      stockPrices = _defaultStockPrices();
+    }
+
+    myMissions = JSON.parse(localStorage.getItem('pesk-my-missions-'+roomId+'-'+myStudentNum)||'{}');
+    localNotifs = JSON.parse(localStorage.getItem(NOTIF_KEY())||'[]');
+    localTxns = JSON.parse(localStorage.getItem(TXN_KEY())||'[]');
+  }catch(e){
+    console.warn('데이터 로드 실패:', e);
+    students=[]; missions=[]; studentBadges={}; jobs=[];
+    peskWritings=[]; stockPrices={}; myPortfolio=[]; mySurvey=null; myPurchases=[];
+    localNotifs=[]; localTxns=[];
+  }
+}
+
+// 로그인 없이 접근 시 안내 화면
+function renderNoAccess(){
+  document.getElementById('app').innerHTML=
+    '<div class="no-access">'
+    + '<div class="no-access-icon">🔒</div>'
+    + '<div class="no-access-title">로그인이 필요해요</div>'
+    + '<div class="no-access-desc">선생님께 받은 학급 코드와<br>아이디/비밀번호로 입장해주세요.</div>'
+    + '<a href="landing.html" style="display:inline-block;padding:12px 28px;background:var(--pesk);color:#fff;border-radius:12px;font-weight:700;font-size:14px;text-decoration:none;">로그인 화면으로 →</a>'
+    + '</div>';
+}
+
+// 알림 추가
+function addNotif(msg, type='info'){
+  const n = {id:uid(), msg, type, date:new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}), read:false};
+  localNotifs.unshift(n);
+  if(localNotifs.length > 20) localNotifs.pop();
+  localStorage.setItem(NOTIF_KEY(), JSON.stringify(localNotifs));
+  renderNotifSection();
+}
+
+function markAllRead(){
+  localNotifs.forEach(n=>n.read=true);
+  localStorage.setItem(NOTIF_KEY(), JSON.stringify(localNotifs));
+  renderNotifSection();
+}
+
+function dismissNotif(id){
+  localNotifs = localNotifs.filter(n=>n.id!==id);
+  localStorage.setItem(NOTIF_KEY(), JSON.stringify(localNotifs));
+  renderNotifSection();
+}
+
+function renderNotifSection(){
+  const el = document.getElementById('notif-list');
+  if(!el) return;
+  const unread = localNotifs.filter(n=>!n.read).length;
+  const titleEl = document.getElementById('notif-title');
+  if(titleEl) titleEl.textContent = '🔔 알림' + (unread>0?' ('+unread+')':'');
+  if(localNotifs.length === 0){
+    el.innerHTML = '<div class="notif-empty">새 알림이 없어요</div>';
+    return;
+  }
+  el.innerHTML = localNotifs.slice(0,5).map(n=>
+    '<div class="notif-item" id="notif-'+n.id+'">'
+    + '<div class="notif-dot' + (n.read?' read':'') + '"></div>'
+    + '<div class="notif-msg">' + escHtml(n.msg) + '</div>'
+    + '<div class="notif-time">' + n.date + '</div>'
+    + '<button class="notif-dismiss" onclick="dismissNotif(\''+n.id+'\')">✕</button>'
+    + '</div>'
+  ).join('');
+}
+
+// 거래 내역 추가
+function addTxn(desc, amount, type){
+  const t = {id:uid(), desc, amount, type, date:new Date().toLocaleDateString('ko-KR')};
+  localTxns.unshift(t);
+  if(localTxns.length > 50) localTxns.pop();
+  localStorage.setItem(TXN_KEY(), JSON.stringify(localTxns));
+}
+
+// 메인 대시보드
+function renderDashboard(){
+  const me=students.find(s=>s.num===myStudentNum);
+  if(!me){renderNoAccess();return;}
+  const myJob=jobs.find(j=>parseInt(j.studentNum)===myStudentNum);
+  // 직업
+  const jobHtml = myJob
+    ? '<div class="pj-icon">💼</div><div class="pj-name">' + escHtml(myJob.title) + '</div><div class="pj-salary">· 주간 🪙' + myJob.salary + '</div>'
+    : '<div class="pj-icon">🔍</div><div class="pj-empty">아직 직업이 없어요 — 선생님께 문의하세요</div>';
+
+  // 명언 패널 HTML
+  const quoteHtml = buildQuotePanel();
+  // 매점 패널 HTML
+  const shopHtml = buildShopPanel(me);
+  // 글쓰기 패널 HTML
+  const writingHtml = buildWritingPanel();
+  // 상담 패널 HTML
+  const counselHtml = buildCounselPanel();
+  // 학급은행 패널 HTML
+  const bankHtml = buildBankPanel(me);
+
+  document.getElementById('app').innerHTML =
+    '<div class="main">'
+
+    // ── 프로필 카드 ──
+    + '<div class="profile-card">'
+    + '<div class="profile-top">'
+    + '<div class="avatar">' + me.name.charAt(0) + '</div>'
+    + '<div class="profile-name-wrap">'
+    + '<div class="profile-name">' + escHtml(me.name) + '</div>'
+    + '<div class="profile-class">' + escHtml(className) + '</div>'
+    + '</div>'
+    + '</div>'
+    // 직업
+    + '<div class="profile-job">' + jobHtml + '</div>'
+    + '</div>'
+
+    // ── 알림 섹션 ──
+    + '<div class="notif-section">'
+    + '<div class="notif-header">'
+    + '<span class="notif-title" id="notif-title">🔔 알림</span>'
+    + '<button class="notif-clear" onclick="markAllRead()">모두 읽음</button>'
+    + '</div>'
+    + '<div id="notif-list"></div>'
+    + '</div>'
+
+    // ── 탭 바 ──
+    + '<div class="tab-bar">'
+    + '<button class="tab-btn active" id="tab-quote" onclick="showTab(\'quote\')">💬 오늘의 명언</button>'
+    + '<button class="tab-btn" id="tab-shop" onclick="showTab(\'shop\')">🏪 매점</button>'
+    + '<button class="tab-btn" id="tab-writing" onclick="showTab(\'writing\')">✍️ 글쓰기</button>'
+    + '<button class="tab-btn" id="tab-counsel" onclick="showTab(\'counsel\')">💬 상담</button>'
+    + '<button class="tab-btn" id="tab-stock" onclick="showTab(\'stock\')">🏦 학급은행</button>'
+    + '</div>'
+
+    // ── 패널들 ──
+    + '<div id="panel-quote">' + quoteHtml + '</div>'
+    + '<div id="panel-shop" style="display:none">' + shopHtml + '</div>'
+    + '<div id="panel-writing" style="display:none">' + writingHtml + '</div>'
+    + '<div id="panel-counsel" style="display:none">' + counselHtml + '</div>'
+    + '<div id="panel-stock" style="display:none">' + bankHtml + '</div>'
+
+    + '<div style="text-align:center;margin-top:16px;">'
+    + '<button onclick="logout()" style="font-size:11px;color:var(--hint);background:none;border:none;cursor:pointer;font-family:inherit;">🚪 로그아웃</button>'
+    + '</div>'
+    + '</div>';
+
+  // 알림 렌더
+  renderNotifSection();
+  // 실시간 구독
+  subscribeToUpdates();
+  // 아침 글쓰기 팝업
+  checkMorningWritingPopup();
+}
+
+/* ── 명언 패널 ── */
+let _quoteCache = [];
+let _quoteLoaded = false;
+const QUOTE_SHEET_ID = '1zpBs9feCPBOwfd3sZVjI3j8QPCHqI7sGg4VhxGypxYg';
+async function _loadQuotes(){
+  if(_quoteLoaded && _quoteCache.length) return;
+  try{
+    const url = 'https://docs.google.com/spreadsheets/d/'+QUOTE_SHEET_ID+'/gviz/tq?tqx=out:csv';
+    const res = await fetch(url);
+    const csv = await res.text();
+    // CSV 파싱
+    const lines = csv.split('\n').filter(l=>l.trim());
+    _quoteCache = lines.map(line=>{
+      // 간단 CSV 파싱 (쉼표 구분, 따옴표 처리)
+      const cols = [];
+      let cur='', inQ=false;
+      for(let i=0;i<line.length;i++){
+        const c=line[i];
+        if(c==='"'){ inQ=!inQ; }
+        else if(c===','&&!inQ){ cols.push(cur.trim()); cur=''; }
+        else { cur+=c; }
+      }
+      cols.push(cur.trim());
+      return { text: cols[1]||'', author: cols[2]||'' };
+    }).filter(q=>q.text && q.text!=='명언' && q.text!=='quote'); // 헤더 제거
+    _quoteLoaded = true;
+  }catch(e){
+    console.warn('명언 로드 실패:', e);
+  }
+}
+function _getRandomQuote(){
+  if(_quoteCache.length===0) return {text:'오늘도 화이팅!', author:'Tesk & Pesk'};
+  return _quoteCache[Math.floor(Math.random()*_quoteCache.length)];
+}
+function buildQuotePanel(){
+  const q = _getRandomQuote();
+  return '<div style="padding:24px 20px;text-align:center;">'
+    + '<div style="font-size:40px;margin-bottom:14px;">💬</div>'
+    + '<div id="quote-text" style="font-size:15px;font-weight:600;line-height:1.8;color:var(--text);margin-bottom:10px;min-height:50px;">"' + escHtml(q.text) + '"</div>'
+    + '<div id="quote-author" style="font-size:12px;color:var(--sub);font-weight:600;">— ' + escHtml(q.author) + '</div>'
+    + '<button onclick="refreshQuote()" style="margin-top:16px;padding:8px 20px;border:1.5px solid var(--pesk);background:#fff;color:var(--pesk);border-radius:99px;font-weight:700;font-size:12px;cursor:pointer;">🔄 다른 명언 보기</button>'
+    + '</div>';
+}
+function refreshQuote(){
+  const q = _getRandomQuote();
+  const t = document.getElementById('quote-text');
+  const a = document.getElementById('quote-author');
+  if(t) t.textContent = '"' + q.text + '"';
+  if(a) a.textContent = '— ' + q.author;
+}
+
+/* ── 매점(상점) 패널 ── */
+function buildShopPanel(me){
+  const coins = me ? me.points : 0;
+  if(!shopItems || shopItems.length===0){
+    return '<div class="empty-state"><span class="empty-icon">🏪</span>아직 매점 상품이 없어요<br>선생님이 학급 경제 → 상점에서 추가하면 여기에 나타나요.</div>';
+  }
+  const header = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">'
+    + '<div style="font-size:15px;font-weight:800;">🏪 매점</div>'
+    + '<div style="font-size:13px;font-weight:700;color:var(--gold);">보유 ' + coins.toLocaleString() + ' 🪙</div>'
+    + '</div>';
+  const items = shopItems.map((item,i)=>{
+    const canBuy = coins >= item.price && item.stock > 0;
+    return '<div style="border:1.5px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:10px;background:#fafafa;display:flex;align-items:center;gap:12px;">'
+      + '<div style="font-size:28px;">' + (item.icon||'🎁') + '</div>'
+      + '<div style="flex:1;">'
+      + '<div style="font-weight:700;font-size:14px;">' + escHtml(item.name) + '</div>'
+      + '<div style="font-size:11px;color:var(--sub);">재고 ' + item.stock + '개</div>'
+      + '</div>'
+      + '<div style="text-align:right;">'
+      + '<div style="font-size:14px;font-weight:900;color:var(--gold);margin-bottom:4px;">' + item.price.toLocaleString() + ' 🪙</div>'
+      + (canBuy
+        ? '<button onclick="buyShopItem('+i+')" style="padding:6px 14px;background:var(--pesk);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:11px;cursor:pointer;">구매</button>'
+        : '<button disabled style="padding:6px 14px;background:#e5e7eb;color:#999;border:none;border-radius:8px;font-weight:700;font-size:11px;">'+(item.stock<=0?'품절':'잔액 부족')+'</button>')
+      + '</div>'
+      + '</div>';
+  }).join('');
+  return header + items;
+}
+async function buyShopItem(idx){
+  const item = shopItems[idx]; if(!item) return;
+  const me = students.find(s=>s.num===myStudentNum);
+  if(!me) return alert('학생 정보를 찾을 수 없어요.');
+  if(me.points < item.price) return alert('잔액이 부족해요!');
+  if(item.stock <= 0) return alert('품절이에요!');
+  if(!confirm('"'+item.name+'"을(를) '+item.price.toLocaleString()+' 🪙에 구매할까요?')) return;
+  try{
+    me.points -= item.price;
+    item.stock = Math.max(0, item.stock - 1);
+    // 구매 기록 저장
+    const purchase = {studentNum:myStudentNum, studentName:me.name, itemName:item.name, price:item.price, date:new Date().toLocaleDateString('ko-KR')};
+    const db=window._db;
+    // 상점 재고 업데이트
+    await window._fsSetDoc(window._fsDoc(db,'classrooms',roomId,'data','tesk-shop'),{value:shopItems,updatedAt:new Date().toISOString()});
+    // 학생 포인트 업데이트
+    await saveMyPointsToFirebase(me.points);
+    // 구매 내역 기록
+    const purchSnap = await window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','pesk-purchases'));
+    const allPurch = purchSnap.exists() ? purchSnap.data().value : [];
+    allPurch.push(purchase);
+    await window._fsSetDoc(window._fsDoc(db,'classrooms',roomId,'data','pesk-purchases'),{value:allPurch,updatedAt:new Date().toISOString()});
+    addTxn('"'+item.name+'" 구매', item.price, 'spend');
+    addNotif('🏪 "'+item.name+'" 구매 완료! ('+item.price.toLocaleString()+'🪙 차감)');
+    showFeedbackNotice('✅ "'+item.name+'" 구매 완료!');
+    renderDashboard();
+  }catch(e){
+    alert('구매 실패: '+e.message);
+  }
+}
+
+/* ─────────────────────────────────────────
+   글쓰기 패널
+───────────────────────────────────────── */
+function buildWritingPanel(){
+  const writingListHtml = peskWritings.length === 0
+    ? '<div class="empty-state"><span class="empty-icon">✍️</span>아직 제출한 글이 없어요<br>첫 번째 글을 써볼까요?</div>'
+    : peskWritings.slice().reverse().map(w =>
+        '<div class="writing-item">'
+        + '<div class="w-title">' + escHtml(w.title) + '</div>'
+        + '<div class="w-meta">'
+        + '<span>' + (w.date||'') + '</span>'
+        + '<span class="status-badge ' + (w.feedback?'reviewed':'pending') + '">' + (w.feedback?'✅ 피드백 완료':'⏳ 검토 중') + '</span>'
+        + '</div>'
+        + (w.feedback
+          ? '<div class="w-feedback">'
+            + '<div class="fb-label">💬 선생님 피드백</div>'
+            + '<div class="fb-text">' + escHtml(w.feedback) + '</div>'
+            + '<div style="font-size:10px;color:var(--sub);margin-top:4px;">' + (w.feedbackDate||'') + '</div>'
+            + '</div>'
+          : '')
+        + '</div>'
+      ).join('');
+
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+    + '<div class="section-title" style="margin:0;">내 글 목록</div>'
+    + '<button class="pesk-btn primary" style="width:auto;margin:0;padding:8px 16px;font-size:12px;" onclick="toggleWritingForm()">+ 새 글 쓰기</button>'
+    + '</div>'
+    + '<div id="writing-form-wrap" style="display:none;">'
+    + '<div class="writing-form">'
+    + '<div style="font-size:12px;font-weight:800;color:var(--pesk);margin-bottom:10px;">✍️ 글쓰기 제출</div>'
+    + '<input id="w-title-inp" placeholder="글 제목을 입력하세요" />'
+    + '<textarea id="w-content-inp" placeholder="여기에 글을 써주세요. 선생님이 읽고 피드백을 보내드려요."></textarea>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button class="pesk-btn primary" style="margin:0;" onclick="submitPeskWriting()">제출하기 📤</button>'
+    + '<button class="pesk-btn secondary" style="margin:0;width:auto;padding:12px 16px;" onclick="toggleWritingForm()">취소</button>'
+    + '</div></div></div>'
+    + writingListHtml;
+}
+
+function toggleWritingForm(){
+  const el = document.getElementById('writing-form-wrap');
+  if(!el) return;
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+let _writingSubmitting = false;
+async function submitPeskWriting(){
+  if(_writingSubmitting) return;
+  const title = document.getElementById('w-title-inp')?.value.trim();
+  const content = document.getElementById('w-content-inp')?.value.trim();
+  if(!title || !content){ alert('제목과 내용을 모두 입력해주세요.'); return; }
+
+  _writingSubmitting = true;
+  const btn = document.querySelector('#writing-form-wrap .pesk-btn.primary');
+  if(btn){ btn.textContent = '제출 중...'; btn.disabled = true; }
+
+  try {
+    const db = window._db;
+    const snap = await window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','pesk-writings'));
+    const existing = snap.exists() ? snap.data().value : [];
+    const newEntry = {
+      id: uid(), studentNum: parseInt(myStudentNum), studentName: myStudentName,
+      title, content, date: new Date().toLocaleDateString('ko-KR'),
+      status: 'pending', feedback: '', feedbackDate: ''
+    };
+    existing.push(newEntry);
+    await window._fsSetDoc(window._fsDoc(db,'classrooms',roomId,'data','pesk-writings'),
+      { value: existing, updatedAt: new Date().toISOString() });
+
+    peskWritings.push(newEntry);
+    addTxn('글쓰기 제출: ' + title, 0, 'earn');
+    const panel = document.getElementById('panel-writing');
+    if(panel) panel.innerHTML = buildWritingPanel();
+  } catch(e) {
+    alert('제출 실패: ' + e.message);
+    if(btn){ btn.textContent = '제출하기 📤'; btn.disabled = false; }
+  } finally {
+    _writingSubmitting = false;
+  }
+}
+
+/* ─────────────────────────────────────────
+   상담 패널
+───────────────────────────────────────── */
+let counselSubTab = 'request';
+
+function buildCounselPanel(){
+  return '<div class="sub-tab-bar">'
+    + '<button class="sub-tab-btn ' + (counselSubTab==='request'?'active':'') + '" onclick="showCounselSubTab(\'request\')">💬 상담 신청</button>'
+    + '<button class="sub-tab-btn ' + (counselSubTab==='survey'?'active':'') + '" onclick="showCounselSubTab(\'survey\')">🧠 교우관계 조사</button>'
+    + '</div>'
+    + '<div id="counsel-sub-request" style="display:' + (counselSubTab==='request'?'block':'none') + ';">' + buildCounselRequestPanel() + '</div>'
+    + '<div id="counsel-sub-survey" style="display:' + (counselSubTab==='survey'?'block':'none') + ';">' + buildSurveyPanel() + '</div>';
+}
+
+function showCounselSubTab(tab){
+  counselSubTab = tab;
+  ['request','survey'].forEach(t=>{
+    const el = document.getElementById('counsel-sub-'+t);
+    const btn = document.querySelector('.sub-tab-btn:nth-child(' + (t==='request'?'1':'2') + ')');
+    if(el) el.style.display = t===tab ? 'block' : 'none';
+    if(btn) btn.classList.toggle('active', t===tab);
+  });
+}
+
+function buildCounselRequestPanel(){
+  const hasPending = myPendingCounsel;
+  return '<div class="counsel-form">'
+    + '<div style="font-size:13px;line-height:1.6;color:var(--sub);margin-bottom:14px;">선생님께 상담을 신청하세요. 신청 내용이 선생님 화면에 바로 전달됩니다.</div>'
+    + (hasPending
+      ? '<div style="padding:12px 14px;border-radius:12px;background:var(--gold-l);border:1px solid rgba(245,158,11,0.3);margin-bottom:12px;">'
+        + '<div style="font-size:12px;font-weight:800;color:var(--gold);">⏳ 상담 신청 대기 중</div>'
+        + '<div style="font-size:11px;color:var(--sub);margin-top:2px;">선생님이 곧 확인하실 거예요!</div>'
+        + '</div>'
+      : '')
+    + '<div class="form-group">'
+    + '<label class="form-label">상담 신청 이유</label>'
+    + '<textarea id="counsel-reason-inp" placeholder="선생님께 하고 싶은 이야기를 적어주세요..." ' + (hasPending?'disabled':'') + '></textarea>'
+    + '</div>'
+    + '<div class="form-group">'
+    + '<label class="form-label">긴급도</label>'
+    + '<div style="display:flex;gap:6px;">'
+    + ['💙 보통','💛 조금 급해요','❤️ 많이 급해요'].map((label,i)=>
+        '<label style="flex:1;text-align:center;cursor:pointer;">'
+        + '<input type="radio" name="counsel-urgency" value="' + i + '" style="display:none;" ' + (i===0?'checked':'') + ' ' + (hasPending?'disabled':'') + '>'
+        + '<div class="scale-btn" style="font-size:10px;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;transition:all .15s;"'
+        + ' onclick="this.parentElement.querySelector(\'input\').checked=true;document.querySelectorAll(\'[name=counsel-urgency]\').forEach(function(r,ri){var sb=r.closest(\'label\').querySelector(\'.scale-btn\');if(ri===' + i + '){sb.style.background=\'var(--pesk)\';sb.style.borderColor=\'var(--pesk)\';sb.style.color=\'#fff\';}else{sb.style.background=\'\';sb.style.borderColor=\'\';sb.style.color=\'\';}});">'
+        + label
+        + '</div></label>'
+      ).join('')
+    + '</div></div>'
+    + '<button class="pesk-btn primary" onclick="submitCounselRequest()" ' + (hasPending?'disabled':'') + '>'
+    + (hasPending?'신청 대기 중':'상담 신청하기 ✉️')
+    + '</button>'
+    + '</div>';
+}
+
+async function submitCounselRequest(){
+  const reason = document.getElementById('counsel-reason-inp')?.value.trim();
+  if(!reason){ alert('상담 신청 이유를 입력해주세요.'); return; }
+  const urgencyEl = document.querySelector('input[name=counsel-urgency]:checked');
+  const urgency = urgencyEl ? parseInt(urgencyEl.value) : 0;
+  const urgencyLabels = ['보통','조금 급해요','많이 급해요'];
+
+  const btn = document.querySelector('#counsel-sub-request .pesk-btn.primary');
+  if(btn){ btn.textContent = '신청 중...'; btn.disabled = true; }
+
+  try {
+    const db = window._db;
+    const snap = await window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','tesk-counsel-requests'));
+    const existing = snap.exists() ? snap.data().value : [];
+    const newReq = {
+      id: uid(), studentNum: myStudentNum, studentName: myStudentName,
+      reason: reason + (urgency>0 ? ' ['+urgencyLabels[urgency]+']' : ''),
+      date: new Date().toLocaleDateString('ko-KR'), status: 'pending'
+    };
+    existing.push(newReq);
+    await window._fsSetDoc(window._fsDoc(db,'classrooms',roomId,'data','tesk-counsel-requests'),
+      { value: existing, updatedAt: new Date().toISOString() });
+
+    myPendingCounsel = true;
+    const panel = document.getElementById('counsel-sub-request');
+    if(panel) panel.innerHTML = buildCounselRequestPanel();
+  } catch(e) {
+    alert('신청 실패: ' + e.message);
+    if(btn){ btn.textContent = '상담 신청하기 ✉️'; btn.disabled = false; }
+  }
+}
+
+/* ─ OCEAN 성격 설문 ─ */
+const OCEAN_QUESTIONS = [
+  { trait:'E', color:'#4f8ef7', label:'외향성 (E)', question:'나는 여러 친구들과 함께 있을 때 에너지가 넘친다.' },
+  { trait:'A', color:'#22c55e', label:'우호성 (A)', question:'나는 다른 사람의 이야기를 잘 들어주고 도움을 주려 한다.' },
+  { trait:'O', color:'#7c3aed', label:'개방성 (O)', question:'나는 새로운 것을 배우거나 경험하는 것을 좋아한다.' },
+  { trait:'C', color:'#f59e0b', label:'성실성 (C)', question:'나는 약속을 잘 지키고 시작한 일을 끝까지 한다.' },
+  { trait:'N', color:'#ef4444', label:'신경증 (N)', question:'나는 걱정이나 불안을 자주 느끼는 편이다.' },
+];
+
+/* ── Moreno 소시오메트리 기반 5가지 관계 기준 ──
+   참고: Coie & Dodge(1988) 사회적 지위, Bukowski & Hoza(1989) 또래 수용
+   맥락별 지명으로 학업/사회/정서/리더십/갈등 네트워크를 분리 분석 */
+const SURVEY_CATS = [
+  { key:'study',      emoji:'📚', label:'학업 파트너',    max:3,
+    color:'#4f8ef7', bg:'#eef4ff',
+    q:'수업이나 모둠 활동을 할 때 함께 하고 싶은 친구는 누구인가요?',
+    desc:'공부할 때 잘 맞는 친구' },
+  { key:'play',       emoji:'🎮', label:'놀이/여가 파트너', max:3,
+    color:'#22c55e', bg:'#f0fdf4',
+    q:'쉬는 시간이나 점심시간에 같이 놀고 싶은 친구는 누구인가요?',
+    desc:'같이 있으면 즐거운 친구' },
+  { key:'support',    emoji:'💛', label:'정서적 지지',     max:2,
+    color:'#f59e0b', bg:'#fffbeb',
+    q:'힘든 일이 있을 때 가장 먼저 이야기하고 싶은 친구는 누구인가요?',
+    desc:'믿고 속 이야기 할 수 있는 친구' },
+  { key:'leader',     emoji:'⭐', label:'리더십',          max:2,
+    color:'#7c3aed', bg:'#f5f3ff',
+    q:'우리 반에서 리더 역할에 가장 어울린다고 생각하는 친구는 누구인가요?',
+    desc:'반을 이끄는 데 적합한 친구' },
+  { key:'discomfort', emoji:'😓', label:'갈등/불편 관계',  max:2,
+    color:'#ef4444', bg:'#fef2f2',
+    q:'함께 있으면 불편하거나 사이가 좋지 않은 친구는 누구인가요?',
+    desc:'선생님만 볼 수 있어요',
+    note:'이 항목은 선생님만 확인하며 절대 공개되지 않아요 🔒' },
+];
+
+function buildSurveyPanel(){
+  const otherStudents = students.filter(s => s.num !== myStudentNum);
+
+  /* ── 결과 뷰 ── */
+  if(mySurvey){
+    const s = mySurvey;
+
+    // 카테고리별 내가 선택한 친구 요약
+    const summaryHtml = '<div class="ocean-result-card">'
+      + '<div style="font-size:11px;font-weight:800;color:var(--pesk);letter-spacing:.06em;margin-bottom:10px;">내가 선택한 친구</div>'
+      + SURVEY_CATS.filter(cat => cat.key !== 'discomfort').map(cat => {
+          const picks = s[cat.key] || [];
+          if(picks.length === 0) return '';
+          const names = picks.map(n => students.find(st=>st.num===n)?.name||'?').join(', ');
+          return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;">'
+            + '<span style="font-size:13px;flex-shrink:0;">' + cat.emoji + '</span>'
+            + '<div style="font-size:11px;line-height:1.5;">'
+            + '<span style="font-weight:700;color:' + cat.color + ';">' + cat.label + '</span>'
+            + ' <span style="color:var(--sub);">— ' + names + '</span>'
+            + '</div></div>';
+        }).join('')
+      + '<button class="pesk-btn secondary" style="margin-top:14px;" onclick="resetSurvey()">✏️ 다시 작성하기</button>'
+      + '</div>';
+
+    // SNA 분석 카드
+    const snaHtml = '<div class="ocean-result-card" style="margin-top:14px;border-color:var(--border);">'
+      + buildSocialNetworkSVG()
+      + '</div>';
+
+    return summaryHtml + snaHtml;
+  }
+
+  /* ── 설문 폼 뷰 ── */
+  // 소시오메트리 카테고리 질문 (OCEAN 성격 섹션 제거됨)
+  const introHtml = '<div style="font-size:12px;color:var(--sub);margin-bottom:14px;line-height:1.5;">'
+    + '솔직하게 답해주세요. 모든 결과는 선생님만 볼 수 있어요.</div>'
+    + '<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:10px;">친구 관계 조사</div>';
+
+  const catFormsHtml = introHtml
+    + SURVEY_CATS.map(cat => {
+        const chips = otherStudents.map(s=>
+          '<span class="friend-chip" id="chip-' + cat.key + '-' + s.num + '" '
+          + 'onclick="toggleSurveyChip(\'' + cat.key + '\',' + s.num + ')">'
+          + s.name + '</span>'
+        ).join('');
+        return '<div class="survey-cat-section" style="border-color:' + cat.color + '33;">'
+          + '<div class="survey-cat-header">'
+          + '<span class="survey-cat-emoji">' + cat.emoji + '</span>'
+          + '<span class="survey-cat-title" style="color:' + cat.color + ';">' + cat.label + '</span>'
+          + '<span class="survey-cat-counter" id="counter-' + cat.key + '" '
+          + 'style="background:' + cat.bg + ';color:' + cat.color + ';">0/' + cat.max + '</span>'
+          + '</div>'
+          + '<div class="survey-cat-q">' + cat.q + ' <span style="color:' + cat.color + ';font-weight:700;">(최대 ' + cat.max + '명)</span></div>'
+          + '<div class="friend-chip-wrap">' + chips + '</div>'
+          + (cat.note ? '<div class="survey-cat-note">🔒 ' + cat.note + '</div>' : '')
+          + '</div>';
+      }).join('');
+
+  return catFormsHtml
+    + '<button class="pesk-btn primary" style="margin-top:4px;" onclick="submitPeerSurvey()">설문 제출하기 🧠</button>';
+}
+
+// 5카테고리 선택 상태
+let surveyPicks = { study:[], play:[], support:[], leader:[], discomfort:[] };
+
+function toggleSurveyChip(catKey, num){
+  const cat = SURVEY_CATS.find(c => c.key === catKey);
+  if(!cat) return;
+  const picks = surveyPicks[catKey];
+  const idx = picks.indexOf(num);
+  if(idx >= 0){
+    picks.splice(idx, 1);
+  } else {
+    if(picks.length >= cat.max) return; // 최대 초과
+    picks.push(num);
+  }
+  // 해당 카테고리 칩 시각 업데이트
+  students.filter(s => s.num !== myStudentNum).forEach(s => {
+    const chip = document.getElementById('chip-' + catKey + '-' + s.num);
+    if(!chip) return;
+    const sel = picks.includes(s.num);
+    chip.style.background = sel ? cat.bg : '';
+    chip.style.borderColor = sel ? cat.color : '';
+    chip.style.color       = sel ? cat.color : '';
+    chip.style.fontWeight  = sel ? '700' : '';
+  });
+  // 카운터 업데이트
+  const counter = document.getElementById('counter-' + catKey);
+  if(counter) counter.textContent = picks.length + '/' + cat.max;
+}
+
+function computeOceanType(scores){
+  return (scores.E>=3?'E':'I')+(scores.A>=3?'A':'L')+(scores.O>=3?'O':'C')+(scores.C>=3?'C':'L')+'-'+(scores.N>=3?'β':'α');
+}
+
+async function submitPeerSurvey(){
+  // OCEAN 성격 섹션 제거됨 — scores/type은 빈값으로 유지 (하위 호환)
+  const scores = { E:3, A:3, O:3, C:3, N:3 };
+  const type = '—';
+  const btn = document.querySelector('#counsel-sub-survey .pesk-btn.primary');
+  if(btn){ btn.textContent = '제출 중...'; btn.disabled = true; }
+
+  try {
+    const db = window._db;
+    const snap = await window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','pesk-peer-survey'));
+    const existing = snap.exists() ? snap.data().value : {};
+    // 5-카테고리 구조 저장 + 하위 호환용 likedStudents/dislikedStudents 병행 저장
+    existing[myStudentNum] = {
+      studentNum: myStudentNum, studentName: myStudentName,
+      scores, type,
+      study:      surveyPicks.study,
+      play:       surveyPicks.play,
+      support:    surveyPicks.support,
+      leader:     surveyPicks.leader,
+      discomfort: surveyPicks.discomfort,
+      likedStudents:    [...new Set([...surveyPicks.study, ...surveyPicks.play, ...surveyPicks.support])],
+      dislikedStudents: surveyPicks.discomfort,
+      date: new Date().toLocaleDateString('ko-KR')
+    };
+    await window._fsSetDoc(window._fsDoc(db,'classrooms',roomId,'data','pesk-peer-survey'),
+      { value: existing, updatedAt: new Date().toISOString() });
+
+    mySurvey = existing[myStudentNum];
+    surveyPicks = {study:[], play:[], support:[], leader:[], discomfort:[]};
+    const panel = document.getElementById('counsel-sub-survey');
+    if(panel) panel.innerHTML = buildSurveyPanel();
+  } catch(e) {
+    alert('제출 실패: ' + e.message);
+    if(btn){ btn.textContent = '설문 제출하기 🧠'; btn.disabled = false; }
+  }
+}
+
+function resetSurvey(){
+  mySurvey = null;
+  surveyPicks = {study:[], play:[], support:[], leader:[], discomfort:[]};
+  const panel = document.getElementById('counsel-sub-survey');
+  if(panel) panel.innerHTML = buildSurveyPanel();
+}
+
+/* ─────────────────────────────────────────
+   사회연결망 분석 — SNA 지표 계산 (Coie & Dodge 1988)
+───────────────────────────────────────── */
+function computeSNAMetrics(targetNum){
+  let posIn = 0, negIn = 0;
+  Object.entries(allSurveys).forEach(([sNum, survey]) => {
+    const n = parseInt(sNum);
+    if(n === targetNum) return;
+    ['study','play','support','leader'].forEach(cat => {
+      if((survey[cat]||[]).includes(targetNum)) posIn++;
+    });
+    if((survey.discomfort||[]).includes(targetNum)) negIn++;
+  });
+  const SP = posIn - negIn;
+  const SI = posIn + negIn;
+  const myData = allSurveys[targetNum];
+  let mutualCount = 0;
+  if(myData){
+    const myPosPicks = [...new Set([...(myData.study||[]), ...(myData.play||[]), ...(myData.support||[])])];
+    myPosPicks.forEach(toNum => {
+      const td = allSurveys[toNum];
+      if(!td) return;
+      const theirPosPicks = [...new Set([...(td.study||[]), ...(td.play||[]), ...(td.support||[])])];
+      if(theirPosPicks.includes(targetNum)) mutualCount++;
+    });
+  }
+  return { posIn, negIn, SP, SI, mutualCount };
+}
+
+/* ─────────────────────────────────────────
+   사회연결망 분석 SVG — 5카테고리 컬러 엣지
+───────────────────────────────────────── */
+function buildSocialNetworkSVG(){
+  const surveyedStudents = students.filter(s => allSurveys[s.num]);
+  if(surveyedStudents.length < 2){
+    return '<div class="empty-state" style="padding:16px 0;"><span class="empty-icon">🕸️</span>아직 설문 참여자가 부족해요<br>친구들이 설문을 완료하면 네트워크가 표시돼요</div>';
+  }
+
+  const W = 320, H = 270;
+  const cx = W / 2, cy = H / 2;
+  // 노드 원형 배치
+  const positions = {};
+  surveyedStudents.forEach((s, i) => {
+    const angle = (i / surveyedStudents.length) * 2 * Math.PI - Math.PI / 2;
+    const r = Math.min(cx, cy) - 36;
+    positions[s.num] = { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle), name: s.name };
+  });
+  if(!positions[myStudentNum]){
+    positions[myStudentNum] = { x: cx, y: cy, name: myStudentName };
+  }
+
+  const mySurveyData = allSurveys[myStudentNum];
+
+  // 카테고리별 엣지 색상 정의
+  const catEdgeDef = {
+    study:      { color: '#4f8ef7', dash: '', w: 1.8 },
+    play:       { color: '#22c55e', dash: '', w: 1.8 },
+    support:    { color: '#f59e0b', dash: '', w: 1.8 },
+    leader:     { color: '#7c3aed', dash: '', w: 1.8 },
+    discomfort: { color: '#ef4444', dash: '5,3', w: 1.5 }
+  };
+
+  // ① 배경 엣지 (다른 학생들 간, 회색)
+  let bgEdges = '';
+  Object.entries(allSurveys).forEach(([sNum, survey]) => {
+    const fromNum = parseInt(sNum);
+    if(fromNum === myStudentNum) return;
+    const fp = positions[fromNum];
+    if(!fp) return;
+    ['study','play','support','leader'].forEach(cat => {
+      (survey[cat]||[]).forEach(toNum => {
+        if(toNum === myStudentNum) return;
+        const tp = positions[toNum];
+        if(!tp) return;
+        bgEdges += '<line x1="' + fp.x.toFixed(1) + '" y1="' + fp.y.toFixed(1)
+          + '" x2="' + tp.x.toFixed(1) + '" y2="' + tp.y.toFixed(1)
+          + '" stroke="#e2e8f0" stroke-width="1.2"/>';
+      });
+    });
+  });
+
+  // ② 나의 관계 엣지 (카테고리별 컬러)
+  let myEdges = '';
+  if(mySurveyData){
+    const mp = positions[myStudentNum];
+    if(mp){
+      SURVEY_CATS.forEach(cat => {
+        const def = catEdgeDef[cat.key];
+        (mySurveyData[cat.key]||[]).forEach(toNum => {
+          const tp = positions[toNum];
+          if(!tp) return;
+          const dashAttr = def.dash ? (' stroke-dasharray="' + def.dash + '"') : '';
+          myEdges += '<line x1="' + mp.x.toFixed(1) + '" y1="' + mp.y.toFixed(1)
+            + '" x2="' + tp.x.toFixed(1) + '" y2="' + tp.y.toFixed(1)
+            + '" stroke="' + def.color + '" stroke-width="' + def.w + '"' + dashAttr + '/>';
+        });
+      });
+      // 나를 선택한 긍정 관계 (상호 아닌 경우만, 연보라 점선)
+      Object.entries(allSurveys).forEach(([sNum, survey]) => {
+        const fromNum = parseInt(sNum);
+        if(fromNum === myStudentNum) return;
+        const fp = positions[fromNum];
+        if(!fp) return;
+        const theyPickedMe = ['study','play','support','leader'].some(cat => (survey[cat]||[]).includes(myStudentNum));
+        const iPickedThem = ['study','play','support','leader'].some(cat => (mySurveyData[cat]||[]).includes(fromNum));
+        if(theyPickedMe && !iPickedThem){
+          myEdges += '<line x1="' + fp.x.toFixed(1) + '" y1="' + fp.y.toFixed(1)
+            + '" x2="' + mp.x.toFixed(1) + '" y2="' + mp.y.toFixed(1)
+            + '" stroke="#a5b4fc" stroke-width="1.4" stroke-dasharray="4,3"/>';
+        }
+      });
+    }
+  }
+
+  // ③ 노드 그리기 (SNA 지표로 크기/색 조절)
+  let nodes = '';
+  Object.entries(positions).forEach(([num, pos]) => {
+    const n = parseInt(num);
+    const isMe = n === myStudentNum;
+    const metrics = computeSNAMetrics(n);
+    const baseR = isMe ? 20 : Math.min(24, Math.max(14, 13 + metrics.posIn * 2));
+    const fill = isMe ? '#4f8ef7' : (metrics.SP >= 2 ? '#dcfce7' : metrics.SP <= -1 ? '#fee2e2' : '#f8fafc');
+    const stroke = isMe ? '#1d5bbf' : (metrics.SP >= 2 ? '#22c55e' : metrics.SP <= -1 ? '#ef4444' : '#cbd5e1');
+    const textColor = isMe ? '#fff' : '#374151';
+    const shortName = (pos.name||'').slice(0, 3);
+    nodes += '<circle cx="' + pos.x.toFixed(1) + '" cy="' + pos.y.toFixed(1)
+      + '" r="' + baseR + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="2"/>';
+    nodes += '<text x="' + pos.x.toFixed(1) + '" y="' + (pos.y + 0.5).toFixed(1)
+      + '" text-anchor="middle" dominant-baseline="middle" fill="' + textColor
+      + '" font-size="9" font-weight="700" font-family="Pretendard,sans-serif">' + shortName + '</text>';
+  });
+
+  // ④ SNA 지표 카드
+  const myMetrics = computeSNAMetrics(myStudentNum);
+  const statItems = [
+    { val: myMetrics.posIn,      label: '긍정 선택\n받은 수',  bg: '#f0fdf4', color: '#22c55e' },
+    { val: myMetrics.mutualCount,label: '상호\n친한 친구',     bg: '#eef4ff', color: '#4f8ef7' },
+    { val: myMetrics.SP,         label: '사회 선호도\n(SP)',   bg: myMetrics.SP >= 0 ? '#f0fdf4' : '#fef2f2', color: myMetrics.SP >= 0 ? '#22c55e' : '#ef4444' },
+    { val: myMetrics.SI,         label: '사회 영향력\n(SI)',   bg: '#f5f3ff', color: '#7c3aed' }
+  ];
+  let statsHtml = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:12px;">';
+  statItems.forEach(function(item){
+    statsHtml += '<div style="text-align:center;padding:9px 4px;background:' + item.bg + ';border-radius:12px;">'
+      + '<div style="font-size:18px;font-weight:900;color:' + item.color + ';">' + item.val + '</div>'
+      + '<div style="font-size:9px;color:var(--sub);margin-top:2px;line-height:1.3;white-space:pre-line;">' + item.label + '</div>'
+      + '</div>';
+  });
+  statsHtml += '</div>';
+
+  // ⑤ 카테고리별 나를 선택한 수 바
+  const totalResponders = Math.max(Object.keys(allSurveys).length, 1);
+  const catCountHtml = '<div style="margin-top:10px;">'
+    + SURVEY_CATS.map(function(cat){
+        const cnt = Object.entries(allSurveys).filter(function(e){
+          return parseInt(e[0]) !== myStudentNum && (e[1][cat.key]||[]).includes(myStudentNum);
+        }).length;
+        const pct = Math.round((cnt / totalResponders) * 100);
+        return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">'
+          + '<span style="font-size:11px;min-width:28px;">' + cat.emoji + '</span>'
+          + '<span style="font-size:10px;color:var(--sub);min-width:58px;">' + cat.label + '</span>'
+          + '<div style="flex:1;height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;">'
+          + '<div style="width:' + pct + '%;height:100%;background:' + cat.color + ';border-radius:4px;"></div>'
+          + '</div>'
+          + '<span style="font-size:10px;font-weight:700;color:' + cat.color + ';min-width:20px;text-align:right;">' + cnt + '</span>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+
+  // ⑥ 범례
+  const legendHtml = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">'
+    + SURVEY_CATS.map(function(cat){
+        const def = catEdgeDef[cat.key];
+        const grad = def.dash
+          ? 'background:repeating-linear-gradient(to right,' + def.color + ' 0,' + def.color + ' 4px,transparent 4px,transparent 7px);'
+          : 'background:' + def.color + ';';
+        return '<div style="display:flex;align-items:center;gap:3px;font-size:9px;color:var(--sub);">'
+          + '<span style="width:16px;height:3px;' + grad + 'display:inline-block;border-radius:2px;"></span>'
+          + cat.emoji + cat.label + '</div>';
+      }).join('')
+    + '<div style="display:flex;align-items:center;gap:3px;font-size:9px;color:var(--sub);">'
+    + '<span style="width:16px;height:3px;background:repeating-linear-gradient(to right,#a5b4fc 0,#a5b4fc 4px,transparent 4px,transparent 7px);display:inline-block;"></span>나를 선택함</div>'
+    + '</div>';
+
+  const totalParticipants = surveyedStudents.length;
+  const totalStudents = students.length;
+
+  return '<div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">'
+    + '<div style="font-size:12px;font-weight:800;color:var(--text);">🕸️ 사회 연결망 분석</div>'
+    + '<div style="font-size:10px;color:var(--sub);">참여 ' + totalParticipants + ' / ' + totalStudents + '명</div>'
+    + '</div>'
+    + '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;border-radius:14px;background:#f8fafc;border:1px solid var(--border);">'
+    + bgEdges + myEdges + nodes
+    + '</svg>'
+    + statsHtml
+    + catCountHtml
+    + legendHtml;
+}
+
+/* ─────────────────────────────────────────
+   구매 목록 / 학급 상점
+───────────────────────────────────────── */
+function buildMyPurchaseList(){
+  if(myPurchases.length === 0){
+    return '<div class="empty-state" style="padding:16px 0;"><span class="empty-icon">🛒</span>아직 구매한 물품이 없어요<br>학급 상점에서 쇼핑해보세요!</div>';
+  }
+  return myPurchases.slice().reverse().map(p=>
+    '<div class="purchase-item">'
+    + '<div class="pi-icon">' + (p.icon||'🛒') + '</div>'
+    + '<div class="pi-info">'
+    + '<div class="pi-name">' + escHtml(p.itemName||p.name||'물품') + '</div>'
+    + '<div class="pi-date">' + (p.date||'') + (p.status==='pending'?' · ⏳ 처리 중':'') + '</div>'
+    + '</div>'
+    + '<div class="pi-price">-' + (p.price||0).toLocaleString() + '🪙</div>'
+    + '</div>'
+  ).join('');
+}
+
+function buildShopList(me){
+  const coins = me ? me.points : 0;
+  if(shopItems.length === 0){
+    return '<div class="empty-state" style="padding:20px 0;"><span class="empty-icon">🏪</span>선생님이 아직 상품을 등록하지 않았어요</div>';
+  }
+  const header = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+    + '<div style="font-size:11px;color:var(--sub);">보유 코인</div>'
+    + '<div style="font-size:14px;font-weight:800;color:var(--gold);">' + coins.toLocaleString() + ' 🪙</div>'
+    + '</div>';
+  const list = shopItems.map(item=>{
+    const canBuy = coins >= item.price;
+    const outOfStock = item.stock !== undefined && item.stock !== -1 && item.stock <= 0;
+    return '<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">'
+      + '<div style="width:44px;height:44px;border-radius:12px;background:var(--purple-l);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">' + (item.icon||'📦') + '</div>'
+      + '<div style="flex:1;">'
+      + '<div style="font-size:13px;font-weight:800;color:var(--text);">' + escHtml(item.name) + '</div>'
+      + (item.desc ? '<div style="font-size:11px;color:var(--sub);margin-top:2px;">' + escHtml(item.desc) + '</div>' : '')
+      + (item.stock > 0 ? '<div style="font-size:10px;color:var(--teal);margin-top:2px;">남은 수량 ' + item.stock + '개</div>' : '')
+      + '</div>'
+      + '<div style="text-align:right;flex-shrink:0;">'
+      + '<div style="font-family:\'Geist\',sans-serif;font-size:14px;font-weight:900;color:var(--gold);margin-bottom:4px;">' + (item.price||0).toLocaleString() + '🪙</div>'
+      + (outOfStock
+        ? '<button disabled style="padding:6px 12px;border-radius:8px;border:none;background:var(--bg);color:var(--hint);font-size:11px;font-weight:700;font-family:inherit;">품절</button>'
+        : '<button onclick="buyShopItem(\'' + item.id + '\')" style="padding:6px 12px;border-radius:8px;border:none;background:' + (canBuy?'var(--pesk)':'var(--bg)') + ';color:' + (canBuy?'#fff':'var(--hint)') + ';font-size:11px;font-weight:700;cursor:' + (canBuy?'pointer':'not-allowed') + ';font-family:inherit;">'
+          + (canBuy?'구매':'코인 부족')
+          + '</button>')
+      + '</div>'
+      + '</div>';
+  }).join('');
+  return header + list;
+}
+
+function showPurchSubTab(tab){
+  const listEl = document.getElementById('purch-sub-list');
+  const shopEl = document.getElementById('purch-sub-shop');
+  const listBtn = document.getElementById('purch-tab-list');
+  const shopBtn = document.getElementById('purch-tab-shop');
+  if(listEl) listEl.style.display = tab==='list' ? 'block' : 'none';
+  if(shopEl) shopEl.style.display = tab==='shop' ? 'block' : 'none';
+  if(listBtn) listBtn.classList.toggle('active', tab==='list');
+  if(shopBtn) shopBtn.classList.toggle('active', tab==='shop');
+}
+
+async function buyShopItem(itemId){
+  const item = shopItems.find(i => i.id === itemId);
+  if(!item){ alert('상품을 찾을 수 없어요.'); return; }
+  const me = students.find(s => s.num === myStudentNum);
+  if(!me){ alert('학생 정보 오류'); return; }
+  if(me.points < item.price){
+    alert('코인이 부족해요!\n필요: ' + item.price.toLocaleString() + ' 🪙\n보유: ' + me.points.toLocaleString() + ' 🪙');
+    return;
+  }
+  if(item.stock !== undefined && item.stock !== -1 && item.stock <= 0){
+    alert('품절된 상품이에요.'); return;
+  }
+  if(!confirm('"' + item.name + '"을(를) ' + item.price.toLocaleString() + ' 🪙에 구매할까요?')) return;
+
+  try {
+    const db = window._db;
+    // 코인 차감
+    const studSnap = await window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','tesk-students'));
+    const allStudents = studSnap.exists() ? studSnap.data().value : students;
+    const stuIdx = allStudents.findIndex(s => s.num === myStudentNum);
+    if(stuIdx >= 0) allStudents[stuIdx].points = Math.max(0, allStudents[stuIdx].points - item.price);
+    await window._fsSetDoc(window._fsDoc(db,'classrooms',roomId,'data','tesk-students'),
+      { value: allStudents, updatedAt: new Date().toISOString() });
+
+    // 구매 기록 저장
+    const purchSnap = await window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','pesk-purchases'));
+    const existingPurch = purchSnap.exists() ? purchSnap.data().value : [];
+    const newPurch = {
+      id: uid(), studentNum: myStudentNum, studentName: myStudentName,
+      itemName: item.name, icon: item.icon||'📦', price: item.price,
+      date: new Date().toLocaleDateString('ko-KR'), status: 'pending'
+    };
+    existingPurch.push(newPurch);
+    await window._fsSetDoc(window._fsDoc(db,'classrooms',roomId,'data','pesk-purchases'),
+      { value: existingPurch, updatedAt: new Date().toISOString() });
+
+    // 재고 감소 (stock !== -1)
+    if(item.stock !== undefined && item.stock !== -1){
+      const shopSnap = await window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','tesk-shop'));
+      const allItems = shopSnap.exists() ? shopSnap.data().value : [];
+      const idx = allItems.findIndex(i => i.id === item.id);
+      if(idx >= 0){ allItems[idx].stock = Math.max(0, allItems[idx].stock - 1); }
+      await window._fsSetDoc(window._fsDoc(db,'classrooms',roomId,'data','tesk-shop'),
+        { value: allItems, updatedAt: new Date().toISOString() });
+      shopItems = allItems;
+    }
+
+    // 로컬 반영
+    me.points = Math.max(0, me.points - item.price);
+    students = allStudents;
+    myPurchases.push(newPurch);
+    addTxn('"' + item.name + '" 구매', item.price, 'spend');
+
+    const panel = document.getElementById('panel-stock');
+    if(panel) panel.innerHTML = buildBankPanel(me);
+    // 상점 탭 유지
+    setTimeout(()=>showPurchSubTab('shop'), 50);
+    addNotif('🛒 "' + item.name + '" 구매 완료! (' + item.price.toLocaleString() + '🪙 차감)');
+    showFeedbackNotice('✅ "' + item.name + '" 구매 완료!');
+  } catch(e) {
+    alert('구매 실패: ' + e.message);
+  }
+}
+
+/* ─────────────────────────────────────────
+   학급은행 패널
+───────────────────────────────────────── */
+// ── 학급은행 v2: 3탭 (대시보드/주식/은행) ──
+let bankActiveTab = 'dashboard';
+let myDeposits = JSON.parse(localStorage.getItem('pesk-my-deposits')||'[]');
+let BANK_PLANS = [
+  {id:'w1', label:'1주일', days:7, rate:0.5},
+  {id:'w2', label:'2주일', days:14, rate:1.2},
+  {id:'m1', label:'1개월', days:30, rate:3.0},
+  {id:'m3', label:'3개월', days:90, rate:10.0},
+  {id:'m6', label:'6개월', days:180, rate:25.0},
+];
+let bankBadgeBonus = 0.2; // 배지당 가산 이율(%p)
+function _myBadgeCount(){ return (studentBadges[myStudentNum]||[]).length; }
+function _bonusRate(){ return _myBadgeCount()*bankBadgeBonus; }
+function _effectiveRate(planRate){ return planRate + _bonusRate(); }
+function _depositValueNow(dep){
+  const elapsedMs = Date.now() - new Date(dep.startDate).getTime();
+  const elapsedDays = Math.max(0, elapsedMs/(1000*60*60*24));
+  const progress = Math.min(1, elapsedDays/dep.termDays);
+  // 만기 전 중도해지시 이율의 30%만 적용
+  const effRate = progress>=1 ? dep.rate/100 : (dep.rate/100)*0.3*progress;
+  return Math.floor(dep.amount * (1 + effRate));
+}
+function _depositMaturedValue(dep){
+  return Math.floor(dep.amount * (1 + dep.rate/100));
+}
+function _isDepositMatured(dep){
+  const elapsedMs = Date.now() - new Date(dep.startDate).getTime();
+  return elapsedMs >= dep.termDays*24*60*60*1000;
+}
+
+function buildBankPanel(me){
+  const coins = me ? me.points : 0;
+  const tabs = [
+    {id:'dashboard',label:'📊 대시보드'},
+    {id:'stock',label:'📈 주식'},
+    {id:'bank',label:'🏦 은행'},
+  ];
+  const tabBar = '<div style="display:flex;gap:6px;margin-bottom:14px;background:#f3f4f6;padding:4px;border-radius:10px;">' +
+    tabs.map(t=>`<button onclick="switchBankTab('${t.id}')" style="flex:1;padding:9px;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;${bankActiveTab===t.id?'background:#fff;color:var(--pesk);box-shadow:0 1px 3px rgba(0,0,0,.08);':'background:none;color:var(--sub);'}">${t.label}</button>`).join('') +
+    '</div>';
+
+  let body = '';
+  if(bankActiveTab==='dashboard') body = buildDashboardTab(me, coins);
+  else if(bankActiveTab==='stock') body = buildStockTab(me, coins);
+  else if(bankActiveTab==='bank') body = buildBankTab(me, coins);
+
+  return tabBar + '<div id="bank-tab-body">' + body + '</div>';
+}
+
+function switchBankTab(tab){
+  bankActiveTab = tab;
+  const panel = document.getElementById('panel-stock');
+  if(panel){
+    const me = students.find(s=>s.num===myStudentNum);
+    panel.innerHTML = buildBankPanel(me);
+  }
+}
+
+// 대시보드 탭: 현재 돈 현황
+function buildDashboardTab(me, coins){
+  const totalPortVal = myPortfolio.reduce((sum,p)=>sum+(stockPrices[p.code]||p.avgPrice)*p.qty, 0);
+  const totalDepositVal = myDeposits.reduce((s,d)=>s+_depositValueNow(d), 0);
+  const totalAsset = coins + totalPortVal + totalDepositVal;
+  const coinCard = '<div class="bank-coin-card">'
+    + '<div class="bcc-label">💰 현금 보유</div>'
+    + '<div class="bcc-amount">' + coins.toLocaleString() + ' 🪙</div>'
+    + '<div class="bcc-sub">총 자산 ' + totalAsset.toLocaleString() + ' 🪙</div>'
+    + '</div>';
+
+  // 자산 분해
+  const assetBreakdown = '<div class="bank-section"><div class="bank-section-header"><span class="bank-section-title">📊 자산 구성</span></div><div class="bank-section-body">'
+    + `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid #eee;"><span>💰 현금</span><strong>${coins.toLocaleString()} 🪙</strong></div>`
+    + `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid #eee;"><span>📈 주식 투자</span><strong>${totalPortVal.toLocaleString()} 🪙</strong></div>`
+    + `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid #eee;"><span>🏦 예금</span><strong>${totalDepositVal.toLocaleString()} 🪙</strong></div>`
+    + `<div style="display:flex;justify-content:space-between;padding:10px 0 4px;font-size:14px;"><span style="color:var(--pesk);font-weight:800;">총 자산</span><strong style="color:var(--pesk);">${totalAsset.toLocaleString()} 🪙</strong></div>`
+    + '</div></div>';
+
+  return coinCard + assetBreakdown;
+}
+
+// 주식 탭: 투자 현황 + 매매 시장
+function buildStockTab(me, coins){
+  // 투자 현황
+  let investRows = '';
+  if(myPortfolio.length > 0){
+    investRows = myPortfolio.map(p=>{
+      const curPrice = stockPrices[p.code] || p.avgPrice;
+      const totalVal = curPrice * p.qty;
+      const gain = (curPrice - p.avgPrice) * p.qty;
+      const gainPct = ((curPrice - p.avgPrice)/p.avgPrice*100).toFixed(1);
+      const isUp = gain >= 0;
+      return '<div class="port-item"><div class="port-icon">📊</div><div class="port-name"><div class="pn-name">' + escHtml(p.name) + '</div><div class="pn-qty">' + p.qty + '주 · 평균 ' + p.avgPrice.toLocaleString() + '🪙</div></div><div class="port-value"><div class="pv-amount ' + (isUp?'up':'down') + '">' + totalVal.toLocaleString() + '🪙</div><div class="pv-change ' + (isUp?'up':'down') + '">' + (isUp?'▲':'▼') + Math.abs(gainPct) + '%</div></div></div>';
+    }).join('');
+  } else {
+    investRows = '<div class="empty-state" style="padding:16px 0;"><span class="empty-icon">📊</span>아직 보유 중인 주식이 없어요</div>';
+  }
+  const myInvest = '<div class="bank-coin-card"><div class="bcc-label">💰 현재 현금</div><div class="bcc-amount">' + coins.toLocaleString() + ' 🪙</div></div>'
+    + '<div class="bank-section"><div class="bank-section-header"><span class="bank-section-title">📈 내 투자 현황</span></div><div class="bank-section-body">' + investRows + '</div></div>';
+
+  // 주식 시장 (항상 표시)
+  const market = '<div class="bank-section"><div class="bank-section-header"><span class="bank-section-title">🏪 주식 시장</span></div><div class="bank-section-body">' + buildTradeView(me) + '</div></div>';
+
+  return myInvest + market;
+}
+
+// 은행 탭: 예금 상품 + 내 예금 현황
+function buildBankTab(me, coins){
+  const coinCard = '<div class="bank-coin-card"><div class="bcc-label">💰 예금 가능 금액</div><div class="bcc-amount">' + coins.toLocaleString() + ' 🪙</div></div>';
+
+  // 예금 상품 목록
+  const bc = _myBadgeCount();
+  const bonus = _bonusRate();
+  const bonusBadge = bc>0
+    ? `<div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#92400e;font-weight:700;">🏅 보유 배지 ${bc}개 → 이율 +${bonus.toFixed(1)}%p 가산 적용</div>`
+    : `<div style="background:#f3f4f6;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:11px;color:var(--sub);">🏅 배지를 모으면 이율이 가산됩니다!</div>`;
+  const planList = BANK_PLANS.map(p=>{
+    const eff = _effectiveRate(p.rate);
+    return `<div style="border:1.5px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:10px;background:#fafafa;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div><div style="font-weight:800;font-size:14px;">${escHtml(p.label)} 예금</div><div style="font-size:11px;color:var(--sub);">만기 ${p.days}일 · 기본 +${p.rate}%${bonus>0?` · 배지 +${bonus.toFixed(1)}%p`:''}</div></div>
+        <div style="text-align:right;"><div style="font-size:18px;font-weight:900;color:var(--pesk);">+${eff.toFixed(1)}%</div><div style="font-size:10px;color:var(--sub);">내 만기 이율</div></div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <input type="number" id="dep-amt-${p.id}" placeholder="금액" min="10" style="flex:1;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;">
+        <button onclick="createDeposit('${p.id}')" style="padding:8px 16px;background:var(--pesk);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;">예금</button>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty-state" style="padding:16px 0;">예금 상품이 없어요</div>';
+  const plansInner = bonusBadge + planList;
+
+  const plansSection = '<div class="bank-section"><div class="bank-section-header"><span class="bank-section-title">💳 예금 상품</span></div><div class="bank-section-body">' + plansInner + '</div></div>';
+
+  // 내 예금 현황
+  let depRows = '';
+  if(myDeposits.length===0){
+    depRows = '<div class="empty-state" style="padding:16px 0;"><span class="empty-icon">🏦</span>아직 예금이 없어요</div>';
+  } else {
+    depRows = myDeposits.map((d,i)=>{
+      const curVal = _depositValueNow(d);
+      const matVal = _depositMaturedValue(d);
+      const matured = _isDepositMatured(d);
+      const elapsedDays = Math.floor((Date.now()-new Date(d.startDate).getTime())/(1000*60*60*24));
+      const progress = Math.min(100, Math.round((elapsedDays/d.termDays)*100));
+      return `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:8px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <div><div style="font-weight:700;font-size:13px;">${d.label} 예금</div><div style="font-size:10px;color:var(--sub);">원금 ${d.amount.toLocaleString()} 🪙 · 이율 ${d.rate}%</div></div>
+          <div style="text-align:right;"><div style="font-size:14px;font-weight:900;color:${matured?'var(--green)':'var(--pesk)'};">${curVal.toLocaleString()} 🪙</div><div style="font-size:10px;color:var(--sub);">${matured?'✅ 만기':elapsedDays+'/'+d.termDays+'일'}</div></div>
+        </div>
+        <div style="background:#f3f4f6;border-radius:99px;height:6px;overflow:hidden;margin-bottom:8px;"><div style="width:${progress}%;height:100%;background:var(--pesk);"></div></div>
+        <div style="display:flex;gap:6px;">
+          ${matured
+            ? `<button onclick="withdrawDeposit(${i},true)" style="flex:1;padding:7px;background:var(--green);color:#fff;border:none;border-radius:6px;font-weight:700;font-size:11px;cursor:pointer;">만기 수령 (${matVal.toLocaleString()} 🪙)</button>`
+            : `<button onclick="withdrawDeposit(${i},false)" style="flex:1;padding:7px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:6px;font-weight:700;font-size:11px;cursor:pointer;">중도 해지 (${curVal.toLocaleString()} 🪙)</button>`
+          }
+        </div>
+      </div>`;
+    }).join('');
+  }
+  const myDepSection = '<div class="bank-section"><div class="bank-section-header"><span class="bank-section-title">📂 내 예금</span></div><div class="bank-section-body">' + depRows + '</div></div>';
+
+  return coinCard + plansSection + myDepSection;
+}
+
+async function createDeposit(planId){
+  const plan = BANK_PLANS.find(p=>p.id===planId);
+  if(!plan) return;
+  const amt = Number(document.getElementById('dep-amt-'+planId).value)||0;
+  if(amt<10) return alert('10 🪙 이상 예금해주세요');
+  const me = students.find(s=>s.num===myStudentNum);
+  if(!me || me.points < amt) return alert('보유 금액이 부족해요');
+  const effRate = _effectiveRate(plan.rate);
+  if(!confirm(`${amt.toLocaleString()} 🪙을 ${plan.label} 예금(+${effRate.toFixed(1)}%)에 예치할까요?\n만기 ${plan.days}일 후: ${Math.floor(amt*(1+effRate/100)).toLocaleString()} 🪙`)) return;
+  // 돈 차감
+  me.points -= amt;
+  const dep = {id:Date.now(),planId:plan.id,label:plan.label,amount:amt,rate:effRate,termDays:plan.days,startDate:new Date().toISOString()};
+  myDeposits.push(dep);
+  localStorage.setItem('pesk-my-deposits',JSON.stringify(myDeposits));
+  localTxns.unshift({type:'spend',desc:`🏦 ${plan.label} 예금`,amount:amt,date:new Date().toLocaleDateString('ko-KR')});
+  localStorage.setItem('pesk-local-txns',JSON.stringify(localTxns));
+  if(window._fbReady) await saveMyPointsToFirebase(me.points);
+  switchBankTab('bank');
+}
+
+async function withdrawDeposit(idx, matured){
+  const dep = myDeposits[idx]; if(!dep) return;
+  const val = matured ? _depositMaturedValue(dep) : _depositValueNow(dep);
+  const label = matured ? '만기 수령' : '중도 해지';
+  if(!confirm(`${label}하시겠어요?\n수령액: ${val.toLocaleString()} 🪙${!matured?'\n(만기 전 해지는 이율의 30%만 적용돼요)':''}`)) return;
+  const me = students.find(s=>s.num===myStudentNum);
+  if(me){
+    me.points += val;
+    if(window._fbReady) await saveMyPointsToFirebase(me.points);
+  }
+  myDeposits.splice(idx,1);
+  localStorage.setItem('pesk-my-deposits',JSON.stringify(myDeposits));
+  localTxns.unshift({type:'earn',desc:`🏦 예금 ${label}`,amount:val,date:new Date().toLocaleDateString('ko-KR')});
+  localStorage.setItem('pesk-local-txns',JSON.stringify(localTxns));
+  switchBankTab('bank');
+}
+
+async function saveMyPointsToFirebase(points){
+  try{
+    if(!window._fbReady) return;
+    const roomId = localStorage.getItem('pesk-room-id');
+    if(!roomId) return;
+    const snap = await window._fsGetDoc(window._fsDoc(window._db,'classrooms',roomId,'data','tesk-students'));
+    if(!snap.exists()) return;
+    const stus = snap.data().value||[];
+    const idx = stus.findIndex(s=>s.num===myStudentNum);
+    if(idx>=0){
+      stus[idx].points = points;
+      await window._fsSetDoc(window._fsDoc(window._db,'classrooms',roomId,'data','tesk-students'),{value:stus,updatedAt:new Date().toISOString()});
+    }
+  }catch(e){console.warn(e);}
+}
+
+function _legacyBankPanelDisabled(me){
+  const coins = me ? me.points : 0;
+  const totalPortVal = myPortfolio.reduce((sum,p)=>sum+(stockPrices[p.code]||p.avgPrice)*p.qty, 0);
+  const totalAsset = coins + totalPortVal;
+  const coinCard = '<div class="bank-coin-card">'
+    + '<div class="bcc-label">보유 코인</div>'
+    + '<div class="bcc-amount">' + coins.toLocaleString() + ' 🪙</div>'
+    + '<div class="bcc-sub">총 자산 ' + totalAsset.toLocaleString() + ' 🪙 (코인 + 투자 합산)</div>'
+    + '</div>';
+
+  // ② 투자 현황
+  let investRows = '';
+  if(myPortfolio.length > 0){
+    investRows = myPortfolio.map(p=>{
+      const curPrice = stockPrices[p.code] || p.avgPrice;
+      const totalVal = curPrice * p.qty;
+      const gain = (curPrice - p.avgPrice) * p.qty;
+      const gainPct = ((curPrice - p.avgPrice)/p.avgPrice*100).toFixed(1);
+      const isUp = gain >= 0;
+      return '<div class="port-item">'
+        + '<div class="port-icon">📊</div>'
+        + '<div class="port-name">'
+        + '<div class="pn-name">' + escHtml(p.name) + '</div>'
+        + '<div class="pn-qty">' + p.qty + '주 · 평균 ' + p.avgPrice.toLocaleString() + '🪙</div>'
+        + '</div>'
+        + '<div class="port-value">'
+        + '<div class="pv-amount ' + (isUp?'up':'down') + '">' + totalVal.toLocaleString() + '🪙</div>'
+        + '<div class="pv-change ' + (isUp?'up':'down') + '">' + (isUp?'▲':'▼') + Math.abs(gainPct) + '%</div>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  } else {
+    investRows = '<div class="empty-state" style="padding:16px 0;"><span class="empty-icon">📊</span>아직 보유 중인 주식이 없어요</div>';
+  }
+  const investSection = '<div class="bank-section">'
+    + '<div class="bank-section-header">'
+    + '<span class="bank-section-title">📈 투자 현황</span>'
+    + '<button class="pesk-btn primary" style="width:auto;margin:0;padding:6px 14px;font-size:11px;" onclick="showBankSubView(\'trade\')">주식 매매 →</button>'
+    + '</div>'
+    + '<div class="bank-section-body">' + investRows + '</div>'
+    + '</div>';
+
+  // ③ 구매 물품 + 학급 상점 (서브탭)
+  const purchaseSection = '<div class="bank-section">'
+    + '<div class="bank-section-header">'
+    + '<span class="bank-section-title">🛒 구매 물품</span>'
+    + '</div>'
+    + '<div style="display:flex;gap:5px;padding:10px 18px 0;">'
+    + '<button class="sub-tab-btn active" id="purch-tab-list" style="flex:1;padding:7px;font-size:11px;" onclick="showPurchSubTab(\'list\')">내 구매 목록</button>'
+    + '<button class="sub-tab-btn" id="purch-tab-shop" style="flex:1;padding:7px;font-size:11px;" onclick="showPurchSubTab(\'shop\')">🏪 학급 상점</button>'
+    + '</div>'
+    + '<div id="purch-sub-list" class="bank-section-body">' + buildMyPurchaseList() + '</div>'
+    + '<div id="purch-sub-shop" class="bank-section-body" style="display:none;">' + buildShopList(me) + '</div>'
+    + '</div>';
+
+  // 주식 매매 서브뷰 (숨김)
+  const tradeSection = '<div id="bank-trade-view" style="display:none;">'
+    + buildTradeView(me)
+    + '</div>';
+
+  return '<div id="bank-main-view">'
+    + coinCard + investSection + purchaseSection
+    + '</div>'
+    + tradeSection;
+}
+
+function buildTradeView(me){
+  const coins = me ? me.points : 0;
+  const prices = Object.keys(stockPrices);
+  if(prices.length === 0){
+    return '<div class="empty-state"><span class="empty-icon">📊</span>주식 시세 데이터가 없어요<br>선생님이 학급 경제를 설정하면 이용할 수 있어요.</div>';
+  }
+  const KOSPI_MAP = {};
+  _DEFAULT_STOCKS.forEach(([c,n])=>{ KOSPI_MAP[c]=n; });
+  // 추가 종목 (tesk KOSPI100 참조)
+  Object.assign(KOSPI_MAP, {
+    '005930':'삼성전자','000660':'SK하이닉스','373220':'LG에너지솔루션','207940':'삼성바이오로직스',
+    '006400':'삼성SDI','051910':'LG화학','005380':'현대자동차','000270':'기아',
+    '035420':'NAVER','035720':'카카오','105560':'KB금융','055550':'신한지주',
+    '086790':'하나금융지주','316140':'우리금융지주','017670':'SK텔레콤','030200':'KT',
+    '034730':'SK','010130':'고려아연','003550':'LG','066570':'LG전자',
+    '012330':'현대모비스','028260':'삼성물산','009150':'삼성전기','018260':'삼성에스디에스',
+    '032830':'삼성생명','003670':'포스코퓨처엠','000810':'삼성화재','036570':'엔씨소프트',
+    '251270':'넷마블','259960':'크래프톤',
+  });
+  const listHtml = Object.entries(stockPrices).map(([code, price])=>{
+    const name = KOSPI_MAP[code] || code;
+    const myHolding = myPortfolio.find(p=>p.code===code);
+    return '<div class="stock-list-item">'
+      + '<div class="s-header">'
+      + '<div>'
+      + '<div class="s-name">' + escHtml(name) + '</div>'
+      + '<div class="s-code">' + code + (myHolding?' · ':'') + (myHolding?'<span class="s-holding">보유 '+myHolding.qty+'주</span>':'') + '</div>'
+      + '</div>'
+      + '<div style="text-align:right;">'
+      + '<div class="s-price">' + price.toLocaleString() + ' 🪙</div>'
+      + '</div>'
+      + '</div>'
+      + '<div class="stock-buy-form">'
+      + '<input type="number" id="qty-' + code + '" placeholder="수량" min="1" />'
+      + '<button class="stock-btn buy" onclick="buyStockPesk(\'' + code + '\',\'' + escHtml(name) + '\',' + price + ')">매수</button>'
+      + (myHolding?'<button class="stock-btn sell" onclick="sellStockPesk(\'' + code + '\',\'' + escHtml(name) + '\',' + price + ')">매도</button>':'')
+      + '</div>'
+      + '</div>';
+  }).join('');
+
+  return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">'
+    + '<button onclick="showBankSubView(\'main\')" style="background:none;border:none;font-size:20px;cursor:pointer;padding:0;">←</button>'
+    + '<div style="font-size:15px;font-weight:800;color:var(--text);">주식 매매</div>'
+    + '<div style="margin-left:auto;font-size:12px;font-weight:700;color:var(--gold);">보유 ' + coins.toLocaleString() + ' 🪙</div>'
+    + '</div>'
+    + '<input class="stock-search" placeholder="🔍 종목명 검색..." oninput="filterStocks(this.value)" />'
+    + '<div id="stock-list-container">' + listHtml + '</div>';
+}
+
+function showBankSubView(view){
+  const mainEl = document.getElementById('bank-main-view');
+  const tradeEl = document.getElementById('bank-trade-view');
+  if(!mainEl || !tradeEl) return;
+  if(view === 'trade'){
+    mainEl.style.display = 'none';
+    tradeEl.style.display = 'block';
+  } else {
+    mainEl.style.display = 'block';
+    tradeEl.style.display = 'none';
+  }
+}
+
+function filterStocks(query){
+  const container = document.getElementById('stock-list-container');
+  if(!container) return;
+  const items = container.querySelectorAll('.stock-list-item');
+  items.forEach(item=>{
+    const name = item.querySelector('.s-name')?.textContent || '';
+    item.style.display = name.toLowerCase().includes(query.toLowerCase()) ? 'block' : 'none';
+  });
+}
+
+async function buyStockPesk(code, name, price){
+  const qtyEl = document.getElementById('qty-'+code);
+  const qty = parseInt(qtyEl?.value) || 0;
+  if(qty <= 0){ alert('수량을 입력해주세요.'); return; }
+
+  const me = students.find(s=>s.num===myStudentNum);
+  if(!me){ alert('학생 정보를 찾을 수 없어요.'); return; }
+  const totalCost = price * qty;
+  if(me.points < totalCost){
+    alert('코인이 부족해요!\n필요: '+totalCost.toLocaleString()+' 🪙\n보유: '+me.points.toLocaleString()+' 🪙');
+    return;
+  }
+  if(!confirm(name+' '+qty+'주를 '+totalCost.toLocaleString()+' 🪙에 매수하시겠어요?')) return;
+
+  try {
+    const db = window._db;
+    const portSnap = await window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','pesk-portfolios'));
+    const allPortfolios = portSnap.exists() ? portSnap.data().value : {};
+    const myPort = allPortfolios[myStudentNum] || [];
+    const existing = myPort.find(p=>p.code===code);
+    if(existing){
+      const newQty = existing.qty + qty;
+      existing.avgPrice = Math.round((existing.avgPrice*existing.qty + price*qty) / newQty);
+      existing.qty = newQty;
+    } else {
+      myPort.push({code, name, qty, avgPrice: price});
+    }
+    allPortfolios[myStudentNum] = myPort;
+    await window._fsSetDoc(window._fsDoc(db,'classrooms',roomId,'data','pesk-portfolios'),
+      { value: allPortfolios, updatedAt: new Date().toISOString() });
+
+    const studSnap = await window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','tesk-students'));
+    const allStudents = studSnap.exists() ? studSnap.data().value : students;
+    const stuIdx = allStudents.findIndex(s=>s.num===myStudentNum);
+    if(stuIdx>=0){ allStudents[stuIdx].points = Math.max(0, allStudents[stuIdx].points - totalCost); }
+    await window._fsSetDoc(window._fsDoc(db,'classrooms',roomId,'data','tesk-students'),
+      { value: allStudents, updatedAt: new Date().toISOString() });
+
+    myPortfolio = myPort;
+    if(me) me.points = Math.max(0, me.points - totalCost);
+    students = allStudents;
+    if(qtyEl) qtyEl.value = '';
+    addTxn(name+' '+qty+'주 매수', totalCost, 'spend');
+
+    const panel = document.getElementById('panel-stock');
+    if(panel) panel.innerHTML = buildBankPanel(me);
+    alert('✅ '+name+' '+qty+'주 매수 완료! ('+totalCost.toLocaleString()+' 🪙 차감)');
+  } catch(e) {
+    alert('매수 실패: ' + e.message);
+  }
+}
+
+async function sellStockPesk(code, name, price){
+  const qtyEl = document.getElementById('qty-'+code);
+  const qty = parseInt(qtyEl?.value) || 0;
+  if(qty <= 0){ alert('수량을 입력해주세요.'); return; }
+
+  const myHolding = myPortfolio.find(p=>p.code===code);
+  if(!myHolding || myHolding.qty < qty){
+    alert('보유 수량이 부족해요!\n보유: '+(myHolding?.qty||0)+'주');
+    return;
+  }
+  const totalGain = price * qty;
+  if(!confirm(name+' '+qty+'주를 '+totalGain.toLocaleString()+' 🪙에 매도하시겠어요?')) return;
+
+  const me = students.find(s=>s.num===myStudentNum);
+  try {
+    const db = window._db;
+    const portSnap = await window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','pesk-portfolios'));
+    const allPortfolios = portSnap.exists() ? portSnap.data().value : {};
+    let myPort = allPortfolios[myStudentNum] || [];
+    const idx = myPort.findIndex(p=>p.code===code);
+    if(idx>=0){
+      myPort[idx].qty -= qty;
+      if(myPort[idx].qty <= 0) myPort.splice(idx,1);
+    }
+    allPortfolios[myStudentNum] = myPort;
+    await window._fsSetDoc(window._fsDoc(db,'classrooms',roomId,'data','pesk-portfolios'),
+      { value: allPortfolios, updatedAt: new Date().toISOString() });
+
+    const studSnap = await window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','tesk-students'));
+    const allStudents = studSnap.exists() ? studSnap.data().value : students;
+    const stuIdx = allStudents.findIndex(s=>s.num===myStudentNum);
+    if(stuIdx>=0){ allStudents[stuIdx].points = (allStudents[stuIdx].points||0) + totalGain; }
+    await window._fsSetDoc(window._fsDoc(db,'classrooms',roomId,'data','tesk-students'),
+      { value: allStudents, updatedAt: new Date().toISOString() });
+
+    myPortfolio = myPort;
+    if(me) me.points = (me.points||0) + totalGain;
+    students = allStudents;
+    if(qtyEl) qtyEl.value = '';
+    addTxn(name+' '+qty+'주 매도', totalGain, 'earn');
+
+    const panel = document.getElementById('panel-stock');
+    if(panel) panel.innerHTML = buildBankPanel(me);
+    alert('✅ '+name+' '+qty+'주 매도 완료! ('+totalGain.toLocaleString()+' 🪙 획득)');
+  } catch(e) {
+    alert('매도 실패: ' + e.message);
+  }
+}
+
+/* ─────────────────────────────────────────
+   탭 전환
+───────────────────────────────────────── */
+function showTab(tab){
+  ['quote','shop','writing','counsel','stock'].forEach(t=>{
+    const panel = document.getElementById('panel-'+t);
+    const btn = document.getElementById('tab-'+t);
+    if(panel) panel.style.display = t===tab ? 'block' : 'none';
+    if(btn) btn.classList.toggle('active', t===tab);
+  });
+}
+
+/* (미션 기능 삭제됨) */
+
+/* ─────────────────────────────────────────
+   아침 글쓰기 팝업
+───────────────────────────────────────── */
+function checkMorningWritingPopup(){
+  const key = 'pesk-popup-date-' + roomId + '-' + myStudentNum;
+  const lastDate = localStorage.getItem(key) || '';
+  const today = new Date().toLocaleDateString('ko-KR');
+  if(lastDate !== today){
+    localStorage.setItem(key, today);
+    setTimeout(showMorningPopup, 600);
+  }
+}
+
+function showMorningPopup(){
+  const overlay = document.createElement('div');
+  overlay.className = 'morning-overlay';
+  overlay.id = 'morning-overlay';
+  overlay.innerHTML =
+    '<div class="morning-popup">'
+    + '<span class="mp-emoji">🌅</span>'
+    + '<div class="mp-title">오늘의 글쓰기</div>'
+    + '<div class="mp-desc">매일 아침 글쓰기를 하면<br>생각이 자라고 선생님께 피드백을 받을 수 있어요! ✍️</div>'
+    + '<button class="mp-btn" onclick="closeMorningPopup(true)">지금 글쓰기 하러 가기 →</button>'
+    + '<button class="mp-later" onclick="closeMorningPopup(false)">나중에 할게요</button>'
+    + '</div>';
+  document.body.appendChild(overlay);
+}
+
+function closeMorningPopup(goWrite){
+  const el = document.getElementById('morning-overlay');
+  if(el) el.remove();
+  if(goWrite) showTab('writing');
+}
+
+/* ─────────────────────────────────────────
+   로그아웃
+───────────────────────────────────────── */
+function logout(){
+  localStorage.removeItem('pesk-student-num');
+  localStorage.removeItem('pesk-student-name');
+  localStorage.removeItem('pesk-room-id');
+  localStorage.removeItem('pesk-class-name');
+  localStorage.removeItem('pesk-class-code');
+  localStorage.removeItem('pesk-pw-changed');
+  window.location.href='landing.html';
+}
+
+/* ─────────────────────────────────────────
+   실시간 업데이트 구독
+───────────────────────────────────────── */
+let _unsubs = [];
+function subscribeToUpdates(){
+  _unsubs.forEach(fn=>fn());
+  _unsubs = [];
+  if(!window._fbReady) return;
+
+  // 학생 포인트 실시간
+  _unsubs.push(window._fsOnSnapshot(
+    window._fsDoc(window._db,'classrooms',roomId,'data','tesk-students'),
+    (snap)=>{
+      if(snap.exists()){
+        students = snap.data().value||[];
+        const me = students.find(s=>s.num===myStudentNum);
+        if(me){
+          const ptEl = document.querySelector('.bcc-amount');
+          const lvEl = document.querySelector('.lv-num');
+          if(ptEl) ptEl.textContent = me.points.toLocaleString() + ' 🪙';
+          if(lvEl) lvEl.textContent = Math.max(1,Math.floor(me.points/200)+1);
+        }
+      }
+    }
+  ));
+
+  // 내 글쓰기 피드백 실시간
+  _unsubs.push(window._fsOnSnapshot(
+    window._fsDoc(window._db,'classrooms',roomId,'data','pesk-writings'),
+    (snap)=>{
+      if(snap.exists()){
+        const allWritings = snap.data().value||[];
+        const myNewWritings = allWritings.filter(w=>parseInt(w.studentNum)===myStudentNum);
+        const hadFeedback = peskWritings.filter(w=>w.feedback).length;
+        const nowFeedback = myNewWritings.filter(w=>w.feedback).length;
+        peskWritings = myNewWritings;
+        const panel = document.getElementById('panel-writing');
+        if(panel && panel.style.display !== 'none') panel.innerHTML = buildWritingPanel();
+        if(nowFeedback > hadFeedback){
+          addNotif('✉️ 선생님이 피드백을 보내주셨어요!');
+          showFeedbackNotice('✉️ 선생님이 피드백을 보내주셨어요!');
+        }
+      }
+    }
+  ));
+
+  // 상담 신청 상태
+  _unsubs.push(window._fsOnSnapshot(
+    window._fsDoc(window._db,'classrooms',roomId,'data','tesk-counsel-requests'),
+    (snap)=>{
+      if(snap.exists()){
+        const all = snap.data().value||[];
+        const wasPending = myPendingCounsel;
+        myPendingCounsel = all.some(r=>parseInt(r.studentNum)===myStudentNum && r.status==='pending');
+        if(wasPending && !myPendingCounsel){
+          addNotif('✅ 상담 신청이 선생님께 확인됐어요!');
+          showFeedbackNotice('✅ 상담 신청이 선생님께 확인됐어요!');
+          const panel = document.getElementById('counsel-sub-request');
+          if(panel) panel.innerHTML = buildCounselRequestPanel();
+        }
+      }
+    }
+  ));
+}
+
+function showFeedbackNotice(msg){
+  let el = document.getElementById('pesk-notice');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'pesk-notice';
+    el.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);'
+      +'background:var(--pesk);color:#fff;padding:11px 22px;border-radius:14px;'
+      +'font-size:13px;font-weight:700;z-index:999;box-shadow:0 4px 20px rgba(79,142,247,0.4);'
+      +'animation:fadeDown .3s ease;white-space:nowrap;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(()=>{ el.style.display='none'; }, 3000);
+}
+
+function escHtml(str){
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ─────────────────────────────────────────
+   시작
+───────────────────────────────────────── */
+waitFirebase(async()=>{
+  if(!roomId || !myStudentNum){ renderNoAccess(); return; }
+  // 비밀번호 변경 여부 확인
+  try{
+    const localPwChanged = localStorage.getItem('pesk-pw-changed');
+    if(localPwChanged !== 'true'){
+      const accSnap = await window._fsGetDoc(window._fsDoc(window._db,'classrooms',roomId,'data','tesk-accounts'));
+      if(accSnap.exists()){
+        const accounts = accSnap.data().value||{};
+        const myAcc = accounts[myStudentNum] || accounts[String(myStudentNum)];
+        if(myAcc && myAcc.pwChanged===false){
+          // 비밀번호 미변경 → 랜딩으로 리다이렉트
+          window.location.href='landing.html';
+          return;
+        }
+      }
+    }
+  }catch(e){ console.warn('계정 확인 실패',e); }
+  await Promise.all([loadData(), _loadQuotes()]);
+  if(students.find(s=>s.num===myStudentNum)){
+    renderDashboard();
+  } else {
+    renderNoAccess();
+  }
+});
+</script>
+<style>
+@keyframes fadeDown{
+  from{opacity:0;transform:translateX(-50%) translateY(-10px);}
+  to{opacity:1;transform:translateX(-50%) translateY(0);}
+}
+/* ── 교우관계 설문 카테고리 섹션 ── */
+.survey-cat-section{
+  border-radius:var(--radius-sm);padding:16px;margin-bottom:10px;
+  border:1.5px solid var(--border);background:var(--card);box-shadow:var(--shadow-sm);
+}
+.survey-cat-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.survey-cat-emoji{font-size:18px;}
+.survey-cat-title{font-size:13px;font-weight:800;flex:1;}
+.survey-cat-counter{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;}
+.survey-cat-q{font-size:12px;color:var(--sub);margin-bottom:10px;line-height:1.5;}
+.survey-cat-note{font-size:10px;color:var(--hint);margin-top:6px;font-style:italic;}
+.sna-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.sna-bar-label{font-size:11px;color:var(--sub);width:72px;flex-shrink:0;}
+.sna-bar-track{flex:1;height:8px;background:var(--bg);border-radius:99px;overflow:hidden;}
+.sna-bar-fill{height:100%;border-radius:99px;}
+.sna-bar-val{font-size:11px;font-weight:800;width:18px;text-align:right;flex-shrink:0;}
+</style>
+</body>
+</html>

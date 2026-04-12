@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tesk & Pesk — 우리 반 성장 플랫폼</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/pretendard@latest/dist/web/static/pretendard.css" rel="stylesheet">
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey:"AIzaSyA41ZYobXjCtGcSN8N7UJ2XkzrH9ef39EY",
+  authDomain:"tesk-pesk.firebaseapp.com",
+  projectId:"tesk-pesk",
+  storageBucket:"tesk-pesk.firebasestorage.app",
+  messagingSenderId:"619304025482",
+  appId:"1:619304025482:web:27d72258009ec6b9d49c73"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+window._db = db; window._auth = auth;
+window._fsDoc = doc; window._fsGetDoc = getDoc;
+window._fsSetDoc = setDoc; window._fsGetDocs = getDocs; window._fsCollection = collection;
+window._signInWithPopup = signInWithPopup;
+window._GoogleAuthProvider = GoogleAuthProvider;
+window._googleProvider = googleProvider;
+window._fbReady = true;
+// 공지 + 광고 로드
+(async()=>{
+  try{
+    const [noticeSnap, adSnap] = await Promise.all([
+      getDoc(doc(db,'master','notices')),
+      getDoc(doc(db,'master','ads'))
+    ]);
+    // 공지 배너
+    if(noticeSnap.exists() && noticeSnap.data().active){
+      const nd = noticeSnap.data();
+      const colors = {
+        tesk:{bg:'#1a472a',text:'#fff'},
+        pesk:{bg:'#1a3a72',text:'#fff'},
+        gold:{bg:'#c9921a',text:'#fff'},
+        red:{bg:'#d94f2a',text:'#fff'},
+        dark:{bg:'#111008',text:'#fff'}
+      };
+      const c = colors[nd.color||'tesk'];
+      const banner = document.getElementById('notice-banner');
+      if(banner){
+        banner.style.background = c.bg;
+        banner.style.color = c.text;
+        banner.innerHTML = `<span>${nd.text||''}</span>
+          <button onclick="this.parentElement.style.display='none'"
+            style="background:none;border:none;color:inherit;opacity:.6;cursor:pointer;font-size:16px;margin-left:12px;">✕</button>`;
+        banner.style.display = 'flex';
+      }
+    }
+    // 광고 슬롯
+    if(adSnap.exists()){
+      const ad = adSnap.data();
+      const topSlot = document.getElementById('ad-slot-top');
+      const botSlot = document.getElementById('ad-slot-bottom');
+      if(topSlot && ad.topCode) topSlot.innerHTML = ad.topCode;
+      if(botSlot && ad.bottomCode) botSlot.innerHTML = ad.bottomCode;
+    }
+  }catch(e){ console.warn('공지/광고 로드 실패', e); }
+})();
+</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f4f3ef;
+  --tesk:#1a472a; --tesk-m:#2d7a47; --tesk-l:#e8f5ec;
+  --pesk:#1a3a72; --pesk-m:#2d5fa8; --pesk-l:#e8f0fb;
+  --gold:#c9921a; --gold-l:#fdf3e0;
+  --text:#111008; --sub:#6b6760; --hint:#b5b2ab;
+  --card:#ffffff; --border:rgba(0,0,0,0.08);
+  --shadow:0 4px 24px rgba(0,0,0,0.08);
+  --shadow-lg:0 12px 48px rgba(0,0,0,0.14);
+  --radius:20px;
+}
+html,body{min-height:100vh;font-family:'Geist','Pretendard',sans-serif;background:var(--bg);color:var(--text);}
+
+/* ── 배경 그라데이션 ── */
+body{
+  background:
+    radial-gradient(ellipse 60% 40% at 0% 0%, rgba(26,71,42,0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 100% 100%, rgba(26,58,114,0.10) 0%, transparent 60%),
+    #f4f3ef;
+}
+
+/* ── 헤더 ── */
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 48px;
+  position:sticky;top:0;z-index:100;
+  background:rgba(244,243,239,0.88);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+}
+.logo{
+  font-family:'Geist',sans-serif;font-weight:900;font-size:22px;
+  letter-spacing:-0.5px;color:var(--text);
+  display:flex;align-items:center;gap:6px;
+}
+.logo .amp{color:var(--hint);}
+.logo .t{color:var(--tesk);}
+.logo .p{color:var(--pesk);}
+.header-nav{display:flex;align-items:center;gap:10px;}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 20px;border-radius:10px;font-size:13px;font-weight:600;
+  cursor:pointer;border:none;transition:all .15s;text-decoration:none;
+  font-family:'Geist','Pretendard',sans-serif;
+}
+.btn-tesk{background:var(--tesk);color:#fff;}
+.btn-tesk:hover{background:var(--tesk-m);}
+.btn-ghost{background:transparent;color:var(--sub);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--card);color:var(--text);}
+.btn-pesk{background:var(--pesk);color:#fff;}
+.btn-pesk:hover{background:var(--pesk-m);}
+.btn-lg{padding:14px 32px;font-size:15px;border-radius:14px;}
+
+/* ── 히어로 ── */
+.hero{
+  max-width:960px;margin:0 auto;padding:80px 24px 60px;
+  text-align:center;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--gold-l);color:var(--gold);
+  font-size:11px;font-weight:700;border-radius:99px;
+  padding:5px 14px;margin-bottom:24px;letter-spacing:.05em;
+}
+.hero-title{
+  font-family:'Geist',sans-serif;font-weight:900;font-size:clamp(36px,6vw,64px);
+  line-height:1.12;margin-bottom:20px;letter-spacing:-1px;
+}
+.hero-title .hl-t{color:var(--tesk);}
+.hero-title .hl-p{color:var(--pesk);}
+.hero-desc{
+  font-size:17px;color:var(--sub);line-height:1.7;
+  max-width:560px;margin:0 auto 40px;
+}
+.hero-actions{
+  display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
+}
+
+/* ── 카드 섹션 ── */
+.cards{
+  display:grid;grid-template-columns:1fr 1fr;gap:20px;
+  max-width:900px;margin:0 auto 80px;padding:0 24px;
+}
+.card{
+  background:var(--card);border-radius:var(--radius);
+  padding:36px 32px;border:1px solid var(--border);
+  box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.card::before{
+  content:'';position:absolute;top:-40px;right:-40px;
+  width:140px;height:140px;border-radius:50%;opacity:.06;
+}
+.card.tesk-card::before{background:var(--tesk);}
+.card.pesk-card::before{background:var(--pesk);}
+.card-icon{font-size:36px;margin-bottom:16px;display:block;}
+.card-tag{
+  font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 10px;border-radius:99px;display:inline-block;margin-bottom:12px;
+}
+.tesk-card .card-tag{background:var(--tesk-l);color:var(--tesk);}
+.pesk-card .card-tag{background:var(--pesk-l);color:var(--pesk);}
+.card-title{
+  font-family:'Geist',sans-serif;font-weight:800;font-size:24px;margin-bottom:8px;
+}
+.card-desc{font-size:13px;color:var(--sub);line-height:1.7;margin-bottom:20px;}
+.feature-list{list-style:none;display:flex;flex-direction:column;gap:6px;}
+.feature-list li{
+  font-size:12px;color:var(--sub);display:flex;align-items:center;gap:8px;
+}
+.feature-list li::before{content:'✓';color:inherit;font-weight:700;font-size:11px;}
+.tesk-card .feature-list li::before{color:var(--tesk);}
+.pesk-card .feature-list li::before{color:var(--pesk);}
+
+/* ── 학생 입장 섹션 ── */
+.student-section{
+  max-width:520px;margin:0 auto 80px;padding:0 24px;text-align:center;
+}
+.section-label{
+  font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--hint);margin-bottom:16px;
+}
+.code-input-wrap{
+  background:var(--card);border-radius:var(--radius);
+  padding:32px 28px;border:1px solid var(--border);box-shadow:var(--shadow);
+}
+.code-input-title{
+  font-family:'Geist',sans-serif;font-weight:800;font-size:20px;margin-bottom:6px;
+}
+.code-input-desc{font-size:13px;color:var(--sub);margin-bottom:24px;}
+.code-fields{display:flex;gap:8px;justify-content:center;margin-bottom:20px;}
+.code-digit{
+  width:48px;height:60px;border-radius:12px;
+  border:2px solid var(--border);background:var(--bg);
+  font-family:'Geist',sans-serif;font-weight:900;font-size:24px;
+  text-align:center;color:var(--text);
+  transition:border-color .15s;outline:none;
+  font-variant-numeric:tabular-nums;
+}
+.code-digit:focus{border-color:var(--pesk);background:#fff;}
+.code-digit.filled{border-color:var(--pesk-m);}
+
+/* ── 푸터 ── */
+.footer{
+  text-align:center;padding:32px 24px;
+  font-size:12px;color:var(--hint);
+  border-top:1px solid var(--border);
+}
+.footer strong{color:var(--sub);}
+
+/* ── 모달 ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.45);
+  display:flex;align-items:center;justify-content:center;
+  z-index:1000;opacity:0;pointer-events:none;
+  transition:opacity .2s;padding:20px;
+}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{
+  background:var(--card);border-radius:24px;padding:36px 32px;
+  width:100%;max-width:400px;box-shadow:var(--shadow-lg);
+  transform:scale(.96) translateY(8px);transition:transform .2s;
+}
+.modal-overlay.open .modal{transform:scale(1) translateY(0);}
+.modal-title{
+  font-family:'Geist',sans-serif;font-weight:800;font-size:22px;margin-bottom:4px;
+}
+.modal-desc{font-size:13px;color:var(--sub);margin-bottom:24px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--sub);margin-bottom:6px;}
+.field input{
+  width:100%;padding:11px 14px;border-radius:10px;
+  border:1.5px solid var(--border);background:var(--bg);
+  font-size:14px;font-family:'Geist','Pretendard',sans-serif;
+  color:var(--text);outline:none;transition:border-color .15s;
+}
+.field input:focus{border-color:var(--tesk);}
+.modal-actions{display:flex;gap:8px;margin-top:20px;}
+.modal-actions .btn{flex:1;justify-content:center;}
+.btn-full{width:100%;justify-content:center;}
+.error-msg{
+  font-size:12px;color:#d94f2a;margin-top:12px;
+  display:none;text-align:center;
+}
+.error-msg.show{display:block;}
+.btn-google{
+  background:#fff;color:#3c4043;
+  border:1.5px solid #dadce0;gap:10px;
+  font-size:14px;padding:12px 20px;border-radius:10px;
+  width:100%;justify-content:center;
+  box-shadow:0 1px 3px rgba(0,0,0,0.08);
+}
+.btn-google:hover{background:#f8f9fa;box-shadow:0 2px 8px rgba(0,0,0,0.12);}
+.btn-google img{width:20px;height:20px;flex-shrink:0;}
+.google-divider{display:flex;align-items:center;gap:10px;margin:16px 0;
+  font-size:12px;color:var(--hint);}
+.google-divider::before,.google-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── 2단계 로그인 ── */
+.step-indicator{
+  display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:24px;
+}
+.step-dot{
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;
+  background:var(--border);color:var(--hint);
+  border:2px solid var(--border);transition:all .25s;
+}
+.step-dot.active{background:var(--pesk);color:#fff;border-color:var(--pesk);}
+.step-dot.done{background:var(--tesk);color:#fff;border-color:var(--tesk);}
+.step-line{width:40px;height:2px;background:var(--border);transition:background .25s;}
+.step-line.done{background:var(--tesk);}
+.step-label{
+  display:flex;justify-content:space-between;
+  font-size:10px;color:var(--hint);margin-top:6px;margin-bottom:20px;
+  padding:0 10px;
+}
+.login-back{
+  font-size:12px;color:var(--hint);background:none;border:none;cursor:pointer;
+  margin-top:14px;display:block;width:100%;text-align:center;
+  font-family:'Geist','Pretendard',sans-serif;
+}
+.login-back:hover{color:var(--sub);}
+
+/* ── 공지 배너 ── */
+.notice-banner{
+  display:none;align-items:center;justify-content:center;
+  padding:10px 20px;font-size:13px;font-weight:600;
+  text-align:center;gap:8px;
+}
+
+/* ── 광고 슬롯 ── */
+.ad-slot{
+  max-width:900px;margin:0 auto;padding:0 24px 20px;
+  text-align:center;
+}
+.ad-slot:empty{display:none;}
+
+/* ── 반응형 ── */
+@media(max-width:640px){
+  .header{padding:16px 20px;}
+  .hero{padding:48px 20px 40px;}
+  .cards{grid-template-columns:1fr;}
+  .header-nav .btn-ghost{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- 공지 배너 -->
+<div class="notice-banner" id="notice-banner"></div>
+
+<!-- 상단 광고 슬롯 -->
+<div class="ad-slot" id="ad-slot-top"></div>
+
+<!-- 헤더 -->
+<header class="header">
+  <div class="logo">
+    <span class="t">Tesk</span>
+    <span class="amp">&</span>
+    <span class="p">Pesk</span>
+  </div>
+  <nav class="header-nav">
+    <button class="btn btn-ghost" onclick="openTeacherModal()">🍃 교사 로그인</button>
+    <button class="btn btn-pesk" onclick="document.getElementById('student-section').scrollIntoView({behavior:'smooth'})">🎮 학생 입장</button>
+  </nav>
+</header>
+
+<!-- 히어로 -->
+<section class="hero">
+  <div class="hero-badge">✨ 교사 & 학생 연결 플랫폼</div>
+  <h1 class="hero-title">
+    선생님의 업무, <span class="hl-t">Tesk</span>.<br>
+    학생의 성장, <span class="hl-p">Pesk</span>.
+  </h1>
+  <p class="hero-desc">
+    출석·성적·상담·학급 경제까지 한 곳에서.<br>
+    학생은 미션·배지·코인으로 매일 성장해요.
+  </p>
+  <div class="hero-actions">
+    <button class="btn btn-tesk btn-lg" onclick="openTeacherModal()">🍃 교사로 시작하기</button>
+    <button class="btn btn-ghost btn-lg" onclick="document.getElementById('student-section').scrollIntoView({behavior:'smooth'})">🎮 학생으로 입장하기</button>
+  </div>
+</section>
+
+<!-- 카드 -->
+<div class="cards">
+  <div class="card tesk-card">
+    <span class="card-icon">🍃</span>
+    <span class="card-tag">Teacher Platform</span>
+    <div class="card-title">Tesk</div>
+    <p class="card-desc">선생님의 모든 업무를 하나의 대시보드에서. 실시간 Firebase 동기화로 어디서든 접근.</p>
+    <ul class="feature-list">
+      <li>학생 관리 & 포인트 지급/차감</li>
+      <li>학급 경제 시스템 (상점·직업·월급)</li>
+      <li>미션 & 배지 발급</li>
+      <li>수업 계획서 & 생활기록부</li>
+      <li>출석·성적·상담 통합 관리</li>
+    </ul>
+  </div>
+  <div class="card pesk-card">
+    <span class="card-icon">🎮</span>
+    <span class="card-tag">Student Platform</span>
+    <div class="card-title">Pesk</div>
+    <p class="card-desc">학생이 매일 성장을 눈으로 확인하는 게임화 플랫폼. 선생님과 실시간으로 연결돼요.</p>
+    <ul class="feature-list">
+      <li>캐릭터·레벨 성장 시스템</li>
+      <li>학급화폐 획득 & 상점 이용</li>
+      <li>오늘의 미션 & 배지 수집</li>
+      <li>직업·월급·저축·투자</li>
+      <li>학급 랭킹 & 친구 관계</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 학생 입장 섹션 -->
+<div id="student-section" class="student-section">
+  <div class="section-label">학생 입장</div>
+  <div class="code-input-wrap">
+
+    <!-- 단계 표시 -->
+    <div class="step-indicator">
+      <div class="step-dot active" id="step1-dot">1</div>
+      <div class="step-line" id="step-line"></div>
+      <div class="step-dot" id="step2-dot">2</div>
+    </div>
+    <div class="step-label">
+      <span>학급 코드</span>
+      <span>로그인</span>
+    </div>
+
+    <!-- Step 1: 입장 방법 탭 -->
+    <div id="step1-panel">
+      <!-- 탭 토글 -->
+      <div style="display:flex;gap:6px;margin-bottom:18px;">
+        <button id="tab-code" onclick="switchEntryTab('code')"
+          style="flex:1;padding:9px;border-radius:10px;border:1.5px solid var(--pesk);
+            background:var(--pesk);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🎮 학급 코드
+        </button>
+        <button id="tab-school" onclick="switchEntryTab('school')"
+          style="flex:1;padding:9px;border-radius:10px;border:1.5px solid var(--border);
+            background:#fff;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🏫 학교로 찾기
+        </button>
+      </div>
+
+      <!-- ① 6자리 코드 입력 -->
+      <div id="entry-code-panel">
+        <div class="code-input-title">🎮 학급 코드 입력</div>
+        <p class="code-input-desc">선생님께 받은 6자리 코드를 입력해요</p>
+        <div class="code-fields" id="code-fields">
+          <input class="code-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" id="d0" oninput="onDigit(this,0)">
+          <input class="code-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" id="d1" oninput="onDigit(this,1)">
+          <input class="code-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" id="d2" oninput="onDigit(this,2)">
+          <input class="code-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" id="d3" oninput="onDigit(this,3)">
+          <input class="code-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" id="d4" oninput="onDigit(this,4)">
+          <input class="code-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" id="d5" oninput="onDigit(this,5)">
+        </div>
+        <button class="btn btn-pesk btn-full" id="code-btn" onclick="enterWithCode()">다음 →</button>
+        <div class="error-msg" id="code-error">코드가 올바르지 않아요. 선생님께 다시 확인해주세요.</div>
+      </div>
+
+      <!-- ② 학교 검색 입장 -->
+      <div id="entry-school-panel" style="display:none;">
+        <div class="code-input-title">🏫 학교로 찾기</div>
+        <p class="code-input-desc">학교 이름을 검색하고 학급 코드를 입력해요</p>
+        <!-- 학교 검색 -->
+        <input id="ls-school-input" type="text" placeholder="학교 이름 검색 (예: 서울초등학교)"
+          oninput="lsSchoolSearch()"
+          style="width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px 13px;
+            font-size:13px;font-family:inherit;outline:none;margin-bottom:6px;
+            transition:border .2s;"
+          onfocus="this.style.borderColor='var(--pesk)'" onblur="this.style.borderColor='#e5e7eb'">
+        <div id="ls-school-results" style="max-height:160px;overflow-y:auto;border-radius:10px;
+          border:1.5px solid #f3f4f6;margin-bottom:10px;"></div>
+        <!-- 선택된 학교 -->
+        <div id="ls-school-selected" style="display:none;background:#f0f7ff;border:1.5px solid #93c5fd;
+          border-radius:10px;padding:10px 13px;margin-bottom:10px;font-size:12px;">
+          <span id="ls-school-selected-name" style="font-weight:700;color:#1d4ed8;"></span>
+        </div>
+        <!-- 학급 코드 직접 입력 -->
+        <input id="ls-class-input" type="text" placeholder="학급 코드 입력 (선생님께 받은 코드)"
+          style="width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px 13px;
+            font-size:13px;font-family:inherit;outline:none;margin-bottom:10px;
+            transition:border .2s;"
+          onfocus="this.style.borderColor='var(--pesk)'" onblur="this.style.borderColor='#e5e7eb'"
+          onkeydown="if(event.key==='Enter')lsEnterWithSchool()">
+        <button class="btn btn-pesk btn-full" onclick="lsEnterWithSchool()">다음 →</button>
+        <div class="error-msg" id="ls-school-error">학교와 학급 코드를 확인해주세요.</div>
+      </div>
+    </div>
+
+    <!-- Step 2: 아이디 / 비밀번호 -->
+    <div id="step2-panel" style="display:none;">
+      <div class="code-input-title">🔑 로그인</div>
+      <p class="code-input-desc" id="step2-class-name">우리 반</p>
+      <div class="field">
+        <label>아이디</label>
+        <input type="text" id="login-id" placeholder="선생님께 받은 아이디" autocomplete="off"
+          onkeydown="if(event.key==='Enter')document.getElementById('login-pw').focus()">
+      </div>
+      <div class="field">
+        <label>비밀번호</label>
+        <input type="password" id="login-pw" placeholder="비밀번호 입력"
+          onkeydown="if(event.key==='Enter')loginWithCredentials()">
+      </div>
+      <button class="btn btn-pesk btn-full" id="login-btn" onclick="loginWithCredentials()">로그인 →</button>
+      <div class="error-msg" id="login-error">아이디 또는 비밀번호가 올바르지 않아요.</div>
+      <button class="login-back" onclick="backToStep1()">← 다른 학급 코드 입력</button>
+    </div>
+
+    <!-- Step 3: 비밀번호 변경 (첫 로그인 시) -->
+    <div id="step3-panel" style="display:none;">
+      <div class="code-input-title">🔐 비밀번호 변경</div>
+      <p class="code-input-desc">첫 로그인이에요! 안전을 위해 비밀번호를 변경해주세요.</p>
+      <div class="field">
+        <label>새 비밀번호</label>
+        <input type="password" id="new-pw" placeholder="새 비밀번호 입력 (4자 이상)"
+          onkeydown="if(event.key==='Enter')document.getElementById('new-pw-confirm').focus()">
+      </div>
+      <div class="field">
+        <label>새 비밀번호 확인</label>
+        <input type="password" id="new-pw-confirm" placeholder="새 비밀번호 다시 입력"
+          onkeydown="if(event.key==='Enter')changePassword()">
+      </div>
+      <button class="btn btn-pesk btn-full" id="changepw-btn" onclick="changePassword()">비밀번호 변경 후 입장 →</button>
+      <div class="error-msg" id="changepw-error"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 하단 광고 슬롯 -->
+<div class="ad-slot" id="ad-slot-bottom"></div>
+
+<!-- 푸터 -->
+<footer class="footer">
+  <strong>Tesk & Pesk</strong> — 우리 반 성장 플랫폼 &nbsp;·&nbsp; Made with ☕ by 최승륜 선생님
+  &nbsp;·&nbsp; <a href="master.html" style="color:var(--hint);text-decoration:none;font-size:11px;">관리자</a>
+</footer>
+
+<!-- 교사 로그인 모달 -->
+<div class="modal-overlay" id="teacher-modal" onclick="closeTeacherModal(event)">
+  <div class="modal">
+    <div class="modal-title">🍃 교사 로그인</div>
+    <p class="modal-desc">Google 계정으로 간편하게 로그인하세요.<br>첫 로그인 시 학급이 자동으로 생성됩니다.</p>
+    <button class="btn btn-google" id="google-login-btn" onclick="loginWithGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      Google로 로그인
+    </button>
+    <div class="error-msg" id="teacher-error">로그인에 실패했어요. 다시 시도해주세요.</div>
+    <div class="google-divider">또는</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-full" onclick="closeTeacherModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 교사 로그인 모달 ──
+function openTeacherModal(){
+  document.getElementById('teacher-modal').classList.add('open');
+}
+function closeTeacherModal(e){
+  if(!e||e.target===document.getElementById('teacher-modal'))
+    document.getElementById('teacher-modal').classList.remove('open');
+}
+
+async function loginWithGoogle(){
+  const err = document.getElementById('teacher-error');
+  const btn = document.getElementById('google-login-btn');
+  err.classList.remove('show');
+  btn.textContent = '로그인 중...';
+  btn.disabled = true;
+  try{
+    if(!window._fbReady) throw new Error('Firebase 준비 중');
+    const result = await window._signInWithPopup(window._auth, window._googleProvider);
+    const user = result.user;
+    // 사용자 정보 저장
+    localStorage.setItem('tesk-teacher-uid', user.uid);
+    localStorage.setItem('tesk-teacher-name', user.displayName || user.email);
+    localStorage.setItem('tesk-teacher-email', user.email || '');
+    localStorage.setItem('tesk-teacher-photo', user.photoURL || '');
+    window.location.href = 'tesk_teacher_v2.html';
+  } catch(e){
+    if(e.code !== 'auth/popup-closed-by-user'){
+      err.classList.add('show');
+    }
+    btn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"> Google로 로그인';
+    btn.disabled = false;
+  }
+}
+
+// ── 학생 코드 입력 ──
+let _foundRoomId = null;
+
+function onDigit(el, idx){
+  const v=el.value.replace(/[^0-9]/g,'');
+  el.value=v;
+  el.classList.toggle('filled', v.length>0);
+  if(v && idx<5) document.getElementById('d'+(idx+1)).focus();
+}
+
+document.querySelectorAll('.code-digit').forEach((el,i)=>{
+  el.addEventListener('keydown',e=>{
+    if(e.key==='Backspace'&&!el.value&&i>0){
+      document.getElementById('d'+(i-1)).focus();
+    }
+    if(e.key==='Enter') enterWithCode();
+  });
+});
+
+function getCode(){
+  return [0,1,2,3,4,5].map(i=>document.getElementById('d'+i).value).join('');
+}
+
+// Step 1: 학급 코드 확인 → Step 2로 이동
+async function enterWithCode(){
+  const code=getCode();
+  const err=document.getElementById('code-error');
+  const btn=document.getElementById('code-btn');
+  if(code.length<6){
+    err.textContent='6자리 코드를 모두 입력해주세요.';
+    err.classList.add('show'); return;
+  }
+  err.classList.remove('show');
+  btn.textContent='확인 중...'; btn.disabled=true;
+
+  try{
+    if(!window._fbReady){throw new Error('Firebase 연결 중');}
+
+    // classCodes/{code} 직접 조회 (권한 문제 없고 빠름)
+    const codeSnap=await window._fsGetDoc(window._fsDoc(window._db,'classCodes',code));
+    let foundRoom=null;
+    if(codeSnap.exists()){
+      const roomId=codeSnap.data().roomId;
+      const meta=await window._fsGetDoc(window._fsDoc(window._db,'classrooms',roomId,'info','meta'));
+      if(meta.exists()) foundRoom={id:roomId,...meta.data()};
+    }
+    if(foundRoom){
+      _foundRoomId=foundRoom.id;
+      localStorage.setItem('pesk-class-code',code);
+      localStorage.setItem('pesk-room-id',foundRoom.id);
+      localStorage.setItem('pesk-class-name',foundRoom.className||'우리 반');
+      // Step 2로 전환
+      document.getElementById('step1-panel').style.display='none';
+      document.getElementById('step2-panel').style.display='block';
+      document.getElementById('step1-dot').classList.remove('active');
+      document.getElementById('step1-dot').classList.add('done');
+      document.getElementById('step1-dot').textContent='✓';
+      document.getElementById('step2-dot').classList.add('active');
+      document.getElementById('step-line').classList.add('done');
+      document.getElementById('step2-class-name').textContent=
+        (foundRoom.className||'우리 반')+' · 학생 로그인';
+      setTimeout(()=>document.getElementById('login-id').focus(),200);
+    } else {
+      err.textContent='코드가 올바르지 않아요. 선생님께 다시 확인해주세요.';
+      err.classList.add('show');
+      btn.textContent='다음 →'; btn.disabled=false;
+    }
+  }catch(e){
+    err.textContent='연결에 실패했어요. 잠시 후 다시 시도해주세요.';
+    err.classList.add('show');
+    btn.textContent='다음 →'; btn.disabled=false;
+  }
+}
+
+// Step 2: 아이디/비밀번호 로그인
+let _loginMatchedNum = null;
+let _loginRoomId = null;
+let _loginAccounts = null;
+
+async function loginWithCredentials(){
+  const id=document.getElementById('login-id').value.trim();
+  const pw=document.getElementById('login-pw').value;
+  const err=document.getElementById('login-error');
+  const btn=document.getElementById('login-btn');
+  if(!id||!pw){
+    err.textContent='아이디와 비밀번호를 모두 입력해주세요.';
+    err.classList.add('show'); return;
+  }
+  err.classList.remove('show');
+  btn.textContent='확인 중...'; btn.disabled=true;
+
+  try{
+    const roomId=_foundRoomId||localStorage.getItem('pesk-room-id');
+    if(!roomId) throw new Error('학급 정보 없음');
+
+    // tesk-accounts에서 아이디/비밀번호 매칭
+    const accSnap=await window._fsGetDoc(
+      window._fsDoc(window._db,'classrooms',roomId,'data','tesk-accounts')
+    );
+    if(!accSnap.exists()) throw new Error('계정 없음');
+    const accounts=accSnap.data().value||{};
+
+    let matchedNum=null;
+    for(const [num, acc] of Object.entries(accounts)){
+      if(acc.id===id && acc.pw===pw){ matchedNum=parseInt(num); break; }
+    }
+
+    if(matchedNum!==null){
+      // 학생 이름 가져오기
+      const stuSnap=await window._fsGetDoc(
+        window._fsDoc(window._db,'classrooms',roomId,'data','tesk-students')
+      );
+      const students=stuSnap.exists()?stuSnap.data().value:[];
+      const stu=students.find(s=>s.num===matchedNum);
+
+      // 비밀번호 변경 필요 여부 확인
+      const acc = accounts[matchedNum];
+      if(acc && acc.pwChanged===false){
+        // Step 3: 비밀번호 변경 화면으로
+        _loginMatchedNum = matchedNum;
+        _loginRoomId = roomId;
+        _loginAccounts = accounts;
+        localStorage.setItem('pesk-student-num', matchedNum);
+        localStorage.setItem('pesk-student-name', stu?.name||id);
+        document.getElementById('step2-panel').style.display='none';
+        document.getElementById('step3-panel').style.display='block';
+        setTimeout(()=>document.getElementById('new-pw').focus(),200);
+      } else {
+        localStorage.setItem('pesk-student-num', matchedNum);
+        localStorage.setItem('pesk-student-name', stu?.name||id);
+        window.location.href='pesk.html';
+      }
+    } else {
+      err.textContent='아이디 또는 비밀번호가 올바르지 않아요.';
+      err.classList.add('show');
+      btn.textContent='로그인 →'; btn.disabled=false;
+    }
+  }catch(e){
+    err.textContent='연결에 실패했어요. 잠시 후 다시 시도해주세요.';
+    err.classList.add('show');
+    btn.textContent='로그인 →'; btn.disabled=false;
+  }
+}
+
+// Step 3: 비밀번호 변경
+async function changePassword(){
+  const newPw = document.getElementById('new-pw').value;
+  const confirmPw = document.getElementById('new-pw-confirm').value;
+  const err = document.getElementById('changepw-error');
+  const btn = document.getElementById('changepw-btn');
+  err.classList.remove('show');
+
+  if(!newPw || newPw.length < 4){
+    err.textContent = '비밀번호는 4자 이상 입력해주세요.';
+    err.classList.add('show'); return;
+  }
+  if(newPw === '123456'){
+    err.textContent = '초기 비밀번호와 다른 비밀번호를 입력해주세요.';
+    err.classList.add('show'); return;
+  }
+  if(newPw !== confirmPw){
+    err.textContent = '비밀번호가 일치하지 않아요.';
+    err.classList.add('show'); return;
+  }
+
+  btn.textContent = '변경 중...'; btn.disabled = true;
+  try{
+    if(!window._fbReady || !window._db){
+      throw new Error('Firebase 연결 대기 중');
+    }
+    const roomId = _loginRoomId || localStorage.getItem('pesk-room-id');
+    if(!roomId) throw new Error('학급 정보 없음');
+    const num = _loginMatchedNum || parseInt(localStorage.getItem('pesk-student-num'));
+    if(!num && num!==0) throw new Error('학생 정보 없음');
+
+    // 최신 accounts 다시 가져오기
+    const accSnap = await window._fsGetDoc(
+      window._fsDoc(window._db,'classrooms',roomId,'data','tesk-accounts')
+    );
+    const accounts = accSnap.exists() ? accSnap.data().value : (_loginAccounts||{});
+    const numStr = String(num);
+    // 숫자/문자 키 모두 대응
+    const key = accounts[numStr] ? numStr : (accounts[num] ? num : null);
+    if(!key){
+      throw new Error('계정 정보를 찾을 수 없어요 (번호:'+num+')');
+    }
+    accounts[key].pw = newPw;
+    accounts[key].pwChanged = true;
+    // Firebase에 저장 (tesk에서도 보이게)
+    await window._fsSetDoc(
+      window._fsDoc(window._db,'classrooms',roomId,'data','tesk-accounts'),
+      {value: accounts}
+    );
+    // localStorage에도 변경 표시 (pesk.html 리다이렉트 방지)
+    localStorage.setItem('pesk-pw-changed','true');
+    window.location.href = 'pesk.html';
+  } catch(e){
+    console.error('비밀번호 변경 실패:', e);
+    err.textContent = e.message || '비밀번호 변경에 실패했어요. 다시 시도해주세요.';
+    err.classList.add('show');
+    btn.textContent = '비밀번호 변경 후 입장 →'; btn.disabled = false;
+  }
+}
+
+// Step 1로 돌아가기
+function backToStep1(){
+  _foundRoomId=null;
+  localStorage.removeItem('pesk-room-id');
+  localStorage.removeItem('pesk-class-name');
+  localStorage.removeItem('pesk-class-code');
+  localStorage.removeItem('pesk-pw-changed');
+  document.getElementById('step2-panel').style.display='none';
+  document.getElementById('step3-panel').style.display='none';
+  document.getElementById('step1-panel').style.display='block';
+  document.getElementById('step1-dot').classList.add('active');
+  document.getElementById('step1-dot').classList.remove('done');
+  document.getElementById('step1-dot').textContent='1';
+  document.getElementById('step2-dot').classList.remove('active');
+  document.getElementById('step-line').classList.remove('done');
+  document.getElementById('code-btn').textContent='다음 →';
+  document.getElementById('code-btn').disabled=false;
+  document.getElementById('login-id').value='';
+  document.getElementById('login-pw').value='';
+  [0,1,2,3,4,5].forEach(i=>{
+    const el=document.getElementById('d'+i);
+    el.value=''; el.classList.remove('filled');
+  });
+  document.getElementById('d0').focus();
+}
+
+/* ══════════════════════════════════════════
+   학교로 찾기 — NEIS 검색 연동
+══════════════════════════════════════════ */
+const _LS_NEIS_KEY = '8d661b8fa8374771b5028eaf59d2b388';
+let _lsSchoolTimer = null;
+let _lsNeisRows = [];
+let _lsSelectedSchool = null;
+
+function switchEntryTab(tab){
+  const isCode = tab === 'code';
+  document.getElementById('entry-code-panel').style.display  = isCode ? '' : 'none';
+  document.getElementById('entry-school-panel').style.display = isCode ? 'none' : '';
+  const tbCode   = document.getElementById('tab-code');
+  const tbSchool = document.getElementById('tab-school');
+  tbCode.style.background   = isCode ? 'var(--pesk)' : '#fff';
+  tbCode.style.color        = isCode ? '#fff' : 'var(--text)';
+  tbCode.style.borderColor  = isCode ? 'var(--pesk)' : 'var(--border)';
+  tbSchool.style.background = isCode ? '#fff' : 'var(--pesk)';
+  tbSchool.style.color      = isCode ? 'var(--text)' : '#fff';
+  tbSchool.style.borderColor= isCode ? 'var(--border)' : 'var(--pesk)';
+}
+
+function lsSchoolSearch(){
+  const q = document.getElementById('ls-school-input').value.trim();
+  const box = document.getElementById('ls-school-results');
+  if(q.length < 1){ box.innerHTML = ''; return; }
+  box.innerHTML = '<div style="padding:10px;text-align:center;color:#888;font-size:12px;">검색 중...</div>';
+  clearTimeout(_lsSchoolTimer);
+  _lsSchoolTimer = setTimeout(async () => {
+    try {
+      const url = 'https://open.neis.go.kr/hub/schoolInfo?KEY=' + _LS_NEIS_KEY
+        + '&Type=json&pSize=8&SCHUL_NM=' + encodeURIComponent(q);
+      const res = await fetch(url);
+      const data = await res.json();
+      _lsNeisRows = (data.schoolInfo && data.schoolInfo[1] && data.schoolInfo[1].row) || [];
+      if(_lsNeisRows.length === 0){
+        box.innerHTML = '<div style="padding:10px;text-align:center;color:#888;font-size:12px;">검색 결과 없음</div>';
+        return;
+      }
+      box.innerHTML = _lsNeisRows.map((r,i) =>
+        '<div onclick="lsSelectSchool(' + i + ')" style="padding:9px 13px;cursor:pointer;'
+        + 'border-bottom:1px solid #f3f4f6;font-size:12px;transition:background .1s;"'
+        + ' onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'\'">'
+        + '<span style="font-weight:700;color:#111;">' + r.SCHUL_NM + '</span>'
+        + ' <span style="color:#888;font-size:10px;">' + r.SCHUL_KND_SC_NM + ' · ' + (r.LCTN_SC_NM||'') + '</span>'
+        + '</div>'
+      ).join('');
+    } catch(e) {
+      box.innerHTML = '<div style="padding:10px;color:#e44;font-size:11px;">검색 실패: ' + e.message + '</div>';
+    }
+  }, 400);
+}
+
+function lsSelectSchool(idx){
+  _lsSelectedSchool = _lsNeisRows[idx];
+  document.getElementById('ls-school-results').innerHTML = '';
+  document.getElementById('ls-school-input').value = _lsSelectedSchool.SCHUL_NM;
+  const sel = document.getElementById('ls-school-selected');
+  document.getElementById('ls-school-selected-name').textContent =
+    _lsSelectedSchool.SCHUL_NM + ' · ' + (_lsSelectedSchool.ORG_RDNMA || _lsSelectedSchool.LCTN_SC_NM || '');
+  sel.style.display = 'block';
+  document.getElementById('ls-class-input').focus();
+}
+
+// ── 자동 Step2 전환 (이미 학급 코드 저장된 경우) ──
+(function autoSkipToStep2(){
+  const savedRoom = localStorage.getItem('pesk-room-id');
+  const savedClassName = localStorage.getItem('pesk-class-name');
+  if(savedRoom){
+    _foundRoomId = savedRoom;
+    document.getElementById('step1-panel').style.display='none';
+    document.getElementById('step2-panel').style.display='block';
+    document.getElementById('step1-dot').classList.remove('active');
+    document.getElementById('step1-dot').classList.add('done');
+    document.getElementById('step1-dot').textContent='✓';
+    document.getElementById('step2-dot').classList.add('active');
+    document.getElementById('step-line').classList.add('done');
+    document.getElementById('step2-class-name').textContent=
+      (savedClassName||'우리 반')+' · 학생 로그인';
+    setTimeout(()=>document.getElementById('login-id').focus(),200);
+  }
+})();
+
+async function lsEnterWithSchool(){
+  const err = document.getElementById('ls-school-error');
+  err.classList.remove('show');
+  if(!_lsSelectedSchool){ err.textContent = '학교를 먼저 검색해서 선택해주세요.'; err.classList.add('show'); return; }
+  const classInput = document.getElementById('ls-class-input').value.trim();
+  if(!classInput){ err.textContent = '학급 코드를 입력해주세요.'; err.classList.add('show'); return; }
+
+  // roomId = schoolCode + '_' + classCode
+  const schoolCode = _lsSelectedSchool.ATPT_OFCDC_SC_CODE + _lsSelectedSchool.SD_SCHUL_CODE;
+  const roomId = schoolCode + '_' + classInput;
+
+  // Firebase에서 해당 룸 meta 확인
+  try {
+    if(!window._fbReady) throw new Error('Firebase 연결 중');
+    const meta = await window._fsGetDoc(window._fsDoc(window._db,'classrooms',roomId,'info','meta'));
+    if(!meta.exists()){ err.textContent = '해당 학급을 찾을 수 없어요. 코드를 확인해주세요.'; err.classList.add('show'); return; }
+    const foundRoom = { id: roomId, ...meta.data() };
+    _foundRoomId = roomId;
+    localStorage.setItem('pesk-room-id', roomId);
+    localStorage.setItem('pesk-class-name', foundRoom.className || '우리 반');
+    // Step 2로 전환
+    document.getElementById('step1-panel').style.display = 'none';
+    document.getElementById('step2-panel').style.display = 'block';
+    document.getElementById('step2-class-name').textContent =
+      (_lsSelectedSchool.SCHUL_NM || '') + ' · ' + (foundRoom.className || '우리 반');
+    document.getElementById('step1-dot').classList.remove('active');
+    document.getElementById('step1-dot').classList.add('done');
+    document.getElementById('step1-dot').textContent = '✓';
+    document.getElementById('step2-dot').classList.add('active');
+    document.getElementById('step-line').classList.add('done');
+    document.getElementById('login-id').focus();
+  } catch(e) {
+    err.textContent = '오류: ' + e.message; err.classList.add('show');
+  }
+}
+</script>
+</body>
+</html>

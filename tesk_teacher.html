@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tesk — 교사 대시보드</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f2f0eb; --card:#ffffff; --border:rgba(26,71,42,0.10);
+  --text:#111008; --sub:#6b6760; --hint:#b5b2ab; --surface:#eae7e1;
+  --tesk:#1a472a; --tesk-m:#2d7a47; --tesk-l:#e8f5ec; --tesk-xl:#f0faf3;
+  --gold:#c9921a; --gold-l:#fdf3e0;
+  --coral:#d94f2a; --coral-l:#fdf0ec;
+  --blue:#1a5fa8; --blue-l:#e8f0fb;
+  --purple:#5b3fa8; --purple-l:#f0ecfb;
+  --shadow:0 1px 4px rgba(26,71,42,0.06),0 4px 16px rgba(26,71,42,0.06);
+  --shadow-lg:0 8px 40px rgba(26,71,42,0.12);
+  --radius:16px; --radius-sm:10px;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);
+  min-height:100vh;display:flex;overflow:hidden;}
+
+/* ── 사이드바 ── */
+.sidebar{
+  width:220px;flex-shrink:0;background:var(--tesk);
+  display:flex;flex-direction:column;
+  padding:0;position:fixed;left:0;top:0;bottom:0;z-index:100;
+}
+.sidebar-logo{
+  padding:22px 20px 18px;
+  font-family:'Syne',sans-serif;font-weight:900;font-size:22px;
+  color:#fff;letter-spacing:-0.5px;border-bottom:0.5px solid rgba(255,255,255,0.10);
+}
+.sidebar-logo span{color:var(--gold);}
+.sidebar-class{
+  padding:12px 20px;font-size:11px;color:rgba(255,255,255,0.50);
+  border-bottom:0.5px solid rgba(255,255,255,0.08);
+}
+.sidebar-class strong{display:block;color:rgba(255,255,255,0.85);font-size:13px;font-weight:600;margin-bottom:2px;}
+.sidebar-nav{flex:1;padding:14px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;}
+.nav-section-label{
+  font-size:9px;font-weight:700;color:rgba(255,255,255,0.35);
+  letter-spacing:.12em;text-transform:uppercase;
+  padding:10px 10px 4px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:9px;cursor:pointer;
+  font-size:12px;font-weight:500;color:rgba(255,255,255,0.65);
+  transition:all .15s;text-decoration:none;
+}
+.nav-item:hover{background:rgba(255,255,255,0.08);color:#fff;}
+.nav-item.active{background:rgba(255,255,255,0.15);color:#fff;font-weight:700;}
+.nav-item .ni{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
+.nav-item .badge{
+  margin-left:auto;background:var(--gold);color:#fff;
+  font-size:9px;font-weight:800;border-radius:99px;padding:2px 6px;
+}
+.sidebar-bottom{
+  padding:14px 10px;border-top:0.5px solid rgba(255,255,255,0.08);
+}
+
+/* ── 메인 ── */
+.main{margin-left:220px;flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:100vh;}
+.topbar{
+  background:rgba(242,240,235,0.92);backdrop-filter:blur(16px);
+  border-bottom:0.5px solid var(--border);
+  padding:0 28px;height:54px;
+  display:flex;align-items:center;gap:14px;
+  position:sticky;top:0;z-index:50;flex-shrink:0;
+}
+.topbar-title{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;flex:1;}
+.topbar-date{font-size:12px;color:var(--sub);}
+.topbar-avatar{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,var(--tesk),var(--tesk-m));
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;color:#fff;font-weight:700;cursor:pointer;
+}
+
+.content{flex:1;overflow-y:auto;padding:24px 28px 40px;}
+
+/* ── 페이지 ── */
+.page{display:none;}
+.page.active{display:block;}
+
+/* ── 섹션 헤더 ── */
+.page-header{margin-bottom:22px;}
+.page-title{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;margin-bottom:4px;}
+.page-desc{font-size:13px;color:var(--sub);}
+
+/* ── 카드 ── */
+.card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);}
+.card-title{font-size:11px;font-weight:700;color:var(--tesk);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px;}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.card-header .card-title{margin-bottom:0;}
+
+/* ── 홈 대시보드 ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.stat-card{
+  background:var(--card);border:0.5px solid var(--border);
+  border-radius:var(--radius);padding:18px 20px;
+  box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.stat-card::before{
+  content:'';position:absolute;top:-20px;right:-20px;
+  width:80px;height:80px;border-radius:50%;opacity:0.12;
+}
+.stat-card.green::before{background:var(--tesk-m);}
+.stat-card.gold::before{background:var(--gold);}
+.stat-card.coral::before{background:var(--coral);}
+.stat-card.blue::before{background:var(--blue);}
+.stat-icon{font-size:20px;margin-bottom:10px;}
+.stat-label{font-size:11px;color:var(--sub);margin-bottom:4px;}
+.stat-value{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;}
+.stat-change{font-size:11px;margin-top:4px;}
+.stat-change.up{color:var(--tesk-m);}
+.stat-change.down{color:var(--coral);}
+
+.home-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.home-grid-3{display:grid;grid-template-columns:2fr 1fr;gap:16px;}
+
+/* ── 학생 목록 ── */
+.student-table{width:100%;border-collapse:collapse;font-size:13px;}
+.student-table th{font-size:10px;font-weight:700;color:var(--sub);
+  padding:8px 12px;text-align:left;border-bottom:0.5px solid var(--border);
+  letter-spacing:.06em;text-transform:uppercase;}
+.student-table td{padding:10px 12px;border-bottom:0.5px solid var(--border);vertical-align:middle;}
+.student-table tr:last-child td{border-bottom:none;}
+.student-table tr:hover td{background:var(--tesk-xl);}
+.student-name{font-weight:600;}
+.student-level{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:11px;background:var(--tesk-l);color:var(--tesk);
+  border-radius:99px;padding:2px 8px;font-weight:700;
+}
+.point-badge{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:13px;
+  color:var(--gold);
+}
+.att-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.att-dot.present{background:var(--tesk-m);}
+.att-dot.absent{background:var(--coral);}
+.att-dot.late{background:var(--gold);}
+
+/* 포인트 지급 버튼 */
+.point-btns{display:flex;gap:4px;}
+.pt-btn{
+  border:0.5px solid var(--border);background:none;border-radius:6px;
+  padding:4px 8px;font-size:11px;cursor:pointer;font-family:inherit;
+  transition:all .1s;
+}
+.pt-btn.plus{color:var(--tesk-m);border-color:var(--tesk-m);}
+.pt-btn.plus:hover{background:var(--tesk-l);}
+.pt-btn.minus{color:var(--coral);border-color:var(--coral);}
+.pt-btn.minus:hover{background:var(--coral-l);}
+
+/* ── 포인트/경제 ── */
+.economy-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px;}
+.econ-card{
+  background:var(--card);border:0.5px solid var(--border);
+  border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);
+}
+.econ-icon{font-size:24px;margin-bottom:10px;}
+.econ-label{font-size:11px;color:var(--sub);margin-bottom:4px;}
+.econ-value{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;}
+
+/* 상점 아이템 */
+.shop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.shop-item{
+  background:var(--card);border:0.5px solid var(--border);
+  border-radius:var(--radius-sm);padding:14px;
+  display:flex;flex-direction:column;gap:8px;
+}
+.shop-item-icon{font-size:28px;text-align:center;}
+.shop-item-name{font-size:12px;font-weight:700;text-align:center;}
+.shop-item-price{
+  text-align:center;font-family:'Syne',sans-serif;font-weight:800;
+  font-size:14px;color:var(--gold);
+}
+.shop-item-stock{font-size:10px;color:var(--sub);text-align:center;}
+.shop-edit-btn{
+  width:100%;border:0.5px solid var(--border);background:none;
+  border-radius:6px;padding:5px;font-size:11px;cursor:pointer;
+  font-family:inherit;color:var(--sub);
+}
+.shop-edit-btn:hover{background:var(--surface);}
+
+/* ── 미션/배지 ── */
+.mission-list{display:flex;flex-direction:column;gap:10px;}
+.mission-item{
+  background:var(--card);border:0.5px solid var(--border);
+  border-radius:var(--radius-sm);padding:14px 16px;
+  display:flex;align-items:center;gap:14px;
+}
+.mission-icon{
+  width:40px;height:40px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.mission-body{flex:1;}
+.mission-title{font-size:13px;font-weight:700;margin-bottom:2px;}
+.mission-desc{font-size:11px;color:var(--sub);}
+.mission-reward{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:13px;
+  color:var(--gold);white-space:nowrap;
+}
+.mission-status{
+  font-size:10px;padding:3px 8px;border-radius:99px;
+  font-weight:700;white-space:nowrap;
+}
+.mission-status.active{background:var(--tesk-l);color:var(--tesk);}
+.mission-status.done{background:var(--surface);color:var(--hint);}
+
+/* 배지 그리드 */
+.badge-admin-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.badge-admin-item{
+  background:var(--card);border:0.5px solid var(--border);
+  border-radius:var(--radius-sm);padding:14px;text-align:center;
+}
+.badge-admin-icon{font-size:28px;margin-bottom:6px;}
+.badge-admin-name{font-size:12px;font-weight:700;margin-bottom:2px;}
+.badge-admin-count{font-size:11px;color:var(--sub);}
+.badge-award-btn{
+  margin-top:8px;width:100%;border:0.5px solid var(--tesk-m);
+  background:none;border-radius:6px;padding:5px;
+  font-size:11px;cursor:pointer;color:var(--tesk-m);font-family:inherit;
+}
+.badge-award-btn:hover{background:var(--tesk-l);}
+
+/* ── 수업계획서 ── */
+.lesson-list{display:flex;flex-direction:column;gap:10px;}
+.lesson-item{
+  background:var(--card);border:0.5px solid var(--border);
+  border-radius:var(--radius-sm);padding:14px 16px;
+  display:flex;align-items:center;gap:14px;cursor:pointer;
+  transition:box-shadow .15s;
+}
+.lesson-item:hover{box-shadow:var(--shadow);}
+.lesson-week{
+  width:42px;height:42px;border-radius:10px;
+  background:var(--tesk-l);color:var(--tesk);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.lesson-week-num{font-family:'Syne',sans-serif;font-weight:900;font-size:16px;line-height:1;}
+.lesson-week-label{font-size:8px;color:var(--tesk-m);font-weight:600;}
+.lesson-body{flex:1;}
+.lesson-title{font-size:13px;font-weight:700;margin-bottom:3px;}
+.lesson-meta{font-size:11px;color:var(--sub);}
+.lesson-tag{
+  font-size:10px;padding:3px 8px;border-radius:99px;font-weight:600;
+}
+.lesson-tag.complete{background:var(--tesk-l);color:var(--tesk);}
+.lesson-tag.draft{background:var(--gold-l);color:var(--gold);}
+.lesson-tag.upcoming{background:var(--surface);color:var(--sub);}
+
+/* ── 생활기록부 ── */
+.record-student-select{
+  display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;
+}
+.record-stu-btn{
+  padding:7px 14px;border-radius:99px;border:0.5px solid var(--border);
+  background:var(--card);font-size:12px;cursor:pointer;font-family:inherit;
+  color:var(--sub);transition:all .15s;font-weight:500;
+}
+.record-stu-btn:hover{border-color:var(--tesk-m);color:var(--tesk);}
+.record-stu-btn.active{background:var(--tesk);color:#fff;border-color:var(--tesk);font-weight:700;}
+.record-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.record-field{display:flex;flex-direction:column;gap:6px;}
+.record-field.full{grid-column:span 2;}
+.record-label{font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.05em;}
+.record-textarea{
+  border:0.5px solid var(--border);border-radius:10px;
+  padding:10px 12px;font-size:12px;font-family:inherit;
+  background:var(--surface);color:var(--text);outline:none;
+  resize:vertical;min-height:90px;line-height:1.6;
+}
+.record-textarea:focus{border-color:var(--tesk-m);}
+.record-ai-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:8px;
+  border:0.5px solid var(--tesk-m);background:var(--tesk-l);
+  color:var(--tesk);font-size:12px;cursor:pointer;font-family:inherit;
+  font-weight:700;transition:all .15s;
+}
+.record-ai-btn:hover{background:var(--tesk);color:#fff;}
+
+/* ── 통계 ── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.chart-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);}
+.chart-title{font-size:13px;font-weight:700;margin-bottom:16px;}
+
+/* 막대 차트 */
+.bar-chart{display:flex;flex-direction:column;gap:8px;}
+.bar-row{display:flex;align-items:center;gap:10px;}
+.bar-label{font-size:11px;color:var(--sub);width:60px;flex-shrink:0;text-align:right;}
+.bar-track{flex:1;height:8px;background:var(--surface);border-radius:99px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.4,0,.2,1);}
+.bar-val{font-size:11px;font-weight:700;width:34px;text-align:right;flex-shrink:0;}
+
+/* 도넛 차트 (SVG) */
+.donut-wrap{display:flex;align-items:center;gap:20px;}
+.donut-legend{display:flex;flex-direction:column;gap:8px;}
+.donut-legend-item{display:flex;align-items:center;gap:8px;font-size:12px;}
+.donut-legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+
+/* 출석 히트맵 */
+.heatmap{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:8px;}
+.hm-cell{
+  aspect-ratio:1;border-radius:3px;font-size:9px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;color:rgba(255,255,255,0.9);
+}
+.hm-cell.full{background:var(--tesk-m);}
+.hm-cell.partial{background:#7fbf95;}
+.hm-cell.absent{background:var(--coral);}
+.hm-cell.empty{background:var(--surface);}
+
+/* ── 공통 버튼 ── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 16px;border-radius:8px;border:none;
+  font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:all .15s;
+}
+.btn-primary{background:var(--tesk);color:#fff;}
+.btn-primary:hover{background:var(--tesk-m);}
+.btn-secondary{background:var(--card);color:var(--text);border:0.5px solid var(--border);}
+.btn-secondary:hover{background:var(--surface);}
+.btn-gold{background:var(--gold);color:#fff;}
+.btn-gold:hover{opacity:.9;}
+.btn-sm{padding:6px 12px;font-size:11px;}
+
+/* ── 모달 ── */
+.modal-bg{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(17,16,8,0.5);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+.modal-bg.open{opacity:1;pointer-events:all;}
+.modal{
+  background:var(--card);border-radius:20px;
+  width:100%;max-width:440px;margin:20px;
+  box-shadow:var(--shadow-lg);
+  transform:translateY(16px) scale(.97);
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+  overflow:hidden;
+}
+.modal-bg.open .modal{transform:translateY(0) scale(1);}
+.modal-header{
+  padding:20px 22px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:0.5px solid var(--border);
+}
+.modal-title{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;}
+.modal-close{
+  width:30px;height:30px;border-radius:50%;background:var(--surface);
+  border:none;cursor:pointer;font-size:14px;color:var(--sub);
+  display:flex;align-items:center;justify-content:center;
+}
+.modal-body{padding:20px 22px;}
+.form-group{margin-bottom:14px;}
+.form-label{display:block;font-size:11px;font-weight:700;color:var(--sub);
+  margin-bottom:5px;letter-spacing:.05em;text-transform:uppercase;}
+.form-input{
+  width:100%;padding:10px 12px;border:0.5px solid var(--border);
+  border-radius:8px;font-size:13px;font-family:inherit;
+  background:var(--surface);color:var(--text);outline:none;
+}
+.form-input:focus{border-color:var(--tesk-m);}
+.form-select{appearance:none;}
+.modal-footer{
+  padding:14px 22px 20px;display:flex;gap:8px;justify-content:flex-end;
+  border-top:0.5px solid var(--border);
+}
+
+/* ── 토스트 ── */
+.toast{
+  position:fixed;bottom:24px;right:24px;z-index:600;
+  background:var(--tesk);color:#fff;
+  border-radius:12px;padding:12px 18px;
+  display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;
+  box-shadow:var(--shadow-lg);
+  transform:translateY(20px);opacity:0;
+  transition:all .3s cubic-bezier(.34,1.56,.64,1);
+  pointer-events:none;
+}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* ── 반응형 ── */
+@media(max-width:900px){
+  .stat-grid{grid-template-columns:repeat(2,1fr);}
+  .economy-grid{grid-template-columns:1fr 1fr;}
+  .home-grid,.home-grid-3{grid-template-columns:1fr;}
+  .stats-grid{grid-template-columns:1fr;}
+  .record-grid{grid-template-columns:1fr;}
+  .record-field.full{grid-column:span 1;}
+  .badge-admin-grid{grid-template-columns:repeat(3,1fr);}
+  .shop-grid{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:640px){
+  .sidebar{width:60px;}
+  .sidebar-logo .logo-text,.sidebar-class,.nav-item span:not(.ni),.nav-section-label{display:none;}
+  .main{margin-left:60px;}
+  .stat-grid{grid-template-columns:1fr 1fr;}
+}
+
+/* 애니메이션 */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.page.active .stat-card,.page.active .card,.page.active .chart-card{animation:fadeUp .4s ease both;}
+.page.active .stat-card:nth-child(2){animation-delay:.05s;}
+.page.active .stat-card:nth-child(3){animation-delay:.10s;}
+.page.active .stat-card:nth-child(4){animation-delay:.15s;}
+</style>
+</head>
+<body>
+
+<!-- 사이드바 -->
+<aside class="sidebar">
+  <div class="sidebar-logo"><span class="logo-text">Tesk<span>.</span></span></div>
+  <div class="sidebar-class">
+    <strong class="logo-text">최승륜 선생님</strong>
+    <span>3학년 2반 · 26명</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">메인</div>
+    <a class="nav-item active" onclick="goPage('home')"><span class="ni">🏠</span><span>홈 대시보드</span></a>
+    <a class="nav-item" onclick="goPage('students')"><span class="ni">👥</span><span>학생 관리</span><span class="badge">26</span></a>
+
+    <div class="nav-section-label">Pesk 연동</div>
+    <a class="nav-item" onclick="goPage('points')"><span class="ni">🪙</span><span>포인트 지급</span></a>
+    <a class="nav-item" onclick="goPage('economy')"><span class="ni">🏦</span><span>학급 경제</span></a>
+    <a class="nav-item" onclick="goPage('missions')"><span class="ni">⚡</span><span>미션 & 배지</span></a>
+
+    <div class="nav-section-label">수업</div>
+    <a class="nav-item" onclick="goPage('lessons')"><span class="ni">📚</span><span>수업 계획서</span></a>
+    <a class="nav-item" onclick="goPage('records')"><span class="ni">📋</span><span>생활기록부</span></a>
+    <a class="nav-item" onclick="goPage('stats')"><span class="ni">📊</span><span>학급 통계</span></a>
+  </nav>
+  <div class="sidebar-bottom">
+    <a class="nav-item" onclick="showToast('⚙️ 설정 페이지 준비 중!')"><span class="ni">⚙️</span><span>설정</span></a>
+  </div>
+</aside>
+
+<!-- 메인 -->
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">홈 대시보드</div>
+    <div class="topbar-date" id="topbar-date"></div>
+    <button class="btn btn-sm btn-primary" onclick="showToast('🔗 Firebase 연동 후 실시간 동기화!')">🔗 Pesk 연동</button>
+    <div class="topbar-avatar">최</div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── 홈 ── -->
+    <div class="page active" id="page-home">
+      <div class="page-header">
+        <div class="page-title">안녕하세요, 최승륜 선생님 👋</div>
+        <div class="page-desc">오늘도 좋은 하루 되세요. 3학년 2반 현황을 확인해보세요.</div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card green">
+          <div class="stat-icon">👥</div>
+          <div class="stat-label">전체 학생</div>
+          <div class="stat-value">26</div>
+          <div class="stat-change up">▲ 오늘 출석 24명</div>
+        </div>
+        <div class="stat-card gold">
+          <div class="stat-icon">🪙</div>
+          <div class="stat-label">오늘 지급 포인트</div>
+          <div class="stat-value">340</div>
+          <div class="stat-change up">▲ 어제보다 +80</div>
+        </div>
+        <div class="stat-card coral">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-label">활성 미션</div>
+          <div class="stat-value">5</div>
+          <div class="stat-change">완료율 68%</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">📊</div>
+          <div class="stat-label">평균 성적</div>
+          <div class="stat-value">82.4</div>
+          <div class="stat-change up">▲ 지난달 +2.1</div>
+        </div>
+      </div>
+
+      <div class="home-grid">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">오늘 출석 현황</div>
+            <button class="btn btn-sm btn-secondary" onclick="goPage('students')">전체 보기</button>
+          </div>
+          <div class="heatmap" id="att-heatmap"></div>
+          <div style="display:flex;gap:14px;margin-top:12px;font-size:11px;color:var(--sub);">
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--tesk-m);margin-right:4px;"></span>출석 24</span>
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--coral);margin-right:4px;"></span>결석 1</span>
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#d4a843;margin-right:4px;"></span>지각 1</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">오늘의 미션</div>
+            <button class="btn btn-sm btn-secondary" onclick="goPage('missions')">관리</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:8px 10px;background:var(--tesk-xl);border-radius:8px;">
+              <span>📖 수업 노트 정리</span><span style="color:var(--tesk-m);font-weight:700;">22/24</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:8px 10px;background:var(--surface);border-radius:8px;">
+              <span>🤝 친구 도움주기</span><span style="color:var(--sub);font-weight:700;">14/24</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:8px 10px;background:var(--tesk-xl);border-radius:8px;">
+              <span>✅ 출석 체크</span><span style="color:var(--tesk-m);font-weight:700;">24/24</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="home-grid-3">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">최근 포인트 내역</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid var(--border);">
+              <span style="color:var(--sub);">방금 전</span><span>홍길동 · 미션 완료</span><span style="color:var(--gold);font-weight:700;">+30 🪙</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid var(--border);">
+              <span style="color:var(--sub);">5분 전</span><span>김민준 · 발표 우수</span><span style="color:var(--gold);font-weight:700;">+50 🪙</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid var(--border);">
+              <span style="color:var(--sub);">12분 전</span><span>이서연 · 숙제 미제출</span><span style="color:var(--coral);font-weight:700;">-20 🪙</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;">
+              <span style="color:var(--sub);">30분 전</span><span>전체 · 출석 보너스</span><span style="color:var(--gold);font-weight:700;">+10 🪙</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">D-day</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--tesk-l);border-radius:8px;">
+              <span style="font-size:12px;font-weight:600;">기말고사</span>
+              <span style="font-family:'Syne',sans-serif;font-weight:900;font-size:18px;color:var(--tesk);">D-72</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--gold-l);border-radius:8px;">
+              <span style="font-size:12px;font-weight:600;">여름방학</span>
+              <span style="font-family:'Syne',sans-serif;font-weight:900;font-size:18px;color:var(--gold);">D-115</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 학생 관리 ── -->
+    <div class="page" id="page-students">
+      <div class="page-header">
+        <div class="page-title">학생 관리</div>
+        <div class="page-desc">3학년 2반 전체 학생 현황을 관리해요.</div>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+          <div class="card-title">전체 학생 목록</div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-sm btn-secondary" onclick="openModal('modal-add-student')">+ 학생 추가</button>
+            <button class="btn btn-sm btn-primary" onclick="showToast('📤 출석부 내보내기 준비 중!')">내보내기</button>
+          </div>
+        </div>
+        <table class="student-table" id="student-table"></table>
+      </div>
+    </div>
+
+    <!-- ── 포인트 지급 ── -->
+    <div class="page" id="page-points">
+      <div class="page-header">
+        <div class="page-title">포인트 지급 / 차감</div>
+        <div class="page-desc">학생에게 수페코인을 지급하거나 차감해요. Pesk에 실시간 반영돼요.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">학생별 포인트</div>
+            <button class="btn btn-sm btn-gold" onclick="openModal('modal-bulk-point')">일괄 지급</button>
+          </div>
+          <table class="student-table" id="point-table"></table>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card">
+            <div class="card-title">빠른 지급</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <button class="btn btn-primary" style="width:100%;" onclick="quickPoint(10,'출석 완료 🎉')">+10 출석 완료</button>
+              <button class="btn btn-primary" style="width:100%;" onclick="quickPoint(30,'미션 완료 ⚡')">+30 미션 완료</button>
+              <button class="btn btn-primary" style="width:100%;" onclick="quickPoint(50,'발표 우수 🌟')">+50 발표 우수</button>
+              <button class="btn btn-gold" style="width:100%;" onclick="quickPoint(100,'특별 보상 👑')">+100 특별 보상</button>
+              <button class="btn btn-secondary" style="width:100%;color:var(--coral);border-color:var(--coral);" onclick="quickPoint(-20,'숙제 미제출 ⚠️')">-20 숙제 미제출</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">전체 통계</div>
+            <div style="font-size:12px;display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;justify-content:space-between;"><span style="color:var(--sub);">총 지급 포인트</span><span style="font-weight:700;color:var(--gold);">8,420 🪙</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:var(--sub);">총 차감 포인트</span><span style="font-weight:700;color:var(--coral);">-340 🪙</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:var(--sub);">최고 보유자</span><span style="font-weight:700;">홍길동 2,450🪙</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 학급 경제 ── -->
+    <div class="page" id="page-economy">
+      <div class="page-header">
+        <div class="page-title">학급 경제</div>
+        <div class="page-desc">학급 화폐를 발행하고 상점을 운영해요.</div>
+      </div>
+      <div class="economy-grid">
+        <div class="econ-card">
+          <div class="econ-icon">🏦</div>
+          <div class="econ-label">총 발행 화폐</div>
+          <div class="econ-value">24,000 🪙</div>
+        </div>
+        <div class="econ-card">
+          <div class="econ-icon">💰</div>
+          <div class="econ-label">시중 유통량</div>
+          <div class="econ-value">18,420 🪙</div>
+        </div>
+        <div class="econ-card">
+          <div class="econ-icon">🏪</div>
+          <div class="econ-label">오늘 상점 거래</div>
+          <div class="econ-value">12건</div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+          <div class="card-title">학급 상점</div>
+          <button class="btn btn-sm btn-primary" onclick="openModal('modal-add-shop')">+ 상품 추가</button>
+        </div>
+        <div class="shop-grid" id="shop-grid"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">직업 & 월급</div>
+          <button class="btn btn-sm btn-secondary" onclick="openModal('modal-add-job')">+ 직업 추가</button>
+        </div>
+        <table class="student-table" id="job-table"></table>
+      </div>
+    </div>
+
+    <!-- ── 미션 & 배지 ── -->
+    <div class="page" id="page-missions">
+      <div class="page-header">
+        <div class="page-title">미션 & 배지</div>
+        <div class="page-desc">학생들에게 미션을 출제하고 배지를 수여해요.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">활성 미션</div>
+            <button class="btn btn-sm btn-primary" onclick="openModal('modal-add-mission')">+ 미션 출제</button>
+          </div>
+          <div class="mission-list" id="mission-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">배지 관리</div>
+            <button class="btn btn-sm btn-gold" onclick="openModal('modal-award-badge')">🏅 배지 수여</button>
+          </div>
+          <div class="badge-admin-grid" id="badge-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 수업 계획서 ── -->
+    <div class="page" id="page-lessons">
+      <div class="page-header">
+        <div class="page-title">수업 계획서</div>
+        <div class="page-desc">주차별 수업 계획과 학습 자료를 관리해요.</div>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+          <div class="card-title">2026년 1학기</div>
+          <button class="btn btn-sm btn-primary" onclick="openModal('modal-add-lesson')">+ 계획서 작성</button>
+        </div>
+        <div class="lesson-list" id="lesson-list"></div>
+      </div>
+    </div>
+
+    <!-- ── 생활기록부 ── -->
+    <div class="page" id="page-records">
+      <div class="page-header">
+        <div class="page-title">생활기록부 초안</div>
+        <div class="page-desc">학생별 생활기록부 초안을 작성하고 AI 도우미로 문장을 다듬어요.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">학생 선택</div>
+        <div class="record-student-select" id="record-student-select"></div>
+        <div class="record-grid" id="record-grid"></div>
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="record-ai-btn" onclick="aiPolish()">✨ AI 문장 다듬기</button>
+          <button class="btn btn-primary" onclick="showToast('💾 저장됐어요!')">저장</button>
+          <button class="btn btn-secondary" onclick="showToast('📄 출력 준비 중!')">출력</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 학급 통계 ── -->
+    <div class="page" id="page-stats">
+      <div class="page-header">
+        <div class="page-title">학급 통계</div>
+        <div class="page-desc">출석률, 성적 분포, 포인트 현황을 한눈에 확인해요.</div>
+      </div>
+      <div class="stats-grid">
+        <div class="chart-card">
+          <div class="chart-title">📊 과목별 평균 성적</div>
+          <div class="bar-chart" id="grade-chart"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">📅 이번 달 출석률</div>
+          <div class="donut-wrap">
+            <svg width="100" height="100" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="38" fill="none" stroke="var(--surface)" stroke-width="14"/>
+              <circle cx="50" cy="50" r="38" fill="none" stroke="var(--tesk-m)" stroke-width="14"
+                stroke-dasharray="215 239" stroke-dashoffset="60" stroke-linecap="round"/>
+              <circle cx="50" cy="50" r="38" fill="none" stroke="var(--coral)" stroke-width="14"
+                stroke-dasharray="12 239" stroke-dashoffset="-155" stroke-linecap="round"/>
+              <circle cx="50" cy="50" r="38" fill="none" stroke="var(--gold)" stroke-width="14"
+                stroke-dasharray="12 239" stroke-dashoffset="-167" stroke-linecap="round"/>
+              <text x="50" y="54" text-anchor="middle" font-size="16" font-weight="800" fill="var(--tesk)" font-family="'Syne',sans-serif">92%</text>
+            </svg>
+            <div class="donut-legend">
+              <div class="donut-legend-item"><div class="donut-legend-dot" style="background:var(--tesk-m)"></div><span>출석 92%</span></div>
+              <div class="donut-legend-item"><div class="donut-legend-dot" style="background:var(--coral)"></div><span>결석 5%</span></div>
+              <div class="donut-legend-item"><div class="donut-legend-dot" style="background:var(--gold)"></div><span>지각 3%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="chart-card">
+          <div class="chart-title">🪙 학생별 포인트 상위 10</div>
+          <div class="bar-chart" id="point-chart"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">📈 주간 미션 완료율</div>
+          <div class="bar-chart" id="mission-chart"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- 모달들 -->
+<div class="modal-bg" id="modal-add-student" onclick="closeOnBg(event,'modal-add-student')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">학생 추가</div><button class="modal-close" onclick="closeModal('modal-add-student')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">번호</label><input class="form-input" type="number" id="add-stu-num" placeholder="1"></div>
+      <div class="form-group"><label class="form-label">이름</label><input class="form-input" id="add-stu-name" placeholder="홍길동"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-student')">취소</button>
+      <button class="btn btn-primary" onclick="addStudent()">추가</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-bulk-point" onclick="closeOnBg(event,'modal-bulk-point')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">일괄 포인트 지급</div><button class="modal-close" onclick="closeModal('modal-bulk-point')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">포인트 (음수 = 차감)</label><input class="form-input" type="number" id="bulk-pt-val" placeholder="10"></div>
+      <div class="form-group"><label class="form-label">사유</label><input class="form-input" id="bulk-pt-reason" placeholder="출석 완료"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-bulk-point')">취소</button>
+      <button class="btn btn-gold" onclick="bulkPoint()">전체 지급</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-add-mission" onclick="closeOnBg(event,'modal-add-mission')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">미션 출제</div><button class="modal-close" onclick="closeModal('modal-add-mission')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">미션 이름</label><input class="form-input" id="mission-name" placeholder="수업 노트 정리하기"></div>
+      <div class="form-group"><label class="form-label">설명</label><input class="form-input" id="mission-desc-inp" placeholder="핵심 내용 3가지 작성"></div>
+      <div class="form-group"><label class="form-label">보상 포인트</label><input class="form-input" type="number" id="mission-reward" placeholder="30"></div>
+      <div class="form-group"><label class="form-label">아이콘</label><input class="form-input" id="mission-icon" placeholder="📖"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-mission')">취소</button>
+      <button class="btn btn-primary" onclick="addMission()">출제</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-award-badge" onclick="closeOnBg(event,'modal-award-badge')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">배지 수여</div><button class="modal-close" onclick="closeModal('modal-award-badge')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">학생 선택</label>
+        <select class="form-input form-select" id="award-stu-sel" style="appearance:none"></select></div>
+      <div class="form-group"><label class="form-label">배지 선택</label>
+        <select class="form-input form-select" id="award-badge-sel" style="appearance:none">
+          <option value="🔥">🔥 출석왕</option><option value="📚">📚 독서완료</option>
+          <option value="⭐">⭐ 우수 학생</option><option value="🤝">🤝 친절왕</option>
+          <option value="💰">💰 저축달인</option><option value="🚀">🚀 성장왕</option>
+        </select></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-award-badge')">취소</button>
+      <button class="btn btn-gold" onclick="awardBadge()">수여 🏅</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-add-lesson" onclick="closeOnBg(event,'modal-add-lesson')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">수업 계획서 작성</div><button class="modal-close" onclick="closeModal('modal-add-lesson')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">주차</label><input class="form-input" type="number" id="lesson-week" placeholder="1"></div>
+      <div class="form-group"><label class="form-label">제목</label><input class="form-input" id="lesson-title" placeholder="1단원: 자연과 환경"></div>
+      <div class="form-group"><label class="form-label">학습 목표</label><input class="form-input" id="lesson-goal" placeholder="환경의 중요성을 이해한다"></div>
+      <div class="form-group"><label class="form-label">상태</label>
+        <select class="form-input form-select" id="lesson-status">
+          <option value="upcoming">예정</option><option value="draft">초안</option><option value="complete">완료</option>
+        </select></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-lesson')">취소</button>
+      <button class="btn btn-primary" onclick="addLesson()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-add-shop" onclick="closeOnBg(event,'modal-add-shop')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">상품 추가</div><button class="modal-close" onclick="closeModal('modal-add-shop')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">상품명</label><input class="form-input" id="shop-name" placeholder="자리 선택권"></div>
+      <div class="form-group"><label class="form-label">아이콘</label><input class="form-input" id="shop-icon" placeholder="🪑"></div>
+      <div class="form-group"><label class="form-label">가격 (🪙)</label><input class="form-input" type="number" id="shop-price" placeholder="200"></div>
+      <div class="form-group"><label class="form-label">재고</label><input class="form-input" type="number" id="shop-stock" placeholder="5"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-shop')">취소</button>
+      <button class="btn btn-primary" onclick="addShopItem()">추가</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-add-job" onclick="closeOnBg(event,'modal-add-job')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">직업 추가</div><button class="modal-close" onclick="closeModal('modal-add-job')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">직업명</label><input class="form-input" id="job-title-inp" placeholder="도서관 사서"></div>
+      <div class="form-group"><label class="form-label">담당 학생</label>
+        <select class="form-input form-select" id="job-stu-sel" style="appearance:none"></select></div>
+      <div class="form-group"><label class="form-label">주간 월급 (🪙)</label><input class="form-input" type="number" id="job-salary" placeholder="150"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-job')">취소</button>
+      <button class="btn btn-primary" onclick="addJob()">임명</button>
+    </div>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div class="toast" id="toast"><span id="toast-msg"></span></div>
+
+<script>
+/* ── 데이터 ── */
+function load(k,d){try{return JSON.parse(localStorage.getItem(k))??d;}catch{return d;}}
+function save(k,v){localStorage.setItem(k,JSON.stringify(v));}
+
+let students = load('tesk-students',[
+  {num:1,name:'홍길동',points:2450,level:12,job:'도서관 사서',salary:150},
+  {num:2,name:'김민준',points:1820,level:10,job:'',salary:0},
+  {num:3,name:'이서연',points:2100,level:11,job:'환경부장',salary:120},
+  {num:4,name:'박지후',points:1650,level:9,job:'',salary:0},
+  {num:5,name:'최수아',points:1900,level:10,job:'급식도우미',salary:100},
+  {num:6,name:'정우진',points:980,level:7,job:'',salary:0},
+]);
+
+let missions = load('tesk-missions',[
+  {id:1,icon:'📖',name:'수업 노트 정리',desc:'핵심 내용 3가지 작성',reward:30,active:true},
+  {id:2,icon:'🤝',name:'친구 도움주기',desc:'어려운 친구에게 도움',reward:20,active:true},
+  {id:3,icon:'✅',name:'출석 체크',desc:'정시 등교',reward:10,active:true},
+  {id:4,icon:'📚',name:'독서 완료',desc:'이번 달 도서 1권',reward:50,active:false},
+]);
+
+let shopItems = load('tesk-shop',[
+  {icon:'🪑',name:'자리 선택권',price:200,stock:5},
+  {icon:'📝',name:'숙제 면제권',price:500,stock:2},
+  {icon:'🍬',name:'사탕 1개',price:50,stock:30},
+  {icon:'⏰',name:'쉬는시간 +5분',price:300,stock:3},
+  {icon:'🎮',name:'게임 시간',price:400,stock:2},
+  {icon:'📸',name:'칭찬 사진',price:100,stock:10},
+]);
+
+let lessons = load('tesk-lessons',[
+  {week:1,title:'1단원: 자연과 환경',goal:'환경의 중요성 이해',status:'complete'},
+  {week:2,title:'2단원: 동식물의 생활',goal:'다양한 생물 탐구',status:'complete'},
+  {week:3,title:'3단원: 날씨와 기후',goal:'날씨 변화 이해',status:'draft'},
+  {week:4,title:'4단원: 물의 순환',goal:'물의 순환 과정 학습',status:'upcoming'},
+]);
+
+let jobs = load('tesk-jobs',[
+  {title:'도서관 사서',studentNum:1,salary:150},
+  {title:'환경부장',studentNum:3,salary:120},
+  {title:'급식도우미',studentNum:5,salary:100},
+]);
+
+let records = load('tesk-records',{});
+const RECORD_FIELDS=[
+  {key:'behavior',label:'행동 특성'},
+  {key:'academic',label:'학업 역량'},
+  {key:'social',label:'사회성'},
+  {key:'special',label:'특기 사항',full:true},
+];
+
+/* ── 페이지 전환 ── */
+const PAGE_TITLES={home:'홈 대시보드',students:'학생 관리',points:'포인트 지급',
+  economy:'학급 경제',missions:'미션 & 배지',lessons:'수업 계획서',records:'생활기록부',stats:'학급 통계'};
+function goPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    if(n.getAttribute('onclick')===`goPage('${id}')`) n.classList.add('active');
+  });
+  document.getElementById('topbar-title').textContent=PAGE_TITLES[id]||id;
+  renderPage(id);
+}
+function renderPage(id){
+  if(id==='home') renderHome();
+  else if(id==='students') renderStudents();
+  else if(id==='points') renderPoints();
+  else if(id==='economy') renderEconomy();
+  else if(id==='missions') renderMissions();
+  else if(id==='lessons') renderLessons();
+  else if(id==='records') renderRecords();
+  else if(id==='stats') renderStats();
+}
+
+/* ── 홈 ── */
+function renderHome(){
+  const hm=document.getElementById('att-heatmap');
+  const types=['full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','partial','absent','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','late','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full','full'];
+  hm.innerHTML=types.slice(0,students.length).map((t,i)=>`<div class="hm-cell ${t}" title="${students[i]?.name||''}">${students[i]?.num||''}</div>`).join('');
+}
+
+/* ── 학생 ── */
+function renderStudents(){
+  const t=document.getElementById('student-table');
+  t.innerHTML=`<thead><tr><th>번호</th><th>이름</th><th>레벨</th><th>포인트</th><th>직업</th><th>오늘 출석</th><th>관리</th></tr></thead><tbody>${
+    students.map((s,i)=>`<tr>
+      <td>${s.num}</td>
+      <td class="student-name">${s.name}</td>
+      <td><span class="student-level">Lv.${s.level}</span></td>
+      <td><span class="point-badge">${s.points.toLocaleString()} 🪙</span></td>
+      <td>${s.job?`<span style="font-size:11px;background:var(--tesk-l);color:var(--tesk);border-radius:99px;padding:2px 8px;">${s.job}</span>`:'—'}</td>
+      <td><span class="att-dot present"></span> 출석</td>
+      <td><div class="point-btns">
+        <button class="pt-btn plus" onclick="givePoint(${i},30,'칭찬 +30')">+30</button>
+        <button class="pt-btn minus" onclick="givePoint(${i},-10,'차감 -10')">-10</button>
+      </div></td>
+    </tr>`).join('')
+  }</tbody>`;
+  // 모달 셀렉트 업데이트
+  ['award-stu-sel','job-stu-sel'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(sel) sel.innerHTML=students.map(s=>`<option value="${s.num}">${s.num}번 ${s.name}</option>`).join('');
+  });
+}
+
+/* ── 포인트 ── */
+function renderPoints(){
+  const t=document.getElementById('point-table');
+  t.innerHTML=`<thead><tr><th>번호</th><th>이름</th><th>보유 포인트</th><th>지급/차감</th></tr></thead><tbody>${
+    students.map((s,i)=>`<tr>
+      <td>${s.num}</td><td class="student-name">${s.name}</td>
+      <td><span class="point-badge">${s.points.toLocaleString()} 🪙</span></td>
+      <td><div class="point-btns">
+        <button class="pt-btn plus" onclick="givePoint(${i},10,'+10')">+10</button>
+        <button class="pt-btn plus" onclick="givePoint(${i},30,'+30')">+30</button>
+        <button class="pt-btn plus" onclick="givePoint(${i},50,'+50')">+50</button>
+        <button class="pt-btn minus" onclick="givePoint(${i},-20,'-20')">-20</button>
+      </div></td>
+    </tr>`).join('')
+  }</tbody>`;
+}
+
+function givePoint(idx,amt,reason){
+  students[idx].points=Math.max(0,students[idx].points+amt);
+  save('tesk-students',students);
+  renderPage(document.querySelector('.nav-item.active')?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1]||'points');
+  showToast(`${amt>0?'🪙':'⚠️'} ${students[idx].name} ${reason}`);
+}
+
+function quickPoint(amt,reason){
+  showToast(`${amt>0?'🪙 전체':'⚠️ 전체'} ${reason} (${amt>0?'+':''}${amt})`);
+}
+
+function bulkPoint(){
+  const v=parseInt(document.getElementById('bulk-pt-val').value)||0;
+  const r=document.getElementById('bulk-pt-reason').value||'일괄 지급';
+  students.forEach(s=>s.points=Math.max(0,s.points+v));
+  save('tesk-students',students);
+  closeModal('modal-bulk-point');
+  showToast(`🪙 전체 학생 ${v>0?'+':''}${v} (${r})`);
+}
+
+/* ── 경제 ── */
+function renderEconomy(){
+  document.getElementById('shop-grid').innerHTML=shopItems.map((item,i)=>`
+    <div class="shop-item">
+      <div class="shop-item-icon">${item.icon}</div>
+      <div class="shop-item-name">${item.name}</div>
+      <div class="shop-item-price">${item.price} 🪙</div>
+      <div class="shop-item-stock">재고 ${item.stock}개</div>
+      <button class="shop-edit-btn" onclick="showToast('✏️ 상품 수정 기능 준비 중!')">수정</button>
+    </div>`).join('');
+
+  document.getElementById('job-table').innerHTML=`<thead><tr><th>직업명</th><th>담당</th><th>주간 월급</th><th>관리</th></tr></thead><tbody>${
+    jobs.map((j,i)=>{
+      const stu=students.find(s=>s.num===j.studentNum);
+      return`<tr><td style="font-weight:600;">${j.title}</td><td>${stu?stu.name:'—'}</td>
+        <td style="color:var(--gold);font-weight:700;">${j.salary} 🪙</td>
+        <td><button class="pt-btn plus" onclick="showToast('💰 월급 지급!')">월급 지급</button></td></tr>`;
+    }).join('')
+  }</tbody>`;
+}
+
+function addShopItem(){
+  const name=document.getElementById('shop-name').value.trim();
+  const icon=document.getElementById('shop-icon').value.trim()||'🎁';
+  const price=parseInt(document.getElementById('shop-price').value)||100;
+  const stock=parseInt(document.getElementById('shop-stock').value)||1;
+  if(!name)return;
+  shopItems.push({icon,name,price,stock});
+  save('tesk-shop',shopItems);
+  closeModal('modal-add-shop');
+  renderEconomy();
+  showToast(`🏪 ${name} 추가됐어요!`);
+}
+
+function addJob(){
+  const title=document.getElementById('job-title-inp').value.trim();
+  const num=parseInt(document.getElementById('job-stu-sel').value);
+  const salary=parseInt(document.getElementById('job-salary').value)||100;
+  if(!title||!num)return;
+  jobs.push({title,studentNum:num,salary});
+  save('tesk-jobs',jobs);
+  const stu=students.find(s=>s.num===num);
+  if(stu){stu.job=title;stu.salary=salary;save('tesk-students',students);}
+  closeModal('modal-add-job');
+  renderEconomy();
+  showToast(`👔 ${title} 임명됐어요!`);
+}
+
+/* ── 미션 & 배지 ── */
+function renderMissions(){
+  document.getElementById('mission-list').innerHTML=missions.map((m,i)=>`
+    <div class="mission-item">
+      <div class="mission-icon" style="background:${m.active?'var(--tesk-l)':'var(--surface)'};">${m.icon}</div>
+      <div class="mission-body">
+        <div class="mission-title">${m.name}</div>
+        <div class="mission-desc">${m.desc}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+        <div class="mission-reward">+${m.reward} 🪙</div>
+        <span class="mission-status ${m.active?'active':'done'}">${m.active?'활성':'종료'}</span>
+      </div>
+    </div>`).join('');
+
+  const BADGES=[{icon:'🔥',name:'출석왕',count:8},{icon:'📚',name:'독서완료',count:15},
+    {icon:'⭐',name:'우수 학생',count:5},{icon:'🤝',name:'친절왕',count:12},
+    {icon:'💰',name:'저축달인',count:3},{icon:'🚀',name:'성장왕',count:7},
+    {icon:'👑',name:'학급왕',count:1},{icon:'🎯',name:'목표달성',count:18}];
+  document.getElementById('badge-grid').innerHTML=BADGES.map(b=>`
+    <div class="badge-admin-item">
+      <div class="badge-admin-icon">${b.icon}</div>
+      <div class="badge-admin-name">${b.name}</div>
+      <div class="badge-admin-count">수여 ${b.count}회</div>
+      <button class="badge-award-btn" onclick="document.getElementById('award-badge-sel').value='${b.icon}';openModal('modal-award-badge')">수여</button>
+    </div>`).join('');
+}
+
+function addMission(){
+  const name=document.getElementById('mission-name').value.trim();
+  const desc=document.getElementById('mission-desc-inp').value.trim();
+  const reward=parseInt(document.getElementById('mission-reward').value)||10;
+  const icon=document.getElementById('mission-icon').value.trim()||'⚡';
+  if(!name)return;
+  missions.push({id:Date.now(),icon,name,desc,reward,active:true});
+  save('tesk-missions',missions);
+  closeModal('modal-add-mission');
+  renderMissions();
+  showToast(`⚡ 미션 "${name}" 출제됐어요!`);
+}
+
+function awardBadge(){
+  const num=parseInt(document.getElementById('award-stu-sel').value);
+  const badge=document.getElementById('award-badge-sel').value;
+  const stu=students.find(s=>s.num===num);
+  if(!stu)return;
+  closeModal('modal-award-badge');
+  showToast(`🏅 ${stu.name}에게 ${badge} 배지 수여!`);
+}
+
+/* ── 수업계획서 ── */
+function renderLessons(){
+  const STATUS={complete:'complete',draft:'draft',upcoming:'upcoming'};
+  const LABEL={complete:'완료',draft:'초안',upcoming:'예정'};
+  document.getElementById('lesson-list').innerHTML=lessons.map((l,i)=>`
+    <div class="lesson-item" onclick="showToast('📝 수업 계획서 편집 기능 준비 중!')">
+      <div class="lesson-week">
+        <div class="lesson-week-num">${l.week}</div>
+        <div class="lesson-week-label">주차</div>
+      </div>
+      <div class="lesson-body">
+        <div class="lesson-title">${l.title}</div>
+        <div class="lesson-meta">${l.goal}</div>
+      </div>
+      <span class="lesson-tag ${l.status}">${LABEL[l.status]}</span>
+    </div>`).join('');
+}
+
+function addLesson(){
+  const week=parseInt(document.getElementById('lesson-week').value)||1;
+  const title=document.getElementById('lesson-title').value.trim();
+  const goal=document.getElementById('lesson-goal').value.trim();
+  const status=document.getElementById('lesson-status').value;
+  if(!title)return;
+  lessons.push({week,title,goal,status});
+  lessons.sort((a,b)=>a.week-b.week);
+  save('tesk-lessons',lessons);
+  closeModal('modal-add-lesson');
+  renderLessons();
+  showToast(`📚 ${week}주차 계획서 저장됐어요!`);
+}
+
+/* ── 생활기록부 ── */
+let selectedRecordStudent=students[0]?.num||1;
+function renderRecords(){
+  const sel=document.getElementById('record-student-select');
+  sel.innerHTML=students.map(s=>`
+    <button class="record-stu-btn ${s.num===selectedRecordStudent?'active':''}"
+      onclick="selectRecordStudent(${s.num})">${s.name}</button>`).join('');
+  renderRecordForm();
+}
+function selectRecordStudent(num){
+  selectedRecordStudent=num;renderRecords();
+}
+function renderRecordForm(){
+  const r=records[selectedRecordStudent]||{};
+  document.getElementById('record-grid').innerHTML=RECORD_FIELDS.map(f=>`
+    <div class="record-field ${f.full?'full':''}">
+      <label class="record-label">${f.label}</label>
+      <textarea class="record-textarea" id="rf-${f.key}" placeholder="${f.label} 내용을 작성하세요..."
+        onchange="saveRecord('${f.key}',this.value)">${r[f.key]||''}</textarea>
+    </div>`).join('');
+}
+function saveRecord(key,val){
+  if(!records[selectedRecordStudent]) records[selectedRecordStudent]={};
+  records[selectedRecordStudent][key]=val;
+  save('tesk-records',records);
+}
+function aiPolish(){
+  showToast('✨ AI 문장 다듬기 — Firebase + Claude API 연동 후 활성화!');
+}
+
+/* ── 통계 ── */
+function renderStats(){
+  const subjects=[{label:'국어',val:85,color:'var(--tesk-m)'},{label:'수학',val:79,color:'var(--blue)'},
+    {label:'영어',val:88,color:'var(--gold)'},{label:'과학',val:76,color:'var(--coral)'},
+    {label:'사회',val:83,color:'var(--purple)'}];
+  document.getElementById('grade-chart').innerHTML=subjects.map(s=>`
+    <div class="bar-row">
+      <div class="bar-label">${s.label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${s.val}%;background:${s.color}"></div></div>
+      <div class="bar-val">${s.val}</div>
+    </div>`).join('');
+
+  const topStudents=students.slice().sort((a,b)=>b.points-a.points).slice(0,5);
+  const maxPt=topStudents[0]?.points||1;
+  document.getElementById('point-chart').innerHTML=topStudents.map(s=>`
+    <div class="bar-row">
+      <div class="bar-label">${s.name}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(s.points/maxPt)*100}%;background:var(--gold)"></div></div>
+      <div class="bar-val">${(s.points/1000).toFixed(1)}k</div>
+    </div>`).join('');
+
+  const weeks=[{label:'1주',val:72},{label:'2주',val:81},{label:'3주',val:68},
+    {label:'4주',val:88},{label:'이번주',val:75}];
+  document.getElementById('mission-chart').innerHTML=weeks.map(w=>`
+    <div class="bar-row">
+      <div class="bar-label">${w.label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${w.val}%;background:var(--tesk-m)"></div></div>
+      <div class="bar-val">${w.val}%</div>
+    </div>`).join('');
+}
+
+/* ── 학생 추가 ── */
+function addStudent(){
+  const num=parseInt(document.getElementById('add-stu-num').value);
+  const name=document.getElementById('add-stu-name').value.trim();
+  if(!num||!name)return;
+  students.push({num,name,points:0,level:1,job:'',salary:0});
+  students.sort((a,b)=>a.num-b.num);
+  save('tesk-students',students);
+  closeModal('modal-add-student');
+  renderStudents();
+  showToast(`👤 ${name} 학생이 추가됐어요!`);
+}
+
+/* ── 모달 ── */
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function closeOnBg(e,id){if(e.target===e.currentTarget)closeModal(id);}
+document.addEventListener('keydown',e=>{if(e.key==='Escape') document.querySelectorAll('.modal-bg.open').forEach(m=>m.classList.remove('open'));});
+
+/* ── 토스트 ── */
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  document.getElementById('toast-msg').textContent=msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+/* ── 날짜 ── */
+document.getElementById('topbar-date').textContent=
+  new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+
+/* ── 초기 렌더 ── */
+renderHome();
+</script>
+</body>
+</html>
