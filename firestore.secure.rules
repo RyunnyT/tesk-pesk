@@ -1,0 +1,158 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────
+// 강화된 보안 규칙 (최종 목표안)
+//
+// ⚠️ 적용 시점: 모든 경제 경로(매점 구매·주식·예금·비밀번호 변경)가 Cloud Functions
+//    로 옮겨진 뒤에만 firestore.rules 로 교체하세요. 그 전에 적용하면 아직
+//    클라이언트에서 직접 쓰는 경로(주식/예금 등)가 막혀 동작이 깨집니다.
+//
+// 현재 함수화 완료: 학생 로그인(studentLogin), 매점 구매(purchaseShopItem),
+//                   교사 잔액 조정(adjustBalance), 예금·주식(bankDeposit/bankWithdraw/stockBuy/stockSell, 미배포)
+// 남은 작업: 아직 클라이언트가 직접 쓰는 나머지 경제 경로 이전 (MIGRATION-경제로직.md 참고)
+//
+// 이 규칙의 핵심 변화 (현행 firestore.rules 대비):
+//  1) tesk-accounts(평문 비밀번호 포함) 공개 읽기 차단 → 로그인은 서버 함수만 수행
+//  2) 돈에 영향을 주는 키(tesk-students, tesk-shop, pesk-purchases, pesk-portfolios,
+//     pesk-deposits)의 공개 쓰기 차단 → 서버 함수(admin SDK)만 변경. admin 은 규칙을
+//     우회하므로 함수는 정상 동작하고, 위조 클라이언트는 차단됩니다.
+//  3) 학생이 직접 써야 하는 비-경제 키(글쓰기/설문/상담 등)는 학생 커스텀 토큰으로
+//     인증된 경우 + 본인 학급에만 허용
+// ─────────────────────────────────────────────────────────────
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function myUid() { return request.auth.uid; }
+    function myUser() { return get(/databases/$(database)/documents/users/$(myUid())).data; }
+
+    // Authority comes from Firebase-signed, verified identity, never editable profile.role.
+    // Keep this allowlist aligned with MASTER_EMAILS in shared/firebase-config.js.
+    function isMaster() {
+      return isSignedIn()
+        && request.auth.token.get('email_verified', false) == true
+        && request.auth.token.get('email', '') in ['asx0203@gmail.com'];
+    }
+
+    function isApprovedTeacher() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(myUid()))
+        && myUser().get('role', '') == 'teacher'
+        && myUser().get('approved', false) == true;
+    }
+
+    function ownsRoom(roomId) {
+      return isApprovedTeacher()
+        && exists(/databases/$(database)/documents/classrooms/$(roomId)/info/meta)
+        && get(/databases/$(database)/documents/classrooms/$(roomId)/info/meta).data.ownerUid == myUid();
+    }
+
+    // 학생 커스텀 토큰(role=student, roomId=...) 으로 본인 학급인지
+    function isStudentOfRoom(roomId) {
+      return isSignedIn()
+        && request.auth.token.role == 'student'
+        && request.auth.token.roomId == roomId;
+    }
+
+    // 학생이 직접 써도 되는 비-경제(돈에 영향 없는) 키. 인증된 본인 학급에서만.
+    function isStudentSelfKey(key) {
+      return key in [
+        'pesk-writings',
+        'pesk-peer-survey',
+        'pesk-checklists',
+        'pesk-challenge-submissions',
+        // 마이룸 착용 상태(그 자체는 돈과 무관). 단, 아이템 '구매'는 tesk-students
+        // 잔액 차감을 동반하므로 주식/예금과 함께 서버 함수로 옮겨야 합니다.
+        'pesk-avatars',
+        'pesk-quiz-progress',
+        'tesk-counsel-requests',
+        'tesk-teacher-notif'
+      ];
+    }
+
+    match /users/{uid} {
+      allow read: if isSignedIn() && (uid == myUid() || isMaster());
+      allow create: if isMaster() || (isSignedIn() && uid == myUid()
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'photoURL', 'role', 'approved', 'createdAt', 'lastLoginAt'
+        ])
+        && request.resource.data.uid == myUid()
+        && request.resource.data.email == request.auth.token.get('email', '')
+        && request.resource.data.role == 'teacher'
+        && request.resource.data.approved == false);
+      allow update: if isMaster() || (isSignedIn() && uid == myUid()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName', 'photoURL', 'lastLoginAt', 'lastRoomId', 'lastClassCode',
+          'lastSchoolCode', 'lastClassId', 'lastRoomUpdatedAt'
+        ]));
+      allow delete: if isMaster();
+    }
+
+    match /classrooms/{roomId} {
+      // 학급 코드로 진입하기 위한 메타 정보는 공개로 둡니다(민감 데이터 아님).
+      allow read: if true;
+
+      match /info/meta {
+        allow read: if true;
+        allow create: if isSignedIn() && (
+          isMaster() || (isApprovedTeacher() && request.resource.data.ownerUid == myUid())
+        );
+        // Only a trusted administrator can assign/reassign an existing room's owner.
+        allow update: if isMaster() || (ownsRoom(roomId)
+          && request.resource.data.ownerUid == resource.data.ownerUid);
+        allow delete: if isMaster() || ownsRoom(roomId);
+      }
+
+      match /peer-support/{studentKey}/entries/{entryId} {
+        allow read, write: if isMaster() || ownsRoom(roomId);
+      }
+
+      match /data/{key} {
+        match /items/{writingId} {
+          match /revisions/{revisionId} {
+            allow read: if key == 'pesk-writings';
+            allow write: if key == 'pesk-writings' && (isMaster() || ownsRoom(roomId) || isStudentOfRoom(roomId));
+          }
+          allow read: if key == 'pesk-writings';
+          allow write: if key == 'pesk-writings' && (isMaster()
+            || ownsRoom(roomId) || isStudentOfRoom(roomId));
+        }
+        // 계정(비밀번호 포함)은 공개 읽기 금지. 교사/마스터만.
+        // 학생 로그인은 서버 함수(studentLogin)가 admin 권한으로 처리.
+        allow read: if key in ['tesk-accounts','tesk-counsels']
+          ? (isMaster() || ownsRoom(roomId))
+          : true;
+
+        // 쓰기:
+        //  - 교사(소유)·마스터: 본인 학급 모든 데이터 쓰기 가능
+        //  - 학생: 비-경제 키만, 인증된 본인 학급에서
+        //  - 경제 키(잔액/구매/주식/예금/계정)는 서버 함수(admin)만 → 클라이언트 차단
+        allow write: if isMaster()
+          || ownsRoom(roomId)
+          || (isStudentOfRoom(roomId) && isStudentSelfKey(key));
+      }
+    }
+
+    match /classCodes/{code} {
+      allow read: if true;
+      allow create: if isMaster() || (isApprovedTeacher()
+        && request.resource.data.ownerUid == myUid()
+        && getAfter(/databases/$(database)/documents/classrooms/$(request.resource.data.roomId)/info/meta).data.ownerUid == myUid());
+      allow update: if isMaster() || (isApprovedTeacher()
+        && resource.data.ownerUid == myUid()
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.roomId == resource.data.roomId
+        && ownsRoom(resource.data.roomId));
+      allow delete: if isMaster();
+    }
+
+    match /master/{doc} {
+      allow read: if true;
+      allow write: if isMaster();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

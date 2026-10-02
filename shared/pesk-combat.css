@@ -1,0 +1,90 @@
+/* 모험 조작 화면 — 마우스, 터치, 키보드가 같은 공격 흐름을 사용한다. */
+.combat-loadout{margin:12px 0;border:1px solid var(--border);border-radius:16px;padding:14px;background:var(--card)}
+.combat-label{font-size:12px;font-weight:850;color:var(--text);margin-bottom:10px}
+.combat-label span{font-size:10px;font-weight:600;color:var(--sub);margin-left:6px}
+.combat-weapons{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+.combat-weapon{font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:5px;background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:12px 5px;color:var(--text);cursor:pointer}
+.combat-weapon>span{font-size:25px}.combat-weapon b{font-size:12px}.combat-weapon small{font-size:9px;line-height:1.4;color:var(--sub)}
+.combat-weapon.selected{border-color:#347e6b;background:#eaf7f1;box-shadow:0 0 0 1px #347e6b inset}
+.combat-weapon:disabled{cursor:default}.combat-weapon:disabled:not(.selected){opacity:.55}
+.combat-auto{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--sub);margin:12px 0 0;min-height:30px;cursor:pointer}
+.combat-auto input{width:17px;height:17px;accent-color:#347e6b}
+.combat-pet{display:flex;align-items:center;gap:9px;padding-top:12px;border-top:1px dashed var(--border);margin-top:10px}
+.combat-pet>span{font-size:25px}.combat-pet>div:nth-child(2){flex:1}.combat-pet b{display:block;font-size:12px}.combat-pet small{font-size:10px;color:var(--sub);display:block;margin-top:3px}
+.combat-pet-meter{display:flex;gap:3px}.combat-pet-meter i{width:10px;height:24px;border-radius:4px;background:#e5e7eb}.combat-pet-meter i.filled{background:#e6ac3d;box-shadow:0 0 8px #e6ac3d33}
+.combat-note{font-size:10px;line-height:1.6;color:var(--sub);margin:9px 0 0}
+.rpg-stage{overflow:hidden!important;position:relative;border-radius:18px!important}
+.rpg-arena{position:relative;min-height:155px!important;gap:46px!important;padding:24px 10px 16px;margin:-4px -4px 8px;border-radius:12px;background:radial-gradient(ellipse at 75% 0%,#fff9d1 0,transparent 46%),linear-gradient(#eaf2fa 0 71%,#c7dfc8 72% 77%,#dfebda 78%);isolation:isolate}
+.rpg-arena:before{content:'';position:absolute;bottom:20px;left:12%;right:12%;height:11px;background:#64837524;border-radius:50%;z-index:-1}
+.rpg-arena .rpg-vs{font-size:11px;letter-spacing:2px;color:#799381;position:absolute;left:50%;top:42%;transform:translateX(-50%)}
+.rpg-arena .rpg-hero img{width:100px;height:100px}.rpg-arena .rpg-mon-big{font-size:64px;min-width:80px;min-height:85px;display:flex;align-items:center;justify-content:center}
+.rpg-mon-big>svg{width:118px;height:118px;image-rendering:pixelated}
+.combat-held-weapon{position:absolute;font-size:30px;right:-4px;bottom:10px;filter:drop-shadow(0 2px 1px #0003)}
+.rpg-arena.weapon-staff .rpg-slash{display:none}.rpg-arena.weapon-axe .rpg-slash{transform:rotate(70deg);border-color:#d99839}
+.combat-projectile{position:absolute;left:32%;top:35%;font-size:35px;color:#8a59d9;text-shadow:0 0 12px #ae85ff;pointer-events:none;animation:combatFlight .5s ease-in both}
+@keyframes combatFlight{0%{transform:translateX(0) scale(.6);opacity:0}20%{opacity:1}85%{transform:translateX(110px) scale(1.2);opacity:1}100%{transform:translateX(125px) scale(1.6);opacity:0}}
+.rpg-mon-big.fallen{animation:combatFall .8s ease-out both!important}
+@keyframes combatFall{0%{transform:scale(1)}35%{transform:rotate(-12deg) scale(1.15)}100%{transform:rotate(15deg) scale(.7);opacity:.25;filter:grayscale(.7)}}
+.combat-action{margin:12px 0;padding:20px 16px;background:linear-gradient(145deg,#f6fbf8,#eef5ff);border:1.5px solid #c5ddcf;border-radius:18px;text-align:center}
+.combat-ready{font-size:10px;font-weight:850;color:#347e6b;letter-spacing:.04em;margin-bottom:7px}
+.combat-action h3{font-size:19px;margin:0 0 8px;color:#223f36}.combat-action p{font-size:11px;color:#5b716b;line-height:1.7;margin:0 0 17px}
+.combat-meter{position:relative;height:24px;background:#dce5e0;border:2px solid #c4d3cb;border-radius:9px;overflow:hidden}
+.combat-sweet{position:absolute;top:0;bottom:0;background:#8eddb0;border-left:2px solid #318c62;border-right:2px solid #318c62;z-index:1}
+#rpg-charge-fill{display:block;position:relative;width:0;height:100%;background:repeating-linear-gradient(115deg,#336856 0 8px,#417e68 8px 16px);z-index:2;opacity:.85;box-shadow:3px 0 0 #fff}
+.combat-meter-label{display:flex;justify-content:space-between;font-size:9px;color:#597b68;margin:6px 0 12px}
+.combat-charge{width:100%;min-height:62px;border:none;border-radius:12px;background:#2e6956;color:#fff;box-shadow:0 5px 0 #194f40;font-weight:800;font-size:15px;font-family:inherit;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.combat-charge.charging{background:#438b69;transform:translateY(3px);box-shadow:0 2px 0 #194f40}
+.combat-spell{display:flex;flex-direction:column;align-items:center;justify-content:center;margin:4px auto 16px;width:120px;height:120px;border:2px solid #bc9ae6;border-radius:50%;background:radial-gradient(circle,#fff 0,#e5d7f8 65%,#cdb3ee);color:#8350b0;box-shadow:0 0 25px #a07ace30;font-size:58px;cursor:pointer;touch-action:manipulation}
+.combat-spell span{font-family:inherit;font-weight:800;font-size:11px;margin-top:-6px}
+.combat-skill{display:block;width:100%;border:1.5px solid #e2c279;background:#fff7de;color:#795820;border-radius:11px;padding:12px;font-weight:750;font-size:12px;font-family:inherit;cursor:pointer;margin-top:15px;min-height:44px}.combat-skill.armed{background:#fbe5a4;box-shadow:0 0 0 1px #c99934 inset}.combat-skill:disabled{opacity:.5;cursor:default}.combat-skill span{margin-left:6px;font-size:10px}
+.combat-basic{display:block;margin:12px auto 7px;background:none;border:none;color:#446e61;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-size:12px;min-height:36px}.combat-action>small{display:block;font-size:9px;color:#7b8f87}.combat-action button:disabled{opacity:.55;cursor:wait}
+.combat-victory{margin:14px 0;padding:22px 18px;text-align:center;border:1px solid #ecd89b;border-radius:16px;background:linear-gradient(140deg,#fff8d8,#fffdf5)}.combat-victory>span{font-size:38px}.combat-victory h3{font-size:19px;margin:9px 0}.combat-victory p{font-size:12px;color:var(--sub)}
+.combat-action button:focus-visible,.combat-weapon:focus-visible{outline:3px solid #478be0;outline-offset:4px}
+@media(max-width:400px){.rpg-arena{gap:30px!important}.rpg-arena .rpg-hero img{width:82px;height:82px}.combat-label span{display:block;margin:4px 0 0}.combat-weapon small{font-size:9px}.combat-action{padding:16px 12px}}
+@media(prefers-reduced-motion:reduce){.combat-projectile,.rpg-mon-big.fallen{animation:none!important}.combat-projectile{display:none}.rpg-mon-big.fallen{opacity:.4}.combat-charge{transition:none}}
+.combat-preferences{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--sub);margin-top:8px}.combat-preferences label{display:flex;align-items:center;gap:5px;min-height:32px}
+.combat-pet em{font-size:10px;font-style:normal;background:#182f31;padding:2px 6px;border-radius:5px}.combat-story{font-size:11px;line-height:1.7;color:var(--sub);margin-top:12px;padding-top:10px;border-top:1px dashed var(--border)}.combat-story summary{cursor:pointer;color:var(--text);font-weight:750}.combat-story p{margin:8px 0}
+.shooter-host[hidden],#rpg-battle-choice[hidden]{display:none}.shooter-host{margin:-8px;color:#d8eee4}.shooter-top{display:flex;align-items:center;justify-content:space-between;background:#183f39;padding:12px;border-radius:14px 14px 0 0;font-size:13px}.shooter-top button{border:1px solid #699588;background:#294e46;color:#effff5;border-radius:8px;padding:8px 12px;cursor:pointer}
+.shooter-host canvas{display:block;width:100%;aspect-ratio:600/430;background:#153936;touch-action:none;border-radius:0 0 12px 12px;outline-offset:2px}.shooter-controls{display:grid;grid-template-columns:60px 1fr 60px;gap:8px;margin-top:10px}.shooter-controls button{min-height:55px;touch-action:none;user-select:none;background:#2c6755;color:#fff;border:0;border-bottom:4px solid #184d3d;border-radius:10px;font-weight:750;cursor:pointer}.shooter-controls button[data-shooter-skill]{background:#f5d68a;color:#5c441d;border-color:#d9b156}.shooter-host p[data-shooter-status]{min-height:22px;margin:10px 0 0;color:#34755d;font-weight:700}.shooter-start{min-height:54px}.pet-tier.unique,.av-pet-tier.unique{background:#eedeff;color:#8f50c2}
+@media(max-width:480px){.combat-weapons{grid-template-columns:repeat(3,minmax(0,1fr))}.shooter-controls{grid-template-columns:48px 1fr 48px}.shooter-top{font-size:11px}.combat-action{padding:15px 12px}}
+dialog.shooter-host{width:min(600px,calc(100vw - 24px),calc((100dvh - 190px)*1.395));max-width:none;max-height:calc(100dvh - 24px);margin:auto;padding:12px;border:1px solid #66998a;border-radius:18px;background:#edf6f0;box-shadow:0 24px 80px #031e2470;box-sizing:content-box;overflow:auto}
+dialog.shooter-host::backdrop{background:#0d262acb;backdrop-filter:blur(3px)}dialog.shooter-host canvas{max-width:100%}dialog.shooter-host .shooter-top{padding:8px 10px}dialog.shooter-host .shooter-controls button{min-height:46px}dialog.shooter-host .combat-basic{margin:4px auto;min-height:28px}
+.combat-settings{display:grid;grid-template-columns:1.15fr .75fr 1.1fr;gap:6px;align-items:center;margin:12px 0;font-size:clamp(9px,2.5vw,12px)}.combat-settings label{display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;min-height:36px;border-radius:8px;background:var(--bg);cursor:pointer}.combat-settings input{appearance:auto;position:static;display:inline-block;flex:none;width:15px;height:15px;margin:0;accent-color:#347e6b;opacity:1}
+.shooter-controls{grid-template-columns:42px 42px minmax(0,1fr) 42px 42px;gap:5px}.shooter-controls button{font-size:12px}.hunt-preparation{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:16px 0;padding:18px;border:1px solid #a7cdb6;border-radius:16px;background:linear-gradient(115deg,#eff8ee,#e5f1ee)}.hunt-preparation small{display:block;font-size:11px;color:#577567}.hunt-preparation b{display:block;font-size:28px;color:#2a6851;margin:5px 0}.hunt-preparation b span{font-size:12px;font-weight:600}.hunt-preparation p{font-size:11px;line-height:1.6;margin:0;color:#59766a}.hunt-actions .rpg-go{margin:0;white-space:nowrap}.hunt-actions .combat-basic{margin:4px auto 0}.hunt-actions button:disabled{opacity:.4;cursor:default}
+@media(max-width:480px){.hunt-preparation{display:block;padding:14px}.hunt-actions{margin-top:12px}.hunt-actions .rpg-go{width:100%}.shooter-controls{grid-template-columns:32px 32px minmax(0,1fr) 32px 32px;gap:4px}.shooter-controls button{padding:3px;font-size:10px}}
+
+/* Compact arena information and keyboard RPG controls. */
+.rpg-arena-info{display:flex;align-items:center;justify-content:center;gap:7px 12px;flex-wrap:wrap;margin:2px 0 10px;font-size:10px;line-height:1.5;color:#607568}.rpg-arena-info span{white-space:nowrap}.rpg-arena-info label{display:inline-flex;gap:4px;align-items:center;white-space:nowrap;cursor:pointer;margin:0}.rpg-arena-info input{appearance:auto;position:static;opacity:1;display:inline-block;width:13px;height:13px;margin:0;accent-color:#557863}.rpg-health{color:#417450;font-weight:800}.rpg-health.low{color:#c16450}
+.rpg-skillbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:8px 0}.rpg-skillbar button{background:#f2dfb0;color:#5b472b;border:1px solid #cebb90;border-bottom-width:3px;border-radius:8px;min-height:44px;font-family:inherit;font-size:11px;font-weight:800;cursor:pointer}.rpg-skillbar button:nth-child(3){background:#d1e9e5;color:#355e63;border-color:#97bfb9}.rpg-skillbar button:nth-child(4){background:#e1d8ec;color:#655073;border-color:#beabd2}.rpg-skillbar button:disabled{opacity:.42;cursor:default}.shooter-controls{display:flex;justify-content:center;margin:7px 0 0;gap:6px}.shooter-controls button{width:42px;min-height:32px!important}.shooter-host p[data-shooter-status]{font-size:11px;line-height:1.5;margin:6px 0 0}.shooter-top{font-size:11px}dialog.shooter-host{width:min(660px,calc(100vw - 32px),calc((100dvh - 232px)*1.395));padding:10px}
+.rpg-camp{background:#fcf1dc;border:1px solid #e5caa1;padding:18px;border-radius:15px;text-align:center;color:#775c3e}.rpg-camp p{font-size:12px}.rpg-arena .rpg-hero.hurt:after{content:'−12 HP';position:absolute;top:-10px;left:0;right:0;font-size:15px;color:#b74c40;font-weight:900;animation:counterFloat 1.2s ease-out both}@keyframes counterFloat{from{transform:translateY(10px);opacity:1}to{transform:translateY(-18px);opacity:0}}
+@media(max-width:480px){.rpg-skillbar button{font-size:9px;padding:4px 2px;min-height:40px}.rpg-arena-info{gap:5px 8px;font-size:9px}}
+@media(prefers-reduced-motion:reduce){.rpg-arena .rpg-hero.hurt:after{animation:none}}
+
+/* A two-handed controller, usable with simultaneous touch pointers. */
+dialog.shooter-host{width:min(680px,calc(100vw - 24px));box-sizing:border-box;max-height:calc(100dvh - 16px);overscroll-behavior:contain}
+dialog.shooter-host canvas{width:min(100%,calc((100dvh - 280px)*1.395));min-width:120px;margin:auto}
+.shooter-gamepad{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 8px 4px;user-select:none;-webkit-user-select:none}
+.rpg-stick-wrap{flex:0 0 auto;text-align:center;color:#426452}
+.rpg-stick-wrap small{display:block;font-size:10px;margin-top:7px}
+.rpg-stick{width:124px;height:124px;position:relative;display:grid;place-items:center;border-radius:50%;border:3px solid #6e9888;background:radial-gradient(circle,#3d7563 0 33%,#234d40 34% 36%,#c5d9c9 37% 68%,#91b59d 69%);box-shadow:inset 0 3px 10px #17382b35,0 3px 0 #557865;touch-action:none;cursor:grab}
+.rpg-stick-cross{color:#edf8eb;font-size:68px;opacity:.35;pointer-events:none}
+.rpg-stick-knob{position:absolute;width:52px;height:52px;border-radius:50%;border:2px solid #d6ebca;background:radial-gradient(circle at 35% 25%,#eff7d9,#8dac80);box-shadow:0 4px 8px #092c3866;pointer-events:none;will-change:transform}
+.shooter-gamepad .rpg-skillbar{grid-template-columns:repeat(2,minmax(0,1fr));width:240px;gap:9px;margin:0}
+.shooter-gamepad .rpg-skillbar button{min-height:58px;touch-action:none;user-select:none;-webkit-user-select:none;font-size:12px;border-radius:17px;border-bottom-width:5px;padding:5px}
+.shooter-gamepad .rpg-skillbar button:active{transform:translateY(2px);border-bottom-width:2px}
+.shooter-gamepad .rpg-skillbar button:focus-visible{outline:3px solid #398adb;outline-offset:2px}
+.answer-pad{margin-top:12px;padding:10px;border-radius:12px;background:#edf3f0;border:1px solid #c8d9cf}
+.answer-pad summary{cursor:pointer;font-size:12px;line-height:1.5;padding:4px;color:#365c49;min-height:36px}
+.answer-pad-row{display:flex;justify-content:center;gap:4px;margin-top:5px}
+.answer-pad-row button{flex:1;min-width:0;min-height:44px;max-width:100px;border:1px solid #bbcdbf;border-bottom:3px solid #93ad9a;border-radius:7px;background:white;color:#254536;font-family:inherit;font-size:16px;font-weight:750;touch-action:manipulation;padding:3px}
+.answer-pad-row:last-child button{max-width:none;font-size:12px}.answer-pad-row button:active{background:#cbe7ce}
+@media(max-width:480px){.shooter-gamepad{gap:10px;padding:8px 0 2px}.rpg-stick{width:106px;height:106px}.rpg-stick-knob{width:46px;height:46px}.shooter-gamepad .rpg-skillbar{width:190px;gap:7px}.shooter-gamepad .rpg-skillbar button{font-size:11px;min-height:54px}.answer-pad{padding:6px}.answer-pad-row{gap:3px}}
+@media(orientation:landscape) and (max-height:600px){
+ dialog.shooter-host[open]{display:grid;grid-template-columns:132px minmax(0,1fr) 190px;gap:4px 10px;width:min(1040px,calc(100vw - 24px));align-items:center}
+ dialog.shooter-host .shooter-top{grid-column:1/-1;grid-row:1}
+ dialog.shooter-host canvas{grid-column:2;grid-row:2;width:min(100%,calc((100dvh - 155px)*1.395))}
+ .shooter-gamepad{display:contents}.rpg-stick-wrap{grid-column:1;grid-row:2;justify-self:center}
+ .shooter-gamepad .rpg-skillbar{grid-column:3;grid-row:2;width:100%}
+ dialog.shooter-host [data-shooter-status]{grid-column:1/-1;grid-row:3;text-align:center}
+ dialog.shooter-host>.combat-basic{grid-column:1/-1;grid-row:4;margin:0;min-height:28px}
+}

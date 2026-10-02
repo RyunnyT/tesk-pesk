@@ -1,0 +1,282 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>학습 RPG 1단계 — 레이팅·문항 생성기 확인</title>
+<script src="quiz-rating.js"></script>
+<style>
+  :root{--line:#e6e8ef;--sub:#6b7280;--hint:#9aa1ad;--text:#1a1a2e;--card:#fff;--accent:#4f6ef7;
+        --ok:#0f9d58;--no:#d93025;--gold:#c9921a;--bg:#f5f6fa}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Pretendard,'Malgun Gothic',system-ui,sans-serif;background:var(--bg);color:var(--text);
+       padding:24px 16px 80px;line-height:1.6}
+  .wrap{max-width:820px;margin:0 auto}
+  h1{font-size:20px;margin-bottom:4px}
+  .lead{font-size:13px;color:var(--sub);margin-bottom:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;
+        margin-bottom:14px;overflow-x:auto}
+  .q{overflow-x:auto}
+  .card h2{font-size:14px;font-weight:800;margin-bottom:10px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .stat{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+  .stat div{background:var(--bg);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700}
+  .stat b{display:block;font-size:18px;font-family:ui-monospace,monospace}
+  .q{background:var(--bg);border-radius:12px;padding:16px;margin:10px 0;font-size:17px;
+     font-weight:800;white-space:pre-wrap;font-family:ui-monospace,monospace}
+  .meta{font-size:11.5px;color:var(--hint);margin-bottom:8px}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  button{font-family:inherit;cursor:pointer;border-radius:10px;border:1.5px solid var(--line);
+         background:#fff;padding:12px;font-size:14px;font-weight:700}
+  button:hover{border-color:var(--accent)}
+  button.right{background:#e6f4ea;border-color:var(--ok);color:var(--ok)}
+  button.wrong{background:#fce8e6;border-color:var(--no);color:var(--no)}
+  button:disabled{cursor:default}
+  .btn-go{background:var(--accent);color:#fff;border-color:var(--accent);padding:10px 18px}
+  .fb{margin-top:10px;font-size:13px;padding:10px 12px;border-radius:10px;background:var(--bg)}
+  .delta{font-family:ui-monospace,monospace;font-weight:800}
+  .up{color:var(--ok)} .down{color:var(--no)}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+  th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--sub);font-weight:700}
+  .ok{color:var(--ok);font-weight:800} .warn{color:var(--gold);font-weight:800}
+  pre{background:#0f1220;color:#d6e2ff;padding:12px;border-radius:10px;font-size:11.5px;
+      overflow:auto;max-height:280px;margin-top:8px}
+  label{font-size:12px;font-weight:700;color:var(--sub)}
+  input[type=number]{width:90px;padding:7px 9px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit}
+</style></head><body>
+<div class="wrap">
+  <h1>학습 RPG 1단계 확인용</h1>
+  <p class="lead">문항 생성기 · 레이팅 갱신 · 경험치 계산이 설계대로 도는지 보는 개발용 화면입니다.
+     학생에게 보여주는 화면이 아닙니다.</p>
+
+  <!-- ① 직접 풀어보기 -->
+  <div class="card">
+    <h2>① 직접 풀어보기</h2>
+    <div class="stat">
+      <div>내 레이팅(숨김)<b id="s-rating">1000</b></div>
+      <div>누적 경험치<b id="s-exp">0</b></div>
+      <div>푼 문제<b id="s-n">0</b></div>
+      <div>정답률<b id="s-acc">—</b></div>
+    </div>
+    <div class="meta" id="q-meta"></div>
+    <div class="q" id="q-text">시작을 누르세요</div>
+    <div class="opts" id="q-opts"></div>
+    <div class="fb" id="q-fb" style="display:none"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn-go" onclick="nextQ()">다음 문제</button>
+      <button onclick="resetMe()">처음부터</button>
+    </div>
+  </div>
+
+  <!-- ② 수렴 검증 -->
+  <div class="card">
+    <h2>② 30문항 시뮬레이션 — 정답률이 70~80%로 수렴하는가</h2>
+    <div class="row" style="margin-bottom:10px">
+      <label>문항 수 <input type="number" id="sim-n" value="30" min="5" max="300"></label>
+      <label>반복 <input type="number" id="sim-rep" value="20" min="1" max="200"></label>
+      <button class="btn-go" onclick="runSim()">시뮬레이션 실행</button>
+    </div>
+    <div id="sim-out"></div>
+  </div>
+
+  <!-- ③-A 진단 10문항 -->
+  <div class="card">
+    <h2>③ 진단 10문항 — 처음 들어온 학생의 레이팅 잡기</h2>
+    <div class="meta">매 문항을 '지금 추정치와 같은 난이도'로 냅니다. 정답률 50% 지점이
+      정보량이 가장 크기 때문이며, 평소 출제(−190)와 반대로 갑니다.</div>
+    <div class="row" style="margin:10px 0">
+      <button class="btn-go" onclick="startDiag()">진단 시작</button>
+      <button onclick="validateDiag()">정확도 일괄 검증</button>
+    </div>
+    <div id="diag-live"></div>
+    <div id="diag-val"></div>
+  </div>
+
+  <!-- ④ 생성기 점검 -->
+  <div class="card">
+    <h2>④ 유형별 생성 샘플 — 오답이 실제 오류에서 나오는지</h2>
+    <div class="row"><button class="btn-go" onclick="showSamples()">샘플 뽑기</button></div>
+    <pre id="samples" style="display:none"></pre>
+  </div>
+</div>
+
+<script>
+const R = window.QRATE;
+let me = { rating: 1000, exp: 0, n: 0, correct: 0 };
+let cur = null, curDiff = 0;
+const itemDiff = {};                     // 유형별 난이도 자동 보정 상태
+
+function paint(){
+  document.getElementById('s-rating').textContent = me.rating;
+  document.getElementById('s-exp').textContent = me.exp;
+  document.getElementById('s-n').textContent = me.n;
+  document.getElementById('s-acc').textContent =
+    me.n ? Math.round(me.correct / me.n * 100) + '%' : '—';
+}
+function resetMe(){
+  me = { rating: 1000, exp: 0, n: 0, correct: 0 };
+  Object.keys(itemDiff).forEach(k => delete itemDiff[k]);
+  cur = null;
+  document.getElementById('q-text').textContent = '시작을 누르세요';
+  document.getElementById('q-opts').innerHTML = '';
+  document.getElementById('q-fb').style.display = 'none';
+  document.getElementById('q-meta').textContent = '';
+  paint();
+}
+function nextQ(){
+  const target = R.pickTargetDifficulty(me.rating);
+  const code = R.pickTypeFor(target);
+  const q = R.generateQuestion(code, target);
+  if(!q) return;
+  cur = q;
+  curDiff = itemDiff[q.typeCode] == null ? q.actualDifficulty : itemDiff[q.typeCode];
+  const p = R.expectedScore(me.rating, curDiff);
+  document.getElementById('q-meta').textContent =
+    q.typeCode + ' · ' + q.typeName + ' · ' + q.unit +
+    '  |  목표 난이도 ' + target + ' → 실제 ' + curDiff +
+    '  |  예상 정답률 ' + Math.round(p * 100) + '%';
+  document.getElementById('q-text').textContent = q.prompt;
+  document.getElementById('q-fb').style.display = 'none';
+  const box = document.getElementById('q-opts');
+  box.innerHTML = '';
+  q.options.forEach(o => {
+    const b = document.createElement('button');
+    b.textContent = o;
+    b.onclick = () => answer(o, b);
+    box.appendChild(b);
+  });
+}
+function answer(chosen, btn){
+  if(!cur) return;
+  const correct = String(chosen) === String(cur.answer);
+  const before = me.rating;
+  const p = R.expectedScore(me.rating, curDiff);
+  const gain = R.expGain(20, me.rating, curDiff);
+
+  me.rating = R.updateRating(me.rating, curDiff, correct);
+  itemDiff[cur.typeCode] = R.updateDifficulty(curDiff, me.rating, correct);
+  me.exp += gain; me.n++; if(correct) me.correct++;
+
+  [...document.getElementById('q-opts').children].forEach(b => {
+    b.disabled = true;
+    if(String(b.textContent) === String(cur.answer)) b.classList.add('right');
+    else if(b === btn && !correct) b.classList.add('wrong');
+  });
+  const d = me.rating - before;
+  document.getElementById('q-fb').innerHTML =
+    (correct ? '⭕ 정답' : '❌ 오답 — 정답은 ' + cur.answer) + '<br>' + cur.explain +
+    '<br><br>레이팅 <span class="delta ' + (d >= 0 ? 'up' : 'down') + '">' +
+    before + ' → ' + me.rating + ' (' + (d >= 0 ? '+' : '') + d + ')</span>' +
+    ' · 경험치 <span class="delta up">+' + gain + '</span>' +
+    ' · 문항 난이도 ' + curDiff + ' → ' + itemDiff[cur.typeCode];
+  document.getElementById('q-fb').style.display = 'block';
+  paint();
+}
+
+function runSim(){
+  const n = Math.max(5, +document.getElementById('sim-n').value || 30);
+  const rep = Math.max(1, +document.getElementById('sim-rep').value || 20);
+  const cov = R.coverage();
+  const skills = [900, 1000, 1100, 1200, 1300, 1500];
+  let rows = '';
+  skills.forEach(skill => {
+    let acc = 0, rate = 0, err = 0, exp = 0;
+    for(let s = 0; s < rep; s++){
+      const o = R.simulate({ trueSkill: skill, n, startRating: 1000, seed: 'lab' + skill + '_' + s });
+      acc += o.accuracy; rate += o.finalRating; err += o.ratingError; exp += o.exp;
+    }
+    const a = acc / rep * 100;
+    const good = a >= 70 && a <= 80;
+    const inBand = skill >= cov.min && skill <= cov.max;
+    rows += '<tr><td>' + skill + (inBand ? '' : ' <span class="warn">(구간 밖)</span>') + '</td>'
+      + '<td class="' + (good ? 'ok' : 'warn') + '">' + a.toFixed(1) + '%</td>'
+      + '<td>' + Math.round(rate / rep) + '</td><td>' + Math.round(err / rep) + '</td>'
+      + '<td>' + Math.round(exp / rep) + '</td></tr>';
+  });
+  document.getElementById('sim-out').innerHTML =
+    '<div class="meta">지금 유형이 덮는 난이도: <b>' + cov.min + ' ~ ' + cov.max + '</b> (유형 ' + cov.types + '개). '
+    + '이 구간 밖의 실력은 맞는 문제가 없어 정답률이 목표를 벗어납니다.</div>'
+    + '<table><tr><th>실력</th><th>정답률</th><th>최종 레이팅</th><th>실력과의 오차</th><th>경험치</th></tr>'
+    + rows + '</table>';
+}
+
+/* ── 진단 ── */
+let diag = null;
+function startDiag(){
+  diag = R.newDiagnostic('lab-' + Date.now());
+  drawDiag();
+}
+function drawDiag(){
+  const box = document.getElementById('diag-live');
+  if(!diag){ box.innerHTML = ''; return; }
+  if(diag.done){
+    const res = R.diagnosticResult(diag);
+    box.innerHTML = '<div class="fb"><b>진단 완료 — 시작 레이팅 ' + res.rating + '</b><br>'
+      + res.correct + ' / ' + res.total + '문항 정답 · 신뢰도 '
+      + (res.confidence === 'ok' ? '<span class="ok">보통</span>' : '<span class="warn">낮음</span>')
+      + (res.note ? '<br><span style="color:var(--sub)">' + res.note + '</span>' : '') + '</div>'
+      + '<table><tr><th>#</th><th>유형</th><th>난이도</th><th>결과</th><th>추정 변화</th></tr>'
+      + res.history.map(h => '<tr><td>' + h.step + '</td><td>' + h.code + '</td><td>' + h.difficulty
+          + '</td><td class="' + (h.correct ? 'ok' : 'warn') + '">' + (h.correct ? '○' : '×')
+          + '</td><td>' + h.before + ' → ' + h.after + '</td></tr>').join('') + '</table>'
+      + '<div class="row" style="margin-top:10px"><button onclick="applyDiag(' + res.rating + ')">이 값으로 ①의 레이팅 설정</button></div>';
+    return;
+  }
+  const q = R.diagnosticNext(diag);
+  if(!q){ drawDiag(); return; }
+  box.innerHTML = '<div class="meta">' + (diag.step + 1) + ' / ' + diag.n + '문항 · '
+      + q.typeCode + ' · ' + q.typeName + ' · 난이도 ' + q.actualDifficulty
+      + ' · 지금 추정 ' + diag.rating + '</div>'
+    + '<div class="q">' + q.prompt.replace(/</g, '&lt;') + '</div>'
+    + '<div class="opts" id="diag-opts"></div>';
+  const wrap = document.getElementById('diag-opts');
+  q.options.forEach(o => {
+    const b = document.createElement('button');
+    b.textContent = o;
+    b.onclick = () => { R.diagnosticAnswer(diag, String(o) === String(q.answer)); drawDiag(); };
+    wrap.appendChild(b);
+  });
+}
+function applyDiag(rating){
+  me.rating = rating; paint();
+  alert('①의 레이팅을 ' + rating + ' 으로 설정했어요.');
+}
+function validateDiag(){
+  const skills = [900, 1000, 1100, 1200, 1300, 1400, 1500];
+  const N = 150;
+  let rows = '';
+  skills.forEach(skill => {
+    let sum = 0, err = 0, within = 0;
+    for(let i = 0; i < N; i++){
+      const r = R.simulateDiagnostic(skill, 'v' + skill + '_' + i);
+      sum += r.rating; err += Math.abs(r.rating - skill);
+      if(Math.abs(r.rating - skill) <= 100) within++;
+    }
+    const w = Math.round(within / N * 100);
+    rows += '<tr><td>' + skill + '</td><td>' + Math.round(sum / N) + '</td><td>' + Math.round(err / N)
+         + '</td><td class="' + (w >= 60 ? 'ok' : 'warn') + '">' + w + '%</td></tr>';
+  });
+  document.getElementById('diag-val').innerHTML =
+    '<table style="margin-top:12px"><tr><th>실제 실력</th><th>추정 평균</th><th>오차 평균</th><th>오차 100 이내</th></tr>'
+    + rows + '</table>';
+}
+
+function showSamples(){
+  const el = document.getElementById('samples');
+  let out = '';
+  Object.keys(R.TYPES).forEach(code => {
+    const t = R.TYPES[code];
+    out += '── ' + code + ' · ' + t.name + '  (기준 ' + t.base + ', 폭 ' + t.range[0] + '~' + t.range[1] + ')\n';
+    [t.range[0], Math.round((t.range[0] + t.range[1]) / 2), t.range[1]].forEach(target => {
+      const q = R.generateQuestion(code, target, code + ':' + target);
+      out += '   목표 ' + target + ' → 실제 ' + q.actualDifficulty + '  '
+           + q.prompt.replace(/\n+/g, ' ') + '\n'
+           + '        정답 ' + q.answer + '   오답 ' + q.distractors.join(' / ') + '\n';
+    });
+    out += '\n';
+  });
+  el.textContent = out;
+  el.style.display = 'block';
+}
+paint();
+</script>
+</body></html>

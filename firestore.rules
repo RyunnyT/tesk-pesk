@@ -1,0 +1,287 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────
+// 무료(Spark) 요금제용 규칙 — Cloud Functions 없이 동작한다.
+//
+// 학급마다 두 가지 방식 중 하나로 동작한다.
+//  1) 전환 전 학급 (info/meta.studentAuth 가 없음): 지금까지와 같다.
+//     학생은 Firebase 로그인 없이 쓰며, 계정 문서도 공개다. 교사가 [학생 로그인 보안 전환]을
+//     누르기 전까지 기존 학급이 멈추지 않게 남겨 둔 호환 경로다.
+//  2) 전환한 학급 (info/meta.studentAuth == 'firebase'):
+//     학생은 Firebase 이메일/비밀번호 계정으로 로그인한다(shared/pesk-student-auth-free.js).
+//     classrooms/{학급}/studentAuth/{Firebase uid} 문서가 있어야 그 학급 자료를 읽고 쓸 수 있다.
+//     계정 문서(tesk-accounts)는 교사만 본다. 비밀번호는 Firebase Auth에만 있다.
+//
+// 남은 한계(서버 없이 규칙만으로는 막을 수 없는 것): 같은 학급의 로그인한 학생은
+// 반 전체가 함께 쓰는 문서(잔액·주식·예금 등)를 여전히 고칠 수 있다.
+// ─────────────────────────────────────────────────────────────
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function myUid() {
+      return request.auth.uid;
+    }
+
+    function myUser() {
+      return get(/databases/$(database)/documents/users/$(myUid())).data;
+    }
+
+    // Authority comes from Firebase-signed, verified identity, never editable profile.role.
+    // Keep this allowlist aligned with MASTER_EMAILS in shared/firebase-config.js.
+    function isMaster() {
+      return isSignedIn()
+        && request.auth.token.get('email_verified', false) == true
+        && request.auth.token.get('email', '') in ['asx0203@gmail.com'];
+    }
+
+    // 학생 Firebase 계정 (shared/student-auth-free-core.js 의 STUDENT_EMAIL_DOMAIN)
+    function isStudentEmail() {
+      return isSignedIn()
+        && request.auth.token.get('email', '').matches('.*@students[.]tesk-pesk[.]firebaseapp[.]com$');
+    }
+
+    function isApprovedTeacher() {
+      return isSignedIn()
+        && !isStudentEmail()
+        && exists(/databases/$(database)/documents/users/$(myUid()))
+        && myUser().get('role', '') == 'teacher'
+        && myUser().get('approved', false) == true;
+    }
+
+    function ownsRoom(roomId) {
+      return isApprovedTeacher()
+        && exists(/databases/$(database)/documents/classrooms/$(roomId)/info/meta)
+        && get(/databases/$(database)/documents/classrooms/$(roomId)/info/meta).data.ownerUid == myUid();
+    }
+
+    // ── 학급 전환 여부 ──
+    function isSecuredRoom(roomId) {
+      let meta = /databases/$(database)/documents/classrooms/$(roomId)/info/meta;
+      return exists(meta) && get(meta).data.get('studentAuth', '') == 'firebase';
+    }
+
+    // ── 전환한 학급의 학생 ── 교사가 계정을 지우거나 비밀번호를 초기화하면 이 문서가 사라진다.
+    function memberPath(roomId) {
+      return /databases/$(database)/documents/classrooms/$(roomId)/studentAuth/$(request.auth.uid);
+    }
+    function member(roomId) {
+      return get(memberPath(roomId)).data;
+    }
+    function isStudentOfRoom(roomId) {
+      return isSignedIn()
+        && isStudentEmail()
+        && exists(memberPath(roomId))
+        && member(roomId).get('disabled', false) == false
+        && member(roomId).get('mustChangePassword', false) == false;
+    }
+
+    // Pesk is used by students without Firebase Auth in rooms not yet converted.
+    // Keep this list narrow: only documents students must write from the student app.
+    function isPeskWritableDataKey(key) {
+      return key in [
+        'pesk-writings',
+        'pesk-peer-survey',
+        'pesk-purchases',
+        'pesk-purchase-log',
+        'pesk-portfolios',
+        'pesk-deposits',
+        'pesk-checklists',
+        'pesk-challenge-submissions',
+        'pesk-avatars',
+        'pesk-quiz-progress',
+        'tesk-counsel-requests',
+        'tesk-students',
+        'tesk-accounts',
+        'tesk-shop',
+        'tesk-teacher-notif'
+      ];
+    }
+    // 전환한 학급의 학생이 쓸 수 있는 문서 — 계정 문서와 옛 글 묶음 문서는 빠진다.
+    function isStudentCompatibleKey(key) {
+      return key in [
+        'pesk-peer-survey',
+        'pesk-purchases',
+        'pesk-purchase-log',
+        'pesk-portfolios',
+        'pesk-deposits',
+        'pesk-checklists',
+        'pesk-challenge-submissions',
+        'pesk-avatars',
+        'pesk-quiz-progress',
+        'tesk-counsel-requests',
+        'tesk-students',
+        'tesk-shop',
+        'tesk-teacher-notif'
+      ];
+    }
+    // 교사만 읽는 문서: 상담·생활기록부(누가기록)·관찰 기록·자리배치 근거
+    function isTeacherOnlyKey(key) {
+      return key in ['tesk-accounts', 'tesk-counsels', 'tesk-friends', 'tesk-activities',
+        'tesk-records', 'tesk-observations', 'tesk-seats'];
+    }
+
+    // ── 전환한 학급의 글 (개별 문서) ── 본인 글만, 교사 피드백·읽음 표시는 못 바꾼다.
+    function ownsWriting(roomId, data) {
+      return data.get('studentNum', 0) == member(roomId).studentNum
+        && data.get('accountUid', '') == member(roomId).accountUid;
+    }
+    function studentWritingCreate(roomId) {
+      let next = request.resource.data;
+      return ownsWriting(roomId, next)
+        && next.keys().hasOnly(['id','studentNum','studentName','accountUid','title','content','date','submittedAt','updatedAt','status','feedback','feedbackDate','readAt','topic'])
+        && next.get('feedback','') == '' && next.get('readAt','') == '' && next.get('feedbackDate','') == '' && next.get('status','pending') == 'pending';
+    }
+    function studentWritingUpdate(roomId) {
+      let next = request.resource.data;
+      return ownsWriting(roomId, next) && ownsWriting(roomId, resource.data) && (next.get('deleted',false) == true
+        ? next.keys().hasOnly(['id','deleted','studentNum','accountUid','updatedAt'])
+        : !resource.data.get('deleted',false)
+          && next.diff(resource.data).affectedKeys().hasOnly(['title','content','updatedAt','editCount','revision','needsRevisionReview','rubricStale','anthology'])
+          && validWritingRevision(next,resource.data)
+          && validAnthologyChoice(next,resource.data));
+    }
+    function validWritingRevision(next,old) {
+      let textChanged = next.get('title','') != old.get('title','') || next.get('content','') != old.get('content','');
+      return textChanged
+        ? next.get('needsRevisionReview',false) == true && next.get('revision',0) == old.get('revision',1) + 1
+        : next.get('revision',1) == old.get('revision',1) && next.get('needsRevisionReview',false) == old.get('needsRevisionReview',false);
+    }
+    function validAnthologyChoice(next,old) {
+      return next.get('anthology',{}) == old.get('anthology',{}) || (
+        old.get('anthology',{}).get('status','') == 'student-review'
+        && next.anthology.status in ['published','declined']
+        && next.anthology.diff(old.anthology).affectedKeys().hasOnly(['status','by','studentChoices','acceptedIds','title','text','publishedAt','declinedAt'])
+      );
+    }
+    function studentWritingArchive(roomId,writingId) {
+      let before = get(/databases/$(database)/documents/classrooms/$(roomId)/data/pesk-writings/items/$(writingId)).data;
+      let next = request.resource.data;
+      return ownsWriting(roomId, before) && ownsWriting(roomId, next)
+        && next.diff(before).affectedKeys().hasOnly(['revision','archivedAt'])
+        && next.revision == before.get('revision',1);
+    }
+
+    match /users/{uid} {
+      allow read: if isSignedIn() && (uid == myUid() || isMaster());
+      allow create: if isMaster() || (isSignedIn() && uid == myUid()
+        && !isStudentEmail()
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'photoURL', 'role', 'approved', 'createdAt', 'lastLoginAt'
+        ])
+        && request.resource.data.uid == myUid()
+        && request.resource.data.email == request.auth.token.get('email', '')
+        && request.resource.data.role == 'teacher'
+        && request.resource.data.approved == false);
+      allow update: if isMaster() || (isSignedIn() && uid == myUid()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName', 'photoURL', 'lastLoginAt', 'lastRoomId', 'lastClassCode',
+          'lastSchoolCode', 'lastClassId', 'lastRoomUpdatedAt'
+        ]));
+      allow delete: if isMaster();
+    }
+
+    match /classrooms/{roomId} {
+      // Students need to read class data before/after logging in to Pesk.
+      allow read: if true;
+
+      match /info/meta {
+        allow read: if true;
+        allow create: if isSignedIn() && (
+          isMaster()
+          || (isApprovedTeacher() && request.resource.data.ownerUid == myUid())
+        );
+        // Only a trusted administrator can assign/reassign an existing room's owner.
+        // 한 번 전환한 학급을 교사가 실수로 다시 공개 방식으로 되돌리지 못하게 한다.
+        allow update: if isMaster() || (ownsRoom(roomId)
+          && request.resource.data.ownerUid == resource.data.ownerUid
+          && (resource.data.get('studentAuth', '') != 'firebase'
+              || request.resource.data.get('studentAuth', '') == 'firebase'));
+        allow delete: if isMaster() || ownsRoom(roomId);
+      }
+
+      // Teacher observation/support history is separate from public student data.
+      match /peer-support/{studentKey}/entries/{entryId} {
+        allow read, write: if isMaster() || ownsRoom(roomId);
+      }
+
+      // 로그인 조회: 아이디 해시 → 학생 Firebase 로그인 주소. 한 건씩만 읽을 수 있다(목록 불가).
+      match /studentLogins/{key} {
+        allow get: if true;
+        allow list: if false;
+        allow write: if isMaster() || ownsRoom(roomId);
+      }
+
+      // 학생 인증 문서: 교사가 만들고 지운다. 학생은 비밀번호를 바꿀 때 자기 문서의
+      // 세션 번호를 1 올리고 "변경 필요" 표시를 끄는 것만 할 수 있다.
+      match /studentAuth/{uid} {
+        allow get: if isMaster() || ownsRoom(roomId) || (isSignedIn() && myUid() == uid);
+        allow list: if isMaster() || ownsRoom(roomId);
+        allow create, delete: if isMaster() || ownsRoom(roomId);
+        allow update: if isMaster() || ownsRoom(roomId) || (isSignedIn() && myUid() == uid
+          && isStudentEmail()
+          && resource.data.get('disabled', false) == false
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sessionVersion','mustChangePassword','pwChanged','passwordUpdatedAt'])
+          && request.resource.data.sessionVersion == resource.data.get('sessionVersion', 1) + 1
+          && request.resource.data.mustChangePassword == false
+          && request.resource.data.pwChanged == true);
+      }
+
+      match /data/{key} {
+        // 글은 개별 문서에 저장한다.
+        match /items/{writingId} {
+          match /revisions/{revisionId} {
+            allow read: if key == 'pesk-writings' && (!isSecuredRoom(roomId) || isMaster() || ownsRoom(roomId) || isStudentOfRoom(roomId));
+            allow create: if key == 'pesk-writings' && (isMaster() || ownsRoom(roomId)
+              || (!isSecuredRoom(roomId))
+              || (isStudentOfRoom(roomId) && revisionId == string(request.resource.data.revision) && studentWritingArchive(roomId,writingId)));
+            allow update, delete: if key == 'pesk-writings' && (isMaster() || ownsRoom(roomId) || !isSecuredRoom(roomId));
+          }
+          allow read: if key == 'pesk-writings' && (!isSecuredRoom(roomId) || isMaster() || ownsRoom(roomId) || isStudentOfRoom(roomId));
+          allow create: if key == 'pesk-writings' && (isMaster() || ownsRoom(roomId)
+            || !isSecuredRoom(roomId)
+            || (isStudentOfRoom(roomId) && studentWritingCreate(roomId)));
+          allow update: if key == 'pesk-writings' && (isMaster() || ownsRoom(roomId)
+            || !isSecuredRoom(roomId)
+            || (isStudentOfRoom(roomId) && studentWritingUpdate(roomId)));
+          allow delete: if key == 'pesk-writings' && (isMaster() || ownsRoom(roomId) || !isSecuredRoom(roomId));
+        }
+
+        allow read: if isMaster() || ownsRoom(roomId)
+          || (!isSecuredRoom(roomId) && !(key in ['tesk-counsels', 'tesk-records', 'tesk-observations', 'tesk-seats']))
+          || (!isTeacherOnlyKey(key) && isStudentOfRoom(roomId));
+
+        // Teachers can write every class data document in their own room.
+        // Students can write only the Pesk-facing data documents listed above.
+        allow write: if isMaster() || ownsRoom(roomId)
+          || (!isSecuredRoom(roomId) && isPeskWritableDataKey(key))
+          || (isStudentOfRoom(roomId) && isStudentCompatibleKey(key));
+      }
+    }
+
+    match /classCodes/{code} {
+      allow read: if true;
+      allow create: if isMaster() || (isApprovedTeacher()
+        && request.resource.data.ownerUid == myUid()
+        && getAfter(/databases/$(database)/documents/classrooms/$(request.resource.data.roomId)/info/meta).data.ownerUid == myUid());
+      allow update: if isMaster() || (isApprovedTeacher()
+        && resource.data.ownerUid == myUid()
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.roomId == resource.data.roomId
+        && ownsRoom(resource.data.roomId));
+      allow delete: if isMaster();
+    }
+
+    match /master/{doc} {
+      allow read: if true;
+      allow write: if isMaster();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

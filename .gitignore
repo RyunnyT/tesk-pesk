@@ -1,0 +1,30 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Build artifacts
+build/
+dist/
+
+# Deploy tool caches
+.vercel/
+.wrangler/
+
+# Node
+node_modules/
+functions/node_modules/
+
+# Firebase
+.firebase/
+firebase-debug.log
+functions/.env
+serviceAccountKey.json
+
+# OS
+Thumbs.db
+.DS_Store
+
+# 검증 산출물 / 스크래치
+output/
+tmp/

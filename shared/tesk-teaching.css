@@ -1,0 +1,26 @@
+.teach-ui{font-size:13px;line-height:1.7;overflow-wrap:anywhere}.teach-ui h3{font-size:18px;margin:0 0 12px}.teach-ui h4{margin:15px 0 5px}.teach-ui label{display:block;margin:10px 0}.teach-ui input:not([type=checkbox]),.teach-ui select,.teach-ui textarea{display:block;width:100%;font:inherit;color:var(--text);background:var(--bg,#fff);border:1px solid var(--border);border-radius:8px;padding:9px;box-sizing:border-box}.teach-ui textarea{resize:vertical}.teach-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:15px}.teach-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.teach-stats{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}.teach-stats>span{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;min-width:130px}.teach-stats b{display:block;font-size:20px}.teach-list{display:block;text-align:left;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);padding:13px;width:100%;margin:10px 0;cursor:pointer;font:inherit}.teach-list span,.teach-list small{display:block}.teach-scroll{overflow:auto;margin:12px 0}.teach-scroll table{border-collapse:collapse;min-width:600px;width:100%;text-align:left}.teach-scroll td,.teach-scroll th{padding:9px;border-bottom:1px solid var(--border);vertical-align:top}.teach-scroll th{background:var(--surface)}.teach-scroll small{display:block;color:var(--sub)}.teach-ui details{border:1px solid var(--border);border-radius:10px;padding:12px;margin:14px 0}.teach-ui summary{font-weight:700;cursor:pointer}.teach-ui pre{white-space:pre-wrap;font:inherit}.teach-ui article{border-bottom:1px solid var(--border);padding:10px 0}.teach-ui blockquote{margin:12px 0;border-left:3px solid var(--tesk);padding:10px;background:var(--surface)}.teach-ui .btn{margin:3px}.teach-exam-input{display:grid;grid-template-columns:90px 80px 1fr 70px;gap:8px;align-items:center;margin:10px 0}.teach-exam-input input{min-width:0;width:100%}.teach-exam-input label input{width:auto}.teach-writing-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}.teach-writing-layout>div{min-width:0}.teach-writing-layout>.teach-original{position:sticky;top:90px;max-height:75vh;overflow:auto}.teach-notice{background:var(--gold-l);border-radius:8px;padding:10px}.teach-overview{margin-top:18px}.teach-ui mark{background:#fff2b8;color:#242219}@media(max-width:800px){.teach-writing-layout,.teach-grid{grid-template-columns:1fr}.teach-writing-layout>.teach-original{position:static;max-height:none}.teach-exam-input{grid-template-columns:65px 65px 1fr}.teach-exam-input label{grid-column:2 / -1}.teach-ui .teach-stats>span{min-width:90px;flex:1}.teach-head{align-items:start}}
+
+/* 상담: 신청 처리 선택 · 다음 단계 선택 · 누적 결과 */
+.teach-ui .teach-request{border:1px solid var(--coral,#e5484d);background:var(--coral-l,#fff1f0);border-radius:10px;padding:10px 12px;margin:8px 0}
+.teach-ui .teach-request p{margin:4px 0 8px}
+.teach-ui .teach-hint{font-size:12px;color:var(--sub)}
+.teach-ui .teach-filter-chip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--tesk-l);border-radius:8px;padding:6px 10px}
+.teach-ui .teach-read-requests{margin-top:10px}
+.teach-ui .teach-read-requests .teach-request{border-color:var(--border);background:var(--surface)}
+.teach-ui .teach-next-step{border-left:4px solid var(--tesk)}
+.teach-ui .teach-next-step #teach-counsel-panel:not(:empty){margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)}
+.rp-line.rp-link{cursor:pointer;border-radius:6px}
+.rp-line.rp-link:hover,.rp-line.rp-link:focus-visible{background:var(--tesk-l)}
+
+/* 상담: 버튼 줄은 왼쪽부터 붙여 놓는다 */
+.teach-head.teach-left{justify-content:flex-start}
+
+/* 상담 AI 결과 · 저장한 AI 분석 기록 */
+.teach-ui .teach-ai-result{margin-top:12px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.teach-ui .teach-ai-result h4{margin:0 0 4px}
+.teach-ui .teach-ai-row{margin:8px 0}
+.teach-ui .teach-ai-row p{margin:2px 0 0}
+.teach-ui .teach-ai-row ul{margin:2px 0 0;padding-left:20px}
+.teach-ui .teach-ai-notes>summary{cursor:pointer;font-weight:800}
+.teach-ui .teach-ai-notes article{border-top:1px solid var(--border);padding:10px 0}
+.teach-ui .teach-ai-notes .teach-head{margin-bottom:4px}

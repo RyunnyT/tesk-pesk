@@ -1,0 +1,32 @@
+{
+  "name": "Pesk - 나의 학급 활동",
+  "short_name": "Pesk",
+  "description": "글쓰기, 상담, 학급 경제와 친구 관계 활동을 확인하는 학생용 앱",
+  "start_url": "./pesk.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f6fa",
+  "theme_color": "#4f8ef7",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./pesk-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./pesk-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./pesk-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity"]
+}

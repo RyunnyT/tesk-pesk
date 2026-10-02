@@ -9,28 +9,28 @@
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, getDocs, collection, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-const firebaseConfig = {
-  apiKey:"AIzaSyA41ZYobXjCtGcSN8N7UJ2XkzrH9ef39EY",
-  authDomain:"tesk-pesk.firebaseapp.com",
-  projectId:"tesk-pesk",
-  storageBucket:"tesk-pesk.firebasestorage.app",
-  messagingSenderId:"619304025482",
-  appId:"1:619304025482:web:27d72258009ec6b9d49c73"
-};
+import { firebaseConfig, MASTER_EMAILS, PESK_DEMO } from "./shared/firebase-config.js";
+window._economyReady = import("./shared/pesk-economy-api.js").then(m => { window._economyApi = m; }).catch(e=>{ console.warn("경제 API 로드 실패",e); });
+window._studentAuthReady = import("./shared/pesk-student-auth.js").then(m=>{window._studentAuthApi=m;}).catch(()=>{});
+// 학급별 학생 인증 방식: 서버 인증(Blaze) / 무료 Firebase 인증(전환한 학급) / 기존 방식(null)
+window._studentAuthFor = roomId => import("./shared/pesk-student-auth-free.js?v=20261001app1").then(m=>m.resolveStudentAuth(roomId));
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 window._db = db; window._auth = auth;
 window._fsDoc = doc; window._fsGetDoc = getDoc;
+window._fsRunTxn = runTransaction;
 window._fsSetDoc = setDoc; window._fsGetDocs = getDocs; window._fsCollection = collection;
 window._signInWithPopup = signInWithPopup;
 window._GoogleAuthProvider = GoogleAuthProvider;
 window._googleProvider = googleProvider;
 window._fbReady = true;
+// 체험(데모) 계정 설정 — 버튼 노출 여부를 결정 (설정은 shared/firebase-config.js)
+window.TESK_PESK_DEMO = PESK_DEMO;
+if(typeof window._syncDemoEntry === 'function') window._syncDemoEntry();
 // 공지 + 광고 로드
 (async()=>{
   try{
@@ -73,14 +73,14 @@ window._fbReady = true;
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --bg:#f4f3ef;
+  --bg:#dfe8e1;
   --tesk:#1a472a; --tesk-m:#2d7a47; --tesk-l:#e8f5ec;
   --pesk:#1a3a72; --pesk-m:#2d5fa8; --pesk-l:#e8f0fb;
   --gold:#c9921a; --gold-l:#fdf3e0;
-  --text:#111008; --sub:#6b6760; --hint:#b5b2ab;
-  --card:#ffffff; --border:rgba(0,0,0,0.08);
-  --shadow:0 4px 24px rgba(0,0,0,0.08);
-  --shadow-lg:0 12px 48px rgba(0,0,0,0.14);
+  --text:#24352e; --sub:#596b60; --hint:#6e7f72;
+  --card:#f0f3eb; --border:#c8d5cb;
+  --shadow:0 4px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-lg:0 16px 56px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.05);
   --radius:20px;
 }
 html,body{min-height:100vh;font-family:'Geist','Pretendard',sans-serif;background:var(--bg);color:var(--text);}
@@ -90,7 +90,7 @@ body{
   background:
     radial-gradient(ellipse 60% 40% at 0% 0%, rgba(26,71,42,0.10) 0%, transparent 60%),
     radial-gradient(ellipse 50% 40% at 100% 100%, rgba(26,58,114,0.10) 0%, transparent 60%),
-    #f4f3ef;
+    var(--bg);
 }
 
 /* ── 헤더 ── */
@@ -98,7 +98,7 @@ body{
   display:flex;align-items:center;justify-content:space-between;
   padding:20px 48px;
   position:sticky;top:0;z-index:100;
-  background:rgba(244,243,239,0.88);backdrop-filter:blur(16px);
+  background:rgba(211,224,213,0.94);backdrop-filter:blur(20px) saturate(180%);
   border-bottom:1px solid var(--border);
 }
 .logo{
@@ -113,15 +113,15 @@ body{
 .btn{
   display:inline-flex;align-items:center;gap:6px;
   padding:9px 20px;border-radius:10px;font-size:13px;font-weight:600;
-  cursor:pointer;border:none;transition:all .15s;text-decoration:none;
+  cursor:pointer;border:none;transition:all .25s cubic-bezier(0.4, 0, 0.2, 1);text-decoration:none;
   font-family:'Geist','Pretendard',sans-serif;
 }
 .btn-tesk{background:var(--tesk);color:#fff;}
-.btn-tesk:hover{background:var(--tesk-m);}
+.btn-tesk:hover{background:var(--tesk-m);transform:translateY(-1px);box-shadow:0 4px 16px rgba(26,71,42,0.25);}
 .btn-ghost{background:transparent;color:var(--sub);border:1px solid var(--border);}
-.btn-ghost:hover{background:var(--card);color:var(--text);}
+.btn-ghost:hover{background:var(--card);color:var(--text);transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,0.06);}
 .btn-pesk{background:var(--pesk);color:#fff;}
-.btn-pesk:hover{background:var(--pesk-m);}
+.btn-pesk:hover{background:var(--pesk-m);transform:translateY(-1px);box-shadow:0 4px 16px rgba(26,58,114,0.25);}
 .btn-lg{padding:14px 32px;font-size:15px;border-radius:14px;}
 
 /* ── 히어로 ── */
@@ -158,10 +158,12 @@ body{
   background:var(--card);border-radius:var(--radius);
   padding:36px 32px;border:1px solid var(--border);
   box-shadow:var(--shadow);position:relative;overflow:hidden;
+  transition:transform .3s cubic-bezier(0.4,0,0.2,1), box-shadow .3s ease;
 }
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.05);}
 .card::before{
   content:'';position:absolute;top:-40px;right:-40px;
-  width:140px;height:140px;border-radius:50%;opacity:.06;
+  width:140px;height:140px;border-radius:50%;opacity:.05;filter:blur(30px);
 }
 .card.tesk-card::before{background:var(--tesk);}
 .card.pesk-card::before{background:var(--pesk);}
@@ -195,7 +197,9 @@ body{
 .code-input-wrap{
   background:var(--card);border-radius:var(--radius);
   padding:32px 28px;border:1px solid var(--border);box-shadow:var(--shadow);
+  transition:box-shadow .3s ease;
 }
+.code-input-wrap:focus-within{box-shadow:0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.05);}
 .code-input-title{
   font-family:'Geist',sans-serif;font-weight:800;font-size:20px;margin-bottom:6px;
 }
@@ -209,7 +213,7 @@ body{
   transition:border-color .15s;outline:none;
   font-variant-numeric:tabular-nums;
 }
-.code-digit:focus{border-color:var(--pesk);background:#fff;}
+.code-digit:focus{border-color:var(--pesk);background:var(--card);box-shadow:0 0 0 3px rgba(26,58,114,0.1);}
 .code-digit.filled{border-color:var(--pesk-m);}
 
 /* ── 푸터 ── */
@@ -225,13 +229,13 @@ body{
   position:fixed;inset:0;background:rgba(0,0,0,0.45);
   display:flex;align-items:center;justify-content:center;
   z-index:1000;opacity:0;pointer-events:none;
-  transition:opacity .2s;padding:20px;
+  transition:opacity .25s ease;padding:20px;
 }
 .modal-overlay.open{opacity:1;pointer-events:all;}
 .modal{
   background:var(--card);border-radius:24px;padding:36px 32px;
   width:100%;max-width:400px;box-shadow:var(--shadow-lg);
-  transform:scale(.96) translateY(8px);transition:transform .2s;
+  transform:scale(.96) translateY(8px);transition:transform .3s cubic-bezier(0.16,1,0.3,1);
 }
 .modal-overlay.open .modal{transform:scale(1) translateY(0);}
 .modal-title{
@@ -246,7 +250,7 @@ body{
   font-size:14px;font-family:'Geist','Pretendard',sans-serif;
   color:var(--text);outline:none;transition:border-color .15s;
 }
-.field input:focus{border-color:var(--tesk);}
+.field input:focus{border-color:var(--tesk);box-shadow:0 0 0 3px rgba(26,71,42,0.08);}
 .modal-actions{display:flex;gap:8px;margin-top:20px;}
 .modal-actions .btn{flex:1;justify-content:center;}
 .btn-full{width:100%;justify-content:center;}
@@ -256,13 +260,13 @@ body{
 }
 .error-msg.show{display:block;}
 .btn-google{
-  background:#fff;color:#3c4043;
+  background:var(--card);color:#3c4043;
   border:1.5px solid #dadce0;gap:10px;
   font-size:14px;padding:12px 20px;border-radius:10px;
   width:100%;justify-content:center;
   box-shadow:0 1px 3px rgba(0,0,0,0.08);
 }
-.btn-google:hover{background:#f8f9fa;box-shadow:0 2px 8px rgba(0,0,0,0.12);}
+.btn-google:hover{background:#f8f9fa;box-shadow:0 3px 12px rgba(0,0,0,0.10);transform:translateY(-1px);}
 .btn-google img{width:20px;height:20px;flex-shrink:0;}
 .google-divider{display:flex;align-items:center;gap:10px;margin:16px 0;
   font-size:12px;color:var(--hint);}
@@ -316,6 +320,12 @@ body{
   .cards{grid-template-columns:1fr;}
   .header-nav .btn-ghost{display:none;}
 }
+
+/* ── 스크롤바 ── */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.08);border-radius:99px;}
+::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,0.15);}
 </style>
 </head>
 <body>
@@ -377,7 +387,7 @@ body{
     <div class="card-title">Pesk</div>
     <p class="card-desc">학생이 매일 성장을 눈으로 확인하는 게임화 플랫폼. 선생님과 실시간으로 연결돼요.</p>
     <ul class="feature-list">
-      <li>캐릭터·레벨 성장 시스템</li>
+      <li>학급화폐 성장 기록</li>
       <li>학급화폐 획득 & 상점 이용</li>
       <li>오늘의 미션 & 배지 수집</li>
       <li>직업·월급·저축·투자</li>
@@ -413,7 +423,7 @@ body{
         </button>
         <button id="tab-school" onclick="switchEntryTab('school')"
           style="flex:1;padding:9px;border-radius:10px;border:1.5px solid var(--border);
-            background:#fff;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+            background:var(--card);color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
           🏫 학교로 찾기
         </button>
       </div>
@@ -501,6 +511,18 @@ body{
       <div class="error-msg" id="changepw-error"></div>
     </div>
 
+    <!-- 체험하기 (데모 계정) — shared/firebase-config.js 의 PESK_DEMO.enabled 로 켜고 끔 -->
+    <div id="demo-entry" style="display:none;margin-top:18px;padding-top:16px;border-top:1px dashed var(--border);">
+      <p style="font-size:12px;color:var(--hint);text-align:center;margin:0 0 10px;line-height:1.6;">
+        학급 코드가 없으신가요?<br>체험용 계정으로 학생 화면을 둘러볼 수 있어요.
+      </p>
+      <button class="btn btn-full" id="demo-btn" onclick="startPeskDemo()"
+        style="border:1.5px dashed var(--pesk);background:var(--card);color:var(--pesk);font-weight:800;">
+        🎮 체험해보기
+      </button>
+      <div class="error-msg" id="demo-error"></div>
+    </div>
+
   </div>
 </div>
 
@@ -532,22 +554,79 @@ body{
 
 <script>
 // ── 교사 로그인 모달 ──
+/* 카카오톡·네이버 등 앱 안 브라우저에서는 Google이 로그인 창 자체를 막는다(403 disallowed_useragent).
+   버튼을 누르기 전에 알려서 '로그인이 안 된다'로 끝나지 않게 한다. */
+function inAppBrowserName(){
+  const ua = navigator.userAgent || '';
+  if(/KAKAOTALK/i.test(ua)) return '카카오톡';
+  if(/NAVER\(inapp|NAVER/i.test(ua)) return '네이버 앱';
+  if(/Instagram/i.test(ua)) return '인스타그램';
+  if(/FBAN|FBAV/i.test(ua)) return '페이스북';
+  if(/\bLine\//i.test(ua)) return '라인';
+  if(/BAND\//i.test(ua)) return '밴드';
+  if(/; wv\)/.test(ua)) return '앱';
+  return '';
+}
 function openTeacherModal(){
   document.getElementById('teacher-modal').classList.add('open');
+  const app = inAppBrowserName(), err = document.getElementById('teacher-error');
+  if(app && err){
+    err.textContent = app + ' 안의 브라우저에서는 Google 로그인이 막혀 있어요. 메뉴(⋮ 또는 공유)에서 "다른 브라우저로 열기"를 눌러 Chrome·Safari·Edge에서 로그인해 주세요.';
+    err.classList.add('show');
+  }
 }
 function closeTeacherModal(e){
   if(!e||e.target===document.getElementById('teacher-modal'))
     document.getElementById('teacher-modal').classList.remove('open');
 }
 
+async function preloadTeacherRoom(user){
+  if(!user?.uid || !window._fbReady) return;
+  try{
+    const userSnap = await window._fsGetDoc(window._fsDoc(window._db,'users',user.uid));
+    if(!userSnap.exists()) return;
+    const p = userSnap.data() || {};
+    if(p.lastRoomId) localStorage.setItem('tesk-room-id', p.lastRoomId);
+    if(p.lastSchoolCode) localStorage.setItem('tesk-school-code', p.lastSchoolCode);
+    if(p.lastClassId) localStorage.setItem('tesk-school-classid', p.lastClassId);
+
+    // roomId가 없지만 classCode만 있는 경우 역조회로 복구
+    if(!localStorage.getItem('tesk-room-id') && p.lastClassCode){
+      const codeSnap = await window._fsGetDoc(window._fsDoc(window._db,'classCodes', String(p.lastClassCode)));
+      if(codeSnap.exists() && codeSnap.data()?.roomId){
+        localStorage.setItem('tesk-room-id', codeSnap.data().roomId);
+      }
+    }
+  }catch(_e){}
+}
+
+async function waitForLoginConnection(){
+  const started = Date.now();
+  while(!window._fbReady){
+    if(navigator.onLine === false) throw new Error('인터넷 연결을 확인한 뒤 다시 시도해주세요.');
+    if(Date.now()-started > 10000) throw new Error('로그인 연결을 준비하지 못했어요. 새로고침 후 다시 시도해주세요.');
+    await new Promise(resolve=>setTimeout(resolve,100));
+  }
+}
+function loginErrorMessage(error){
+  console.warn('로그인 처리 실패',error);
+  if(error?.name==='QuotaExceededError') return '브라우저 저장 공간이 부족해 로그인 정보를 저장하지 못했어요. 브라우저 저장 공간을 확보한 뒤 다시 시도해주세요.';
+  if(['functions/permission-denied','functions/unauthenticated','functions/resource-exhausted','functions/invalid-argument'].includes(error?.code)) return error.message;
+  if(error?.code==='permission-denied') return '학급 정보 접근이 거부됐어요. 선생님께 학급 연결 상태 확인을 요청해주세요.';
+  if(error?.code==='auth/popup-blocked') return '로그인 팝업이 차단됐어요. 이 사이트의 팝업을 허용한 뒤 다시 시도해주세요.';
+  if(error?.code==='auth/unauthorized-domain') return '이 주소에서는 Google 로그인이 허용되지 않아요. 관리자에게 로그인 도메인 확인을 요청해주세요.';
+  return error?.message || '연결에 실패했어요. 잠시 후 다시 시도해주세요.';
+}
+
 async function loginWithGoogle(){
   const err = document.getElementById('teacher-error');
   const btn = document.getElementById('google-login-btn');
+  if(btn.disabled) return;
   err.classList.remove('show');
   btn.textContent = '로그인 중...';
   btn.disabled = true;
   try{
-    if(!window._fbReady) throw new Error('Firebase 준비 중');
+    if(!window._fbReady) throw new Error('로그인 연결을 준비 중이에요. 잠시 후 로그인 버튼을 다시 눌러주세요.');
     const result = await window._signInWithPopup(window._auth, window._googleProvider);
     const user = result.user;
     // 사용자 정보 저장
@@ -555,9 +634,11 @@ async function loginWithGoogle(){
     localStorage.setItem('tesk-teacher-name', user.displayName || user.email);
     localStorage.setItem('tesk-teacher-email', user.email || '');
     localStorage.setItem('tesk-teacher-photo', user.photoURL || '');
+    await preloadTeacherRoom(user);
     window.location.href = 'tesk_teacher_v2.html';
   } catch(e){
     if(e.code !== 'auth/popup-closed-by-user'){
+      err.textContent = loginErrorMessage(e);
       err.classList.add('show');
     }
     btn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"> Google로 로그인';
@@ -593,6 +674,7 @@ async function enterWithCode(){
   const code=getCode();
   const err=document.getElementById('code-error');
   const btn=document.getElementById('code-btn');
+  if(btn.disabled) return;
   if(code.length<6){
     err.textContent='6자리 코드를 모두 입력해주세요.';
     err.classList.add('show'); return;
@@ -601,7 +683,7 @@ async function enterWithCode(){
   btn.textContent='확인 중...'; btn.disabled=true;
 
   try{
-    if(!window._fbReady){throw new Error('Firebase 연결 중');}
+    await waitForLoginConnection();
 
     // classCodes/{code} 직접 조회 (권한 문제 없고 빠름)
     const codeSnap=await window._fsGetDoc(window._fsDoc(window._db,'classCodes',code));
@@ -613,12 +695,14 @@ async function enterWithCode(){
     }
     if(foundRoom){
       _foundRoomId=foundRoom.id;
+      _clearPeskStudentSession();
       localStorage.setItem('pesk-class-code',code);
       localStorage.setItem('pesk-room-id',foundRoom.id);
       localStorage.setItem('pesk-class-name',foundRoom.className||'우리 반');
       // Step 2로 전환
       document.getElementById('step1-panel').style.display='none';
       document.getElementById('step2-panel').style.display='block';
+      window._syncDemoEntry();
       document.getElementById('step1-dot').classList.remove('active');
       document.getElementById('step1-dot').classList.add('done');
       document.getElementById('step1-dot').textContent='✓';
@@ -633,7 +717,7 @@ async function enterWithCode(){
       btn.textContent='다음 →'; btn.disabled=false;
     }
   }catch(e){
-    err.textContent='연결에 실패했어요. 잠시 후 다시 시도해주세요.';
+    err.textContent=loginErrorMessage(e);
     err.classList.add('show');
     btn.textContent='다음 →'; btn.disabled=false;
   }
@@ -643,12 +727,59 @@ async function enterWithCode(){
 let _loginMatchedNum = null;
 let _loginRoomId = null;
 let _loginAccounts = null;
+let _loginAuthApi = null;   // 로그인에 쓴 인증 모듈 (비밀번호 변경 단계에서 그대로 쓴다)
+
+// 이 학급의 학생 인증 모듈. 서버 인증·무료 Firebase 인증이 아니면 null → 기존 방식.
+async function _studentAuthApiFor(roomId){
+  if(window.TESK_USE_SERVER_STUDENT_AUTH || window.TESK_USE_SERVER_ECONOMY){
+    await window._studentAuthReady;
+    if(!window._studentAuthApi) throw new Error('로그인 서버에 연결하지 못했어요. 새로고침 후 다시 시도해주세요.');
+    return window._studentAuthApi;
+  }
+  return window._studentAuthFor ? window._studentAuthFor(roomId) : null;
+}
+
+function _newStudentAccountUid(roomId, num){
+  return 'stu_' + String(roomId||'room').replace(/[^a-zA-Z0-9_-]/g,'_') + '_' + num + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+}
+
+function _normalizeStudentAccount(acc, roomId, num){
+  const next = acc || {};
+  let changed = false;
+  if(!next.accountUid){ next.accountUid = _newStudentAccountUid(roomId, num); changed = true; }
+  if(!next.sessionVersion){ next.sessionVersion = 1; changed = true; }
+  if(next.mustChangePassword === undefined){ next.mustChangePassword = false; changed = true; }
+  if(next.studentNum !== Number(num)){ next.studentNum = Number(num); changed = true; }
+  if(next.roomId !== roomId){ next.roomId = roomId; changed = true; }
+  return { acc: next, changed };
+}
+function _accountNeedsPasswordChange(acc){
+  return !!acc?.mustChangePassword;
+}
+
+function _clearPeskStudentSession(){
+  [
+    'pesk-student-num','pesk-student-name','pesk-account-uid',
+    'pesk-session-version','pesk-login-id','pesk-pw-changed','pesk-demo'
+  ].forEach(k=>localStorage.removeItem(k));
+}
+
+function _storePeskStudentSession(roomId, num, name, acc){
+  localStorage.setItem('pesk-room-id', roomId);
+  localStorage.setItem('pesk-student-num', String(num));
+  localStorage.setItem('pesk-student-name', name || acc.id || String(num));
+  localStorage.setItem('pesk-account-uid', acc.accountUid || '');
+  localStorage.setItem('pesk-session-version', String(acc.sessionVersion || 1));
+  localStorage.setItem('pesk-login-id', acc.id || '');
+  localStorage.setItem('pesk-pw-changed', _accountNeedsPasswordChange(acc) ? 'false' : 'true');
+}
 
 async function loginWithCredentials(){
   const id=document.getElementById('login-id').value.trim();
   const pw=document.getElementById('login-pw').value;
   const err=document.getElementById('login-error');
   const btn=document.getElementById('login-btn');
+  if(btn.disabled) return;
   if(!id||!pw){
     err.textContent='아이디와 비밀번호를 모두 입력해주세요.';
     err.classList.add('show'); return;
@@ -660,41 +791,59 @@ async function loginWithCredentials(){
     const roomId=_foundRoomId||localStorage.getItem('pesk-room-id');
     if(!roomId) throw new Error('학급 정보 없음');
 
-    // tesk-accounts에서 아이디/비밀번호 매칭
-    const accSnap=await window._fsGetDoc(
-      window._fsDoc(window._db,'classrooms',roomId,'data','tesk-accounts')
-    );
-    if(!accSnap.exists()) throw new Error('계정 없음');
-    const accounts=accSnap.data().value||{};
-
-    let matchedNum=null;
-    for(const [num, acc] of Object.entries(accounts)){
-      if(acc.id===id && acc.pw===pw){ matchedNum=parseInt(num); break; }
+    await waitForLoginConnection();
+    const authApi=await _studentAuthApiFor(roomId);
+    if(authApi){
+      const session=await authApi.studentSignIn(roomId,id,pw);
+      _loginAuthApi=authApi;
+      _storePeskStudentSession(roomId,session.studentNum,session.name,session);
+      document.getElementById('login-pw').value='';
+      if(session.mustChangePassword){
+        _loginMatchedNum=session.studentNum;_loginRoomId=roomId;
+        _loginAccounts={[String(session.studentNum)]:session};
+        document.getElementById('step2-panel').style.display='none';
+        document.getElementById('step3-panel').style.display='block';
+        setTimeout(()=>document.getElementById('new-pw').focus(),200);
+      }else window.location.href='pesk.html';
+      return;
     }
 
-    if(matchedNum!==null){
+    // 로그인 중 다른 학생 계정이 바뀌어도 덮어쓰지 않도록 최신 문서에서 검증한다.
+    const accountRef=window._fsDoc(window._db,'classrooms',roomId,'data','tesk-accounts');
+    const matched = await window._fsRunTxn(window._db,async txn=>{
+      const accSnap=await txn.get(accountRef);
+      const accounts=accSnap.exists() ? (accSnap.data().value||{}) : {};
+      const matches=Object.entries(accounts).filter(([,acc])=>acc && acc.id===id && acc.pw===pw);
+      if(matches.length>1) throw new Error('같은 아이디/비밀번호를 가진 계정이 여러 개예요. 선생님께 계정 복구를 요청해주세요.');
+      if(!matches.length) return null;
+      const [key,account]=matches[0], num=Number(key);
+      if(!Number.isInteger(num)||num<1) throw new Error('학생 번호가 올바르지 않아요. 선생님께 계정 복구를 요청해주세요.');
+      const normalized=_normalizeStudentAccount({...account},roomId,num);
+      if(normalized.changed) txn.set(accountRef,{value:{...accounts,[key]:normalized.acc},updatedAt:new Date().toISOString()});
+      return {num,acc:normalized.acc};
+    });
+    if(matched){
+      const matchedNum = matched.num;
       // 학생 이름 가져오기
       const stuSnap=await window._fsGetDoc(
         window._fsDoc(window._db,'classrooms',roomId,'data','tesk-students')
       );
-      const students=stuSnap.exists()?stuSnap.data().value:[];
-      const stu=students.find(s=>s.num===matchedNum);
+      const students=stuSnap.exists() && Array.isArray(stuSnap.data().value) ? stuSnap.data().value : [];
+      const stu=students.find(s=>Number(s.num)===matchedNum);
 
       // 비밀번호 변경 필요 여부 확인
-      const acc = accounts[matchedNum];
-      if(acc && acc.pwChanged===false){
+      const acc = matched.acc;
+      if(_accountNeedsPasswordChange(acc)){
         // Step 3: 비밀번호 변경 화면으로
         _loginMatchedNum = matchedNum;
         _loginRoomId = roomId;
-        _loginAccounts = accounts;
-        localStorage.setItem('pesk-student-num', matchedNum);
-        localStorage.setItem('pesk-student-name', stu?.name||id);
+        _loginAccounts = {[String(matchedNum)]:acc};
+        _storePeskStudentSession(roomId, matchedNum, stu?.name||id, acc);
         document.getElementById('step2-panel').style.display='none';
         document.getElementById('step3-panel').style.display='block';
         setTimeout(()=>document.getElementById('new-pw').focus(),200);
       } else {
-        localStorage.setItem('pesk-student-num', matchedNum);
-        localStorage.setItem('pesk-student-name', stu?.name||id);
+        _storePeskStudentSession(roomId, matchedNum, stu?.name||id, acc);
         window.location.href='pesk.html';
       }
     } else {
@@ -703,9 +852,121 @@ async function loginWithCredentials(){
       btn.textContent='로그인 →'; btn.disabled=false;
     }
   }catch(e){
-    err.textContent='연결에 실패했어요. 잠시 후 다시 시도해주세요.';
+    _clearPeskStudentSession();
+    err.textContent=loginErrorMessage(e);
     err.classList.add('show');
     btn.textContent='로그인 →'; btn.disabled=false;
+  }
+}
+
+/* ══════════════════════════════════════
+   체험(데모) 입장 — 공개 "체험해보기" 버튼
+   ══════════════════════════════════════
+   설정은 shared/firebase-config.js 의 PESK_DEMO 한 곳에서 합니다.
+   계정은 아이디로만 찾습니다. 체험자가 비밀번호를 바꿔도 다음 사람이
+   계속 들어올 수 있도록, 저장된 계정 정보를 그대로 씁니다. */
+function _demoConfig(){
+  const c = window.TESK_PESK_DEMO || {};
+  const ids = (Array.isArray(c.accounts) ? c.accounts : [])
+    .map(a => String(a?.id||'').trim()).filter(Boolean);
+  const classCode = String(c.classCode||'').trim();
+  return { enabled: !!c.enabled && !!classCode && ids.length>0, classCode, ids };
+}
+
+/* 체험 버튼은 학급 코드 입력 단계(step1)에서만 보여준다.
+   로그인·비밀번호 변경 단계에서는 흐름을 방해하지 않도록 숨김. */
+window._syncDemoEntry = function(){
+  const wrap = document.getElementById('demo-entry');
+  if(!wrap) return;
+  const onStep1 = document.getElementById('step1-panel')?.style.display !== 'none';
+  wrap.style.display = (_demoConfig().enabled && onStep1) ? 'block' : 'none';
+};
+window._syncDemoEntry();
+
+async function startPeskDemo(){
+  const cfg = _demoConfig();
+  const err = document.getElementById('demo-error');
+  const btn = document.getElementById('demo-btn');
+  err.classList.remove('show');
+  if(!cfg.enabled){
+    err.textContent = '체험 계정이 아직 준비되지 않았어요.';
+    err.classList.add('show'); return;
+  }
+  btn.textContent = '체험 준비 중...'; btn.disabled = true;
+
+  try{
+    if(!window._fbReady) throw new Error('연결 중이에요. 잠시 후 다시 시도해주세요.');
+
+    // 1) 체험 학급 코드 → roomId
+    const codeSnap = await window._fsGetDoc(window._fsDoc(window._db,'classCodes',cfg.classCode));
+    if(!codeSnap.exists()) throw new Error('체험 학급을 찾을 수 없어요.');
+    const roomId = codeSnap.data().roomId;
+    const meta = await window._fsGetDoc(window._fsDoc(window._db,'classrooms',roomId,'info','meta'));
+    if(!meta.exists()) throw new Error('체험 학급을 찾을 수 없어요.');
+
+    const demoAuthApi=await _studentAuthApiFor(roomId);
+    if(demoAuthApi){
+      const candidates=(window.TESK_PESK_DEMO.accounts||[]).filter(a=>a.id&&a.pw);
+      if(!candidates.length) throw new Error('체험 계정의 로그인 정보가 아직 준비되지 않았어요.');
+      const chosen=candidates[Math.floor(Math.random()*candidates.length)];
+      const session=await demoAuthApi.studentSignIn(roomId,chosen.id,chosen.pw);
+      if(session.mustChangePassword) throw new Error('체험 계정 설정을 선생님이 확인해야 해요.');
+      _storePeskStudentSession(roomId,session.studentNum,session.name,session);
+      localStorage.setItem('pesk-class-code',cfg.classCode);
+      localStorage.setItem('pesk-class-name',meta.data().className||'체험 학급');
+      localStorage.setItem('pesk-demo','1');window.location.href='pesk.html';return;
+    }
+
+    // 2) 체험 계정 중 하나를 무작위 배정 (동시 접속자끼리 덜 부딪히게)
+    const accSnap = await window._fsGetDoc(
+      window._fsDoc(window._db,'classrooms',roomId,'data','tesk-accounts')
+    );
+    const accounts = accSnap.exists() ? (accSnap.data().value||{}) : {};
+    const candidates = [];
+    for(const [num, acc] of Object.entries(accounts)){
+      if(acc && cfg.ids.includes(String(acc.id||''))){
+        candidates.push({ key:num, num:parseInt(num) });
+      }
+    }
+    if(!candidates.length) throw new Error('체험 계정을 학급에서 찾지 못했어요.');
+    const picked = candidates[Math.floor(Math.random()*candidates.length)];
+
+    // 3) 계정 정리 — 체험 계정은 비밀번호 강제 변경을 쓰지 않는다.
+    //    (체험자가 비밀번호를 바꾸면 다음 사람이 못 들어오기 때문)
+    const normalized = _normalizeStudentAccount(accounts[picked.key], roomId, picked.num);
+    accounts[picked.key] = normalized.acc;
+    let needsWrite = normalized.changed;
+    if(accounts[picked.key].mustChangePassword){
+      accounts[picked.key].mustChangePassword = false;
+      needsWrite = true;
+    }
+    if(needsWrite){
+      await window._fsSetDoc(
+        window._fsDoc(window._db,'classrooms',roomId,'data','tesk-accounts'),
+        {value: accounts, updatedAt: new Date().toISOString()}
+      );
+    }
+
+    // 4) 학생 이름 + 세션 저장 후 입장
+    const stuSnap = await window._fsGetDoc(
+      window._fsDoc(window._db,'classrooms',roomId,'data','tesk-students')
+    );
+    const stuList = stuSnap.exists() ? (stuSnap.data().value||[]) : [];
+    const stu = stuList.find(s=>s.num===picked.num);
+    const acc = accounts[picked.key];
+
+    _clearPeskStudentSession();
+    localStorage.setItem('pesk-class-code', cfg.classCode);
+    localStorage.setItem('pesk-room-id', roomId);
+    localStorage.setItem('pesk-class-name', meta.data().className || '체험 학급');
+    _storePeskStudentSession(roomId, picked.num, stu?.name || acc.id, acc);
+    localStorage.setItem('pesk-pw-changed','true');   // 체험은 비밀번호 변경 단계를 건너뜀
+    localStorage.setItem('pesk-demo','1');
+    window.location.href = 'pesk.html';
+  }catch(e){
+    err.textContent = (e && e.message) ? e.message : '체험 입장에 실패했어요. 잠시 후 다시 시도해주세요.';
+    err.classList.add('show');
+    btn.textContent = '🎮 체험해보기'; btn.disabled = false;
   }
 }
 
@@ -715,6 +976,7 @@ async function changePassword(){
   const confirmPw = document.getElementById('new-pw-confirm').value;
   const err = document.getElementById('changepw-error');
   const btn = document.getElementById('changepw-btn');
+  if(btn.disabled) return;
   err.classList.remove('show');
 
   if(!newPw || newPw.length < 4){
@@ -740,26 +1002,29 @@ async function changePassword(){
     const num = _loginMatchedNum || parseInt(localStorage.getItem('pesk-student-num'));
     if(!num && num!==0) throw new Error('학생 정보 없음');
 
-    // 최신 accounts 다시 가져오기
-    const accSnap = await window._fsGetDoc(
-      window._fsDoc(window._db,'classrooms',roomId,'data','tesk-accounts')
-    );
-    const accounts = accSnap.exists() ? accSnap.data().value : (_loginAccounts||{});
-    const numStr = String(num);
-    // 숫자/문자 키 모두 대응
-    const key = accounts[numStr] ? numStr : (accounts[num] ? num : null);
-    if(!key){
-      throw new Error('계정 정보를 찾을 수 없어요 (번호:'+num+')');
+    const pwAuthApi=_loginAuthApi||await _studentAuthApiFor(roomId);
+    if(pwAuthApi){
+      const session=await pwAuthApi.changePassword(roomId,newPw);
+      _storePeskStudentSession(roomId,session.studentNum,localStorage.getItem('pesk-student-name'),session);
+      _loginAccounts=null;
+      document.getElementById('new-pw').value='';document.getElementById('new-pw-confirm').value='';
+      window.location.href='pesk.html';return;
     }
-    accounts[key].pw = newPw;
-    accounts[key].pwChanged = true;
-    // Firebase에 저장 (tesk에서도 보이게)
-    await window._fsSetDoc(
-      window._fsDoc(window._db,'classrooms',roomId,'data','tesk-accounts'),
-      {value: accounts}
-    );
-    // localStorage에도 변경 표시 (pesk.html 리다이렉트 방지)
-    localStorage.setItem('pesk-pw-changed','true');
+    const ref=window._fsDoc(window._db,'classrooms',roomId,'data','tesk-accounts');
+    const expected=_loginAccounts?.[String(num)];
+    if(!expected) throw new Error('로그인 정보를 다시 확인해주세요.');
+    const account=await window._fsRunTxn(window._db,async txn=>{
+      const snap=await txn.get(ref), accounts=snap.exists() ? (snap.data().value||{}) : {};
+      const current=accounts[String(num)];
+      if(!current || current.accountUid!==expected.accountUid || Number(current.sessionVersion||1)!==Number(expected.sessionVersion||1))
+        throw new Error('계정 정보가 변경됐어요. 아이디와 비밀번호로 다시 로그인해주세요.');
+      const next={...current,pw:newPw,pwChanged:true,mustChangePassword:false,
+        sessionVersion:Number(current.sessionVersion||1)+1,passwordUpdatedAt:new Date().toISOString()};
+      txn.set(ref,{value:{...accounts,[String(num)]:next},updatedAt:new Date().toISOString()});
+      return next;
+    });
+    _loginAccounts={[String(num)]:account};
+    _storePeskStudentSession(roomId, num, localStorage.getItem('pesk-student-name') || account.id, account);
     window.location.href = 'pesk.html';
   } catch(e){
     console.error('비밀번호 변경 실패:', e);
@@ -772,13 +1037,15 @@ async function changePassword(){
 // Step 1로 돌아가기
 function backToStep1(){
   _foundRoomId=null;
+  _loginMatchedNum=null; _loginRoomId=null; _loginAccounts=null; _loginAuthApi=null;
+  _clearPeskStudentSession();
   localStorage.removeItem('pesk-room-id');
   localStorage.removeItem('pesk-class-name');
   localStorage.removeItem('pesk-class-code');
-  localStorage.removeItem('pesk-pw-changed');
   document.getElementById('step2-panel').style.display='none';
   document.getElementById('step3-panel').style.display='none';
   document.getElementById('step1-panel').style.display='block';
+  window._syncDemoEntry();
   document.getElementById('step1-dot').classList.add('active');
   document.getElementById('step1-dot').classList.remove('done');
   document.getElementById('step1-dot').textContent='1';
@@ -788,6 +1055,10 @@ function backToStep1(){
   document.getElementById('code-btn').disabled=false;
   document.getElementById('login-id').value='';
   document.getElementById('login-pw').value='';
+  document.getElementById('login-btn').disabled=false;
+  document.getElementById('login-btn').textContent='로그인 →';
+  document.getElementById('changepw-btn').disabled=false;
+  document.getElementById('changepw-btn').textContent='비밀번호 변경 후 입장 →';
   [0,1,2,3,4,5].forEach(i=>{
     const el=document.getElementById('d'+i);
     el.value=''; el.classList.remove('filled');
@@ -859,24 +1130,17 @@ function lsSelectSchool(idx){
   document.getElementById('ls-class-input').focus();
 }
 
-// ── 자동 Step2 전환 (이미 학급 코드 저장된 경우) ──
-(function autoSkipToStep2(){
-  const savedRoom = localStorage.getItem('pesk-room-id');
-  const savedClassName = localStorage.getItem('pesk-class-name');
-  if(savedRoom){
-    _foundRoomId = savedRoom;
-    document.getElementById('step1-panel').style.display='none';
-    document.getElementById('step2-panel').style.display='block';
-    document.getElementById('step1-dot').classList.remove('active');
-    document.getElementById('step1-dot').classList.add('done');
-    document.getElementById('step1-dot').textContent='✓';
-    document.getElementById('step2-dot').classList.add('active');
-    document.getElementById('step-line').classList.add('done');
-    document.getElementById('step2-class-name').textContent=
-      (savedClassName||'우리 반')+' · 학생 로그인';
-    setTimeout(()=>document.getElementById('login-id').focus(),200);
+// ── 안전장치: landing에서는 저장된 예전 학급으로 자동 진입하지 않음 ──
+// 같은 기기에서 이전 학급 roomId가 남아 있으면 포인트·직업·매점이 다른 반으로 보일 수 있어,
+// 학급 코드는 매번 입력하되, 로그인 화면을 연 것만으로 다른 탭의 세션을 지우지 않는다.
+// 세션 초기화는 학급을 선택하거나 사용자가 로그아웃할 때 수행한다.
+window.addEventListener('pageshow',event=>{
+  if(!event.persisted) return;
+  for(const [id,label] of [['code-btn','다음 →'],['login-btn','로그인 →'],['changepw-btn','비밀번호 변경 후 입장 →']]){
+    const button=document.getElementById(id);button.disabled=false;button.textContent=label;
   }
-})();
+  document.getElementById('google-login-btn').disabled=false;
+});
 
 async function lsEnterWithSchool(){
   const err = document.getElementById('ls-school-error');
@@ -901,6 +1165,7 @@ async function lsEnterWithSchool(){
     // Step 2로 전환
     document.getElementById('step1-panel').style.display = 'none';
     document.getElementById('step2-panel').style.display = 'block';
+    window._syncDemoEntry();
     document.getElementById('step2-class-name').textContent =
       (_lsSelectedSchool.SCHUL_NM || '') + ' · ' + (foundRoom.className || '우리 반');
     document.getElementById('step1-dot').classList.remove('active');

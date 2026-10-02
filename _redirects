@@ -1,0 +1,6 @@
+# Cloudflare Pages 라우팅 (정적 리라이트, URL 은 그대로 유지)
+# 루트(/) 는 index.html(=landing) 이 자동으로 서빙됩니다.
+# master.html 은 Cloudflare 가 자동으로 /master 로 제공하므로 규칙 불필요
+# (규칙을 넣으면 자동 처리와 충돌해 무한 리다이렉트가 발생함).
+# tesk_teacher_v2.html 은 파일명이 달라서 /teacher 별칭만 명시합니다.
+/teacher    /tesk_teacher_v2.html    200

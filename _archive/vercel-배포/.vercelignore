@@ -1,0 +1,7 @@
+dist/
+build/
+__pycache__/
+*.py
+*.spec
+*.bat
+*.ps1

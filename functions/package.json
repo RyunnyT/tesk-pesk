@@ -1,0 +1,13 @@
+{
+  "name": "tesk-functions",
+  "description": "Tesk & Pesk 경제 로직 서버(트랜잭션) - 위변조 방지 + 동시성 안전",
+  "engines": {
+    "node": "22"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "14.5.0",
+    "firebase-functions": "7.4.0"
+  },
+  "private": true
+}

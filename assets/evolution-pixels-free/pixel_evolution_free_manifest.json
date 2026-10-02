@@ -1,0 +1,252 @@
+{
+  "count": 15,
+  "size": [
+    128,
+    128
+  ],
+  "background": "transparent",
+  "format": "PNG",
+  "style": "RPG pixel-art evolution sprites",
+  "assets": [
+    {
+      "file": "chick_evo1.png",
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "opaque_pixels": 5423,
+      "transparent_corners": true,
+      "bbox": [
+        25,
+        18,
+        118,
+        120
+      ]
+    },
+    {
+      "file": "chick_evo2.png",
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "opaque_pixels": 8618,
+      "transparent_corners": true,
+      "bbox": [
+        1,
+        5,
+        128,
+        128
+      ]
+    },
+    {
+      "file": "chick_evo3.png",
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "opaque_pixels": 10804,
+      "transparent_corners": true,
+      "bbox": [
+        0,
+        2,
+        128,
+        128
+      ]
+    },
+    {
+      "file": "cat_evo1.png",
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "opaque_pixels": 5570,
+      "transparent_corners": true,
+      "bbox": [
+        1,
+        17,
+        104,
+        111
+      ]
+    },
+    {
+      "file": "cat_evo2.png",
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "opaque_pixels": 7916,
+      "transparent_corners": true,
+      "bbox": [
+        0,
+        13,
+        128,
+        124
+      ]
+    },
+    {
+      "file": "cat_evo3.png",
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "opaque_pixels": 9103,
+      "transparent_corners": true,
+      "bbox": [
+        0,
+        7,
+        128,
+        120
+      ]
+    },
+    {
+      "file": "dog_evo1.png",
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "opaque_pixels": 6719,
+      "transparent_corners": true,
+      "bbox": [
+        1,
+        34,
+        117,
+        124
+      ]
+    },
+    {
+      "file": "dog_evo2.png",
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "opaque_pixels": 7431,
+      "transparent_corners": true,
+      "bbox": [
+        5,
+        23,
+        127,
+        124
+      ]
+    },
+    {
+      "file": "dog_evo3.png",
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "opaque_pixels": 10573,
+      "transparent_corners": true,
+      "bbox": [
+        3,
+        5,
+        128,
+        128
+      ]
+    },
+    {
+      "file": "slime_evo1.png",
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "opaque_pixels": 6213,
+      "transparent_corners": true,
+      "bbox": [
+        13,
+        36,
+        116,
+        109
+      ]
+    },
+    {
+      "file": "slime_evo2.png",
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "opaque_pixels": 8850,
+      "transparent_corners": true,
+      "bbox": [
+        6,
+        20,
+        123,
+        112
+      ]
+    },
+    {
+      "file": "slime_evo3.png",
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "opaque_pixels": 10731,
+      "transparent_corners": true,
+      "bbox": [
+        2,
+        0,
+        127,
+        117
+      ]
+    },
+    {
+      "file": "rabbit_evo1.png",
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "opaque_pixels": 6890,
+      "transparent_corners": true,
+      "bbox": [
+        17,
+        2,
+        112,
+        125
+      ]
+    },
+    {
+      "file": "rabbit_evo2.png",
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "opaque_pixels": 8699,
+      "transparent_corners": true,
+      "bbox": [
+        2,
+        0,
+        128,
+        120
+      ]
+    },
+    {
+      "file": "rabbit_evo3.png",
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "opaque_pixels": 11014,
+      "transparent_corners": true,
+      "bbox": [
+        10,
+        0,
+        128,
+        128
+      ]
+    }
+  ]
+}

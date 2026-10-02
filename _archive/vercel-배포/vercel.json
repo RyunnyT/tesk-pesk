@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "*.html", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/", "dest": "/landing.html" },
+    { "src": "/teacher", "dest": "/tesk_teacher_v2.html" },
+    { "src": "/master", "dest": "/master.html" },
+    { "src": "/(.*)", "dest": "/$1" }
+  ]
+}

@@ -1,0 +1,45 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>모험 조작 미리보기</title><style>
+body{margin:0;background:#edf1ed;font-family:system-ui,'Malgun Gothic',sans-serif;color:#243c32}header{max-width:780px;margin:auto;padding:18px 20px}h1{font-size:20px;margin:0 0 8px}p{font-size:12px;line-height:1.7;margin:0;color:#5b7065}iframe{display:block;width:min(100%,780px);height:calc(100vh - 112px);min-height:650px;border:1px solid #d9e2dc;background:white;margin:auto;border-radius:16px 16px 0 0;box-sizing:border-box}
+</style></head><body><header><h1>⚔️ 모험 조작 미리보기</h1><p>방향키 이동 · A 기본 공격 · S 무기 스킬 · D 방어 · F 펫. 정답은 공격권, 오답은 체력 감소! 이 화면은 테스트 데이터만 사용하며 실제 학급에 연결되지 않습니다.</p></header><iframe id="preview" title="모험 체험 화면"></iframe>
+<script id="preview-setup" type="text/plain">
+(async()=>{
+  const previewDocs={};
+  previewDocs['tesk-students']=[{num:1,name:'모험가',points:120,accountUid:'preview-student'}];
+  previewDocs['pesk-quiz-progress']={1:{rating:1000,xp:180,tried:0,correct:0,daily:{},byUnit:{},game:{...RPG.newGameState(),petCharge:2},boss:{roundId:'preview-boss',dmg:0,titles:[]}}};
+  previewDocs['pesk-class-boss']={enabled:true,roundId:'preview-boss',name:'돌골렘',icon:'🗿',maxHp:150,entryNeed:0,rewardTitle:'함께한 모험가'};
+  Object.assign(window,{_db:{},_fbReady:true,_fsDoc:(_db,...parts)=>parts.at(-1),
+    _fsGetDoc:async key=>({exists:()=>Object.hasOwn(previewDocs,key),data:()=>({value:structuredClone(previewDocs[key])})}),
+    _fsRunTxn:async(_db,change)=>{const writes=[];const result=await change({get:window._fsGetDoc,set:(key,value)=>writes.push([key,value.value])});for(const [key,value] of writes)previewDocs[key]=structuredClone(value);return result;}});
+  students=previewDocs['tesk-students'];
+  quizConfig={grade:3,term:1,mathUnits:[1],dailyQuestionLimit:30,huntQuestionLimit:8,coinPerCorrect:5,dailyCoinCap:50};
+  myAvatar=avDefault();myAvatar.equipped.pet='p_dog';myAvatar.owned.push('p_dog','p_slime','p_rabbit');
+  myAvatar.equipped.weapon='w_sword';myAvatar.equipped.top='t_leather';
+  _applyQuizProgress(structuredClone(previewDocs['pesk-quiz-progress']));_applyBossCfg(previewDocs['pesk-class-boss']);
+  petGrow=async()=>0;pushEconLog=async()=>{};maybeAutoPayAutoChallenge=async()=>{};
+  // Simulate a reload of progress without loading production data.
+  window.previewReload=()=>{rpgStopShooter();rpgCancelCharge();_applyQuizProgress(structuredClone(previewDocs['pesk-quiz-progress']));rpgQ=null;rpgPicked=null;rpgFx='';rpgPetArmed=false;rpgClearAnim();avRefresh();};
+  window.previewEquip=id=>{if(rpgBusy||rpgGame().pendingAttack)return showFeedbackNotice('공격을 마친 뒤 착장을 바꿔주세요.');myAvatar.equipped.weapon=id;avRefresh();};
+  window.previewPet=id=>{if(rpgBusy||rpgGame().pendingAttack)return showFeedbackNotice('공격을 마친 뒤 바꿔주세요.');myAvatar.equipped.pet=id;avRefresh();};
+  window.previewReset=()=>{if(rpgBusy)return;rpgCancelCharge();previewDocs['pesk-quiz-progress'][1]={rating:1000,xp:180,tried:0,correct:0,daily:{},byUnit:{},game:{...RPG.newGameState(),petCharge:2},boss:{roundId:'preview-boss',dmg:0,titles:[]}};previewReload();};
+  document.getElementById('app').innerHTML='<div style="max-width:620px;margin:0 auto;padding:12px 18px 60px"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"><button onclick="previewPet(\'p_dog\')">🐶 돌진</button><button onclick="previewPet(\'p_slime\')">🟢 방패</button><button onclick="previewPet(\'p_rabbit\')">🐰 이동</button><button onclick="previewReload()">이어하기 확인</button><button onclick="previewReset()">체험 초기화</button><label>테스트 아바타 착장 <select onchange="previewEquip(this.value)"><option value="w_sword">검</option><option value="w_staff">지팡이</option><option value="w_axe">도끼</option><option value="w_spear">창</option><option value="w_crystal">수정</option><option value="w_bow">활</option></select></label></div><div id="panel-myroom"></div></div>';
+  document.getElementById('header-class').textContent='테스트 모험가';
+  const exit=document.querySelector('.header-back');if(exit)exit.remove();
+  avRoomTab='rpg';await avPreload();avRefresh();
+})().catch(error=>{document.getElementById('app').textContent='미리보기 오류: '+error.message;console.error(error);});
+</script>
+<script>
+(async()=>{
+  let html=await (await fetch('./pesk.html',{cache:'no-store'})).text();
+  html=html.replace(/<script type="module">[\s\S]*?<\/script>/g,'');
+  const boot=html.lastIndexOf('waitFirebase(async()=>{');
+  if(boot<0)throw new Error('앱 시작 지점을 찾지 못했어요.');
+  const end=html.indexOf('\n});',boot);html=html.slice(0,boot)+html.slice(end+4);
+  html=html.replace("if('serviceWorker' in navigator){","if(false){");
+  const storageCode="const previewStorage=new Map([['pesk-room-id','preview'],['pesk-student-num','1'],['pesk-student-name','모험가'],['pesk-account-uid','preview-student']]);Object.defineProperty(window,'localStorage',{value:{getItem:k=>previewStorage.get(k)||null,setItem:(k,v)=>previewStorage.set(k,String(v)),removeItem:k=>previewStorage.delete(k)}});";
+  const script=code=>'<script>'+code+'<'+'/script>';
+  html=html.replace('<head>','<head><base href="'+location.origin+'/">'+script(storageCode));
+  html=html.replace('</body>',script(document.getElementById('preview-setup').textContent)+'</body>');
+  document.getElementById('preview').srcdoc=html;
+})().catch(error=>{document.querySelector('header p').textContent=error.message;});
+</script></body></html>

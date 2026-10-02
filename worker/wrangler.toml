@@ -1,0 +1,6 @@
+name = "stock-price-worker"
+main = "stock-price-worker.js"
+compatibility_date = "2024-05-01"
+
+# 배포:  cd worker && npx wrangler deploy
+# 배포 후 출력되는 URL 을 shared/firebase-config.js 의 STOCK_PRICE_WORKER_URL 에 넣으세요.

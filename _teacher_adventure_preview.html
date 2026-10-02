@@ -1,0 +1,24 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>교사 모험 설정 미리보기</title>
+<script src="rpg-monsters.js?v=20260910rpg2"></script><script src="quiz-bank.js?v=20260910rpg2"></script><script src="shared/pesk-subjects.js"></script><script src="shared/pesk-boss-catalog.js?v=20260910rpg2"></script></head>
+<body><header style="max-width:1180px;margin:20px auto;padding:0 20px;font-family:system-ui"><h1 style="font-size:20px">교사 모험 설정 미리보기</h1><p style="font-size:12px">테스트 설정만 사용합니다. 저장해도 실제 학급에 반영되지 않습니다.</p><p id="preview-notice" role="status"></p></header><main style="padding:0 20px 60px"></main>
+<script>
+(async()=>{
+ const html=await(await fetch('./tesk_teacher_v2.html',{cache:'no-store'})).text(),parsed=new DOMParser().parseFromString(html,'text/html');
+ for(const style of parsed.querySelectorAll('style'))document.head.append(style.cloneNode(true));
+ const css=document.createElement('link');css.rel='stylesheet';css.href='shared/pesk-teacher-adventure.css';document.head.append(css);
+ const panel=parsed.getElementById('econ-panel-quiz');panel.style.display='block';document.querySelector('main').append(panel);
+ const code=html.slice(html.indexOf('const QZ_DEFAULT ='),html.indexOf('async function loadQuiz(){'));
+ const script=document.createElement('script');script.textContent=`
+ const C=()=> ' 🪙';
+ const TESK_ROOM='teacher-preview',students=[{num:1,name:'모험가'}],testData={};
+ const escHtml=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const load=(key,d)=>testData[key]??d,save=(key,v)=>testData[key]=v;
+ const showToast=msg=>document.getElementById('preview-notice').textContent=msg,addActivity=()=>{};
+ window._fbReady=true;window._db={};window._fsDoc=(_,...p)=>p.at(-1);window._fsSetDoc=async(key,data)=>{testData[key]=data.value;};
+ ${code}
+ qzConfig=qzNormalize({grade:3,term:1,huntQuestionLimit:8,mathUnits:[1]});qzFillForm();renderBoss();
+ document.querySelectorAll('#qz-today-students,#qz-today-tried,#qz-today-coin').forEach(el=>el.textContent='0');
+ `;
+ document.body.append(script);
+})().catch(e=>document.getElementById('preview-notice').textContent='미리보기 오류: '+e.message);
+</script></body></html>

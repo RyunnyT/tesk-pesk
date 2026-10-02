@@ -8,22 +8,23 @@
 <link href="https://cdn.jsdelivr.net/npm/pretendard@latest/dist/web/static/pretendard.css" rel="stylesheet">
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const firebaseConfig = {
-  apiKey:"AIzaSyA41ZYobXjCtGcSN8N7UJ2XkzrH9ef39EY",
-  authDomain:"tesk-pesk.firebaseapp.com",
-  projectId:"tesk-pesk",
-  storageBucket:"tesk-pesk.firebasestorage.app",
-  messagingSenderId:"619304025482",
-  appId:"1:619304025482:web:27d72258009ec6b9d49c73"
-};
+import { getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, collection, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { firebaseConfig, MASTER_EMAILS } from "./shared/firebase-config.js";
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-window._db=db;
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+window._db=db; window._auth=auth; window._googleProvider=googleProvider;
 window._fsDoc=doc; window._fsGetDoc=getDoc; window._fsGetDocs=getDocs;
-window._fsSetDoc=setDoc; window._fsDeleteDoc=deleteDoc;
-window._fsCollection=collection;
+window._fsSetDoc=setDoc; window._fsDeleteDoc=deleteDoc; window._fsUpdateDoc=updateDoc;
+window._fsCollection=collection; window._fsQuery=query; window._fsWhere=where;
+window._signInWithPopup=signInWithPopup; window._signOut=signOut;
+window._onAuthStateChanged=onAuthStateChanged;
 window._fbReady=true;
+
+/* 마스터 이메일은 ./shared/firebase-config.js 한 곳에서 관리합니다.
+   import 시 window.TESK_MASTER_EMAILS 도 함께 설정됩니다. */
 </script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -197,13 +198,14 @@ select.field-input:focus{border-color:var(--master);}
   <div class="login-card">
     <div class="login-logo">⚙️ <span class="m">Master</span></div>
     <p class="login-sub">Tesk & Pesk 플랫폼 관리자 페이지</p>
-    <div class="field">
-      <label>관리자 비밀번호</label>
-      <input type="password" id="master-pw" placeholder="비밀번호 입력"
-        onkeydown="if(event.key==='Enter')masterLogin()">
+    <div class="error-msg" id="login-error">이 계정은 마스터 권한이 없어요.</div>
+    <button class="btn btn-master btn-full" id="google-login-btn" style="margin-top:4px;display:flex;align-items:center;justify-content:center;gap:10px;" onclick="masterGoogleLogin()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt=""> Google로 마스터 로그인
+    </button>
+    <div style="margin-top:14px;font-size:11px;color:var(--hint);text-align:center;line-height:1.6;">
+      허용된 이메일만 접근 가능합니다.<br>
+      권한 요청은 마스터에게 문의해주세요.
     </div>
-    <div class="error-msg" id="login-error">비밀번호가 올바르지 않아요.</div>
-    <button class="btn btn-master btn-full" style="margin-top:4px;" onclick="masterLogin()">로그인 →</button>
     <div style="margin-top:16px;text-align:center;">
       <a href="landing.html" style="font-size:12px;color:var(--hint);text-decoration:none;">← 홈으로 돌아가기</a>
     </div>
@@ -222,6 +224,7 @@ select.field-input:focus{border-color:var(--master);}
   <nav class="tab-nav">
     <div class="tab-item active" id="tab-overview" onclick="switchTab('overview')">📊 통계</div>
     <div class="tab-item" id="tab-classrooms" onclick="switchTab('classrooms')">🏫 학급 관리</div>
+    <div class="tab-item" id="tab-teachers" onclick="switchTab('teachers')">👤 교사 승인 <span id="tab-pending-badge" style="display:none;background:#ef4444;color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:4px;">0</span></div>
     <div class="tab-item" id="tab-notice" onclick="switchTab('notice')">📢 공지 & 광고</div>
   </nav>
 
@@ -311,6 +314,24 @@ select.field-input:focus{border-color:var(--master);}
       </div>
     </div>
 
+    <!-- 교사 승인 패널 -->
+    <div class="panel" id="panel-teachers">
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">가입한 교사 목록</div>
+          <button class="btn btn-ghost btn-sm" onclick="loadTeachers()">🔄 새로고침</button>
+        </div>
+        <p style="font-size:12px;color:var(--sub);margin:0 0 14px 2px;">
+          교사가 Google 로그인 후 승인 대기 중입니다. 승인하면 학급을 만들 수 있어요.
+        </p>
+        <div class="table-wrap">
+          <table id="teachers-table">
+            <tbody><tr><td class="loading-row" colspan="6">불러오는 중...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- 공지 & 광고 패널 -->
     <div class="panel" id="panel-notice">
 
@@ -389,34 +410,72 @@ select.field-input:focus{border-color:var(--master);}
 </div>
 
 <script>
-// ── 마스터 비밀번호 (변경 가능) ──
-const MASTER_PASSWORD = 'tesk-master-2025';
-
 let allRooms = [];
+let allTeachers = [];
 let deleteTargetId = null;
+let currentMaster = null;
 
-// ── 로그인 ──
-function masterLogin(){
-  const pw = document.getElementById('master-pw').value;
+// ── Google 로그인 기반 마스터 인증 ──
+async function masterGoogleLogin(){
   const err = document.getElementById('login-error');
-  if(pw === MASTER_PASSWORD){
-    sessionStorage.setItem('master-auth','1');
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('main-app').classList.add('visible');
-    loadAllData();
-  } else {
-    err.classList.add('show');
-    document.getElementById('master-pw').value='';
-    document.getElementById('master-pw').focus();
+  const btn = document.getElementById('google-login-btn');
+  err.classList.remove('show');
+  btn.disabled = true;
+  btn.innerHTML = '로그인 중...';
+  try{
+    if(!window._fbReady) throw new Error('Firebase 준비 중');
+    const result = await window._signInWithPopup(window._auth, window._googleProvider);
+    const user = result.user;
+    const email = (user.email||'').toLowerCase();
+    if(user.emailVerified !== true || !(window.TESK_MASTER_EMAILS||[]).includes(email)){
+      await window._signOut(window._auth);
+      err.textContent = `이 계정(${email})은 마스터 권한이 없어요.`;
+      err.classList.add('show');
+      resetLoginBtn();
+      return;
+    }
+    // users/{uid}에 마스터 기록
+    await window._fsSetDoc(
+      window._fsDoc(window._db,'users',user.uid),
+      { uid: user.uid, email: user.email, displayName: user.displayName||'',
+        photoURL: user.photoURL||'', role:'master', approved:true,
+        lastLoginAt: new Date().toISOString() },
+      { merge: true }
+    );
+  }catch(e){
+    if(e.code !== 'auth/popup-closed-by-user'){
+      err.textContent = '로그인 실패: ' + (e.message||e.code);
+      err.classList.add('show');
+    }
+    resetLoginBtn();
   }
 }
-
-function masterLogout(){
-  sessionStorage.removeItem('master-auth');
-  document.getElementById('main-app').classList.remove('visible');
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('master-pw').value='';
+function resetLoginBtn(){
+  const btn = document.getElementById('google-login-btn');
+  btn.disabled = false;
+  btn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt=""> Google로 마스터 로그인';
 }
+async function masterLogout(){
+  try{ await window._signOut(window._auth); }catch(_e){}
+  location.reload();
+}
+// 자동 인증 상태 감지
+function _watchAuth(){
+  if(!window._onAuthStateChanged){ setTimeout(_watchAuth,200); return; }
+  window._onAuthStateChanged(window._auth, async (user)=>{
+    if(user && user.emailVerified === true && (window.TESK_MASTER_EMAILS||[]).includes((user.email||'').toLowerCase())){
+      currentMaster = user;
+      document.getElementById('login-screen').style.display='none';
+      document.getElementById('main-app').classList.add('visible');
+      loadAllData();
+    } else {
+      currentMaster = null;
+      document.getElementById('login-screen').style.display='flex';
+      document.getElementById('main-app').classList.remove('visible');
+    }
+  });
+}
+_watchAuth();
 
 // ── 탭 전환 ──
 function switchTab(id){
@@ -480,6 +539,7 @@ async function loadAllData(){
 
     renderOverviewTable();
     renderClassroomTable();
+    await loadTeachers();
 
   }catch(e){
     console.error(e);
@@ -487,22 +547,128 @@ async function loadAllData(){
   }
 }
 
-function renderOverviewTable(){
-  const tbody = document.querySelector('#overview-table tbody') ||
-    (() => { const t=document.getElementById('overview-table'); t.innerHTML=''; const tb=document.createElement('tbody'); t.appendChild(tb); return tb; })();
+// ── 교사 목록 로드 (users 컬렉션) ──
+async function loadTeachers(){
+  try{
+    const snap = await window._fsGetDocs(window._fsCollection(window._db,'users'));
+    allTeachers = [];
+    snap.forEach(d => { allTeachers.push({id:d.id, ...d.data()}); });
+    renderTeachersTable();
+    // pending 뱃지 갱신
+    const pendingCount = allTeachers.filter(t=>t.role!=='master' && t.approved!==true).length;
+    const badge = document.getElementById('tab-pending-badge');
+    if(pendingCount>0){ badge.textContent=pendingCount; badge.style.display='inline-block'; }
+    else { badge.style.display='none'; }
+  }catch(e){
+    console.warn('교사 목록 로드 실패:', e);
+  }
+}
 
+function renderTeachersTable(){
+  const pending = allTeachers.filter(t=>t.role!=='master' && t.approved!==true);
+  const approved = allTeachers.filter(t=>t.role!=='master' && t.approved===true);
+  const masters  = allTeachers.filter(t=>t.role==='master');
+  const row = (t, status, actions) => `
+    <tr>
+      <td>${t.photoURL?`<img src="${t.photoURL}" style="width:28px;height:28px;border-radius:50%;vertical-align:middle;margin-right:8px;">`:''}<strong>${t.displayName||'—'}</strong></td>
+      <td style="font-size:12px;color:var(--sub);">${t.email||'—'}</td>
+      <td><span style="font-family:'Geist';font-size:10px;color:var(--hint);">${t.uid||t.id}</span></td>
+      <td>${t.lastLoginAt?(new Date(t.lastLoginAt).toLocaleDateString('ko-KR')):'—'}</td>
+      <td>${status}</td>
+      <td>${actions}</td>
+    </tr>`;
+  const rows = [];
+  if(pending.length){
+    rows.push(`<tr><td colspan="6" style="background:#fef3c7;padding:10px 14px;font-weight:700;color:#92400e;">⏳ 승인 대기 (${pending.length})</td></tr>`);
+    pending.forEach(t=>rows.push(row(t,
+      '<span class="badge" style="background:#fef3c7;color:#92400e;">대기</span>',
+      `<button class="btn btn-master btn-sm" onclick="approveTeacher('${t.uid||t.id}')">✅ 승인</button>
+       <button class="btn btn-red btn-sm" onclick="rejectTeacher('${t.uid||t.id}')">거절</button>`
+    )));
+  }
+  if(approved.length){
+    rows.push(`<tr><td colspan="6" style="background:#ecfdf5;padding:10px 14px;font-weight:700;color:#065f46;">✅ 승인된 교사 (${approved.length})</td></tr>`);
+    approved.forEach(t=>rows.push(row(t,
+      '<span class="badge badge-active">활성</span>',
+      `<button class="btn btn-red btn-sm" onclick="revokeTeacher('${t.uid||t.id}')">승인 취소</button>`
+    )));
+  }
+  if(masters.length){
+    rows.push(`<tr><td colspan="6" style="background:var(--master-l);padding:10px 14px;font-weight:700;color:var(--master);">👑 마스터 (${masters.length})</td></tr>`);
+    masters.forEach(t=>rows.push(row(t,
+      '<span class="badge badge-master">마스터</span>', '—'
+    )));
+  }
+  document.getElementById('teachers-table').innerHTML = `
+    <thead><tr>
+      <th>이름</th><th>이메일</th><th>UID</th><th>최근 로그인</th><th>상태</th><th>관리</th>
+    </tr></thead>
+    <tbody>${rows.length ? rows.join('') : '<tr><td colspan="6" class="loading-row">등록된 교사가 없어요</td></tr>'}</tbody>`;
+}
+
+async function approveTeacher(uid){
+  try{
+    await window._fsUpdateDoc(window._fsDoc(window._db,'users',uid), {
+      approved: true, approvedAt: new Date().toISOString(),
+      approvedBy: currentMaster ? currentMaster.email : ''
+    });
+    showToast('✅ 교사 승인 완료');
+    await loadTeachers();
+  }catch(e){ showToast('⚠️ 승인 실패: '+e.message); }
+}
+async function revokeTeacher(uid){
+  if(!confirm('정말 이 교사의 승인을 취소할까요?\n기존 학급 데이터는 유지됩니다.')) return;
+  try{
+    await window._fsUpdateDoc(window._fsDoc(window._db,'users',uid), { approved: false });
+    showToast('승인 취소됨');
+    await loadTeachers();
+  }catch(e){ showToast('⚠️ 실패: '+e.message); }
+}
+async function rejectTeacher(uid){
+  if(!confirm('이 교사의 가입 요청을 거절(삭제)할까요?')) return;
+  try{
+    await window._fsDeleteDoc(window._fsDoc(window._db,'users',uid));
+    showToast('🗑 가입 요청 삭제');
+    await loadTeachers();
+  }catch(e){ showToast('⚠️ 실패: '+e.message); }
+}
+
+// ── 학급을 마스터 소유로 claim (레거시 데이터용) ──
+async function claimClassroom(roomId){
+  if(!currentMaster){ showToast('마스터 로그인 필요'); return; }
+  if(!confirm('이 학급을 마스터 본인의 소유로 가져올까요?')) return;
+  try{
+    await window._fsSetDoc(
+      window._fsDoc(window._db,'classrooms',roomId,'info','meta'),
+      { ownerUid: currentMaster.uid, ownerEmail: currentMaster.email,
+        claimedAt: new Date().toISOString() },
+      { merge: true }
+    );
+    showToast('✅ 학급을 내 소유로 가져왔어요');
+    await loadAllData();
+  }catch(e){ showToast('⚠️ 실패: '+e.message); }
+}
+
+function _ownerLabel(meta){
+  if(!meta.ownerUid) return '<span style="color:#d97706;font-weight:700;">⚠️ 미지정</span>';
+  if(currentMaster && meta.ownerUid === currentMaster.uid) return '<span class="badge badge-master">내 소유</span>';
+  return `<span style="font-size:11px;color:var(--sub);">${meta.ownerEmail||meta.ownerUid.slice(0,8)+'…'}</span>`;
+}
+
+function renderOverviewTable(){
   document.getElementById('overview-table').innerHTML = `
     <thead><tr>
-      <th>학급 ID</th><th>학급 이름</th><th>담당 교사</th>
+      <th>학급 ID</th><th>학급 이름</th><th>담당 교사</th><th>소유자</th>
       <th>학생 수</th><th>계정 수</th>
     </tr></thead>
     <tbody>${allRooms.length === 0
-      ? '<tr><td colspan="5" class="loading-row">등록된 학급이 없어요</td></tr>'
+      ? '<tr><td colspan="6" class="loading-row">등록된 학급이 없어요</td></tr>'
       : allRooms.map(r=>`
         <tr>
           <td><span style="font-family:'Geist';font-size:11px;color:var(--hint);">${r.id}</span></td>
           <td style="font-weight:700;">${r.meta.className||'—'}</td>
           <td>${r.meta.teacherName||'—'}</td>
+          <td>${_ownerLabel(r.meta)}</td>
           <td><span class="badge badge-active">${r.studentCount}명</span></td>
           <td><span class="badge badge-master">${r.accountCount}개</span></td>
         </tr>`).join('')}
@@ -512,22 +678,26 @@ function renderOverviewTable(){
 function renderClassroomTable(){
   document.getElementById('classroom-table').innerHTML = `
     <thead><tr>
-      <th>학급 이름</th><th>담당 교사</th><th>학급 코드</th>
-      <th>학생</th><th>상태</th><th>관리</th>
+      <th>학급 이름</th><th>담당 교사</th><th>학급 코드</th><th>소유자</th>
+      <th>학생</th><th>관리</th>
     </tr></thead>
     <tbody>${allRooms.length === 0
       ? '<tr><td colspan="6" class="loading-row">등록된 학급이 없어요</td></tr>'
-      : allRooms.map(r=>`
+      : allRooms.map(r=>{
+          const noOwner = !r.meta.ownerUid;
+          return `
         <tr>
           <td style="font-weight:700;">${r.meta.className||'—'}</td>
           <td>${r.meta.teacherName||'—'}</td>
           <td><span style="font-family:'Geist';font-weight:800;letter-spacing:2px;">${r.meta.classCode||'—'}</span></td>
+          <td>${_ownerLabel(r.meta)}</td>
           <td>${r.studentCount}명</td>
-          <td><span class="badge badge-active">운영 중</span></td>
           <td>
+            ${noOwner ? `<button class="btn btn-master btn-sm" onclick="claimClassroom('${r.id}')">👑 소유하기</button>` : ''}
             <button class="btn btn-red btn-sm" onclick="openDeleteModal('${r.id}','${(r.meta.className||'').replace(/'/g,"\\'")}')">삭제</button>
           </td>
-        </tr>`).join('')}
+        </tr>`;
+        }).join('')}
     </tbody>`;
 }
 
@@ -542,14 +712,19 @@ async function createClassroom(){
   const classCode = (customCode.length === 6) ? customCode : String(Math.floor(100000 + Math.random() * 900000));
 
   try{
+    const ownerUid = currentMaster ? currentMaster.uid : '';
+    const ownerEmail = currentMaster ? currentMaster.email : '';
     await window._fsSetDoc(
       window._fsDoc(window._db,'classrooms',roomId,'info','meta'),
-      { className: name, teacherName: teacher, classCode, createdAt: new Date().toISOString() }
+      { className: name, teacherName: teacher, classCode,
+        ownerUid, ownerEmail, createdBy: ownerEmail,
+        createdAt: new Date().toISOString() }
     );
     // classCodes 역방향 조회 문서
     await window._fsSetDoc(
       window._fsDoc(window._db,'classCodes',classCode),
-      { roomId, className: name, createdAt: new Date().toISOString() }
+      { roomId, className: name, ownerUid, ownerEmail,
+        createdAt: new Date().toISOString() }
     );
     document.getElementById('new-class-name').value = '';
     document.getElementById('new-teacher-name').value = '';
@@ -647,15 +822,7 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'), 2500);
 }
 
-// ── 초기화 ──
-if(sessionStorage.getItem('master-auth')==='1'){
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('main-app').classList.add('visible');
-  function waitFb(){ if(window._fbReady) loadAllData(); else setTimeout(waitFb,200); }
-  waitFb();
-} else {
-  setTimeout(()=>document.getElementById('master-pw').focus(), 200);
-}
+// 초기화: 인증 감지는 _watchAuth()에서 처리
 </script>
 </body>
 </html>

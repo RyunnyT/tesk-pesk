@@ -1,0 +1,43 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tesk UI 미리보기</title>
+<style>html,body{margin:0;height:100%;font-family:system-ui}header{height:35px;box-sizing:border-box;background:#214f3c;color:#e6f1e9;display:flex;align-items:center;justify-content:center;padding:0 12px;font-size:11px}iframe{width:100%;height:calc(100% - 35px);border:0;display:block}</style></head><body>
+<header>UI 미리보기 · 예시 학급 데이터 · 변경 사항은 실제 학급에 저장되지 않습니다</header><iframe title="교사 페이지 UI 미리보기"></iframe>
+<script>
+(async()=>{
+  const response=await fetch('./tesk_teacher_v2.html');
+  if(!response.ok)throw new Error('교사 페이지를 불러오지 못했어요.');
+  let source=await response.text();
+  source=source.replace(/<script type="module">[\s\S]*?<\/script>/g,'');
+  function sandbox(){
+    const memory=new Map(),session=new Map();
+    const storage=map=>({getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,String(v)),removeItem:k=>map.delete(k),clear:()=>map.clear(),key:i=>[...map.keys()][i]??null,get length(){return map.size;}});
+    Object.defineProperty(window,'localStorage',{value:storage(memory)});
+    Object.defineProperty(window,'sessionStorage',{value:storage(session)});
+    const now=new Date(),today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const names=['김하늘','박다온','이서준','정수아','최지우','한도윤','강예린','윤시우','임서아','장유준','서하린','신민준','조지안','오준서','배채원','문현우','남서윤','송지호','류아린','백건우','홍유나','유은호','안소율','전태오'];
+    const fixture={
+      'tesk-settings':{teacherName:'담임',className:'4학년 2반',classCode:'DEMO42',currencyName:'메소',currencyIcon:'🪙',ownerUid:'ui-preview'},
+      'tesk-students':names.map((name,i)=>({num:i+1,name,points:320+i*35,job:''})),
+      'tesk-counsel-requests':[{id:'demo-c1',studentNum:1,studentName:names[0],topic:'학교생활',message:'학교생활에 대해 이야기하고 싶어요.',status:'pending',date:today},{id:'demo-c2',studentNum:2,studentName:names[1],topic:'친구관계',message:'친구와 함께 지내는 방법이 궁금해요.',status:'pending',date:today}],
+      'tesk-cal-events':{[today]:[{title:'학급 회의 · 우리 반 약속 정하기',color:'#4e8664',type:'class'}]},
+      'tesk-activities':[{msg:'🪙 학급 활동 참여 포인트를 지급했어요.',time:'09:40'},{msg:'✏️ 학생이 새로운 글을 제출했어요.',time:'09:25'},{msg:'✅ 아침활동 체크리스트를 확인했어요.',time:'09:10'},{msg:'📅 학급 회의 일정을 추가했어요.',time:'08:50'}],
+      'pesk-writings':Array.from({length:5},(_,i)=>({id:'demo-w'+i,studentNum:i+1,studentName:names[i],title:'우리 반에서 가장 즐거운 순간',content:'친구들과 함께 배우고 도와주었을 때 즐거웠어요.',submittedAt:today+'T09:00:00',type:'free'})),
+      'pesk-quiz-config':{grade:4,term:2,mathOn:true,englishOn:true},'pesk-quiz-progress':{},'tesk-accounts':{},'tesk-jobs':[]
+    };
+    Object.entries(fixture).forEach(([key,value])=>localStorage.setItem(key,JSON.stringify(value)));
+    localStorage.setItem('tesk-school-code','preview');localStorage.setItem('tesk-school-classid','DEMO42');localStorage.setItem('tesk-room-id','ui-preview');
+    localStorage.setItem('tesk-school-name','미리보기 초등학교');sessionStorage.setItem('tesk-initial-synced','1');
+    const originalFetch=window.fetch.bind(window);
+    window.fetch=(input,options)=>{const url=new URL(typeof input==='string'?input:input.url,location.href);return url.origin===location.origin?originalFetch(input,options):Promise.reject(new Error('미리보기에서는 외부 서비스에 연결하지 않습니다.'));};
+    const ref=(base,...parts)=>({path:[base?.path,...parts].filter(Boolean).join('/'),id:parts.at(-1)||'preview'});
+    const snapshot=r=>({id:r.id,exists:()=>Object.hasOwn(fixture,r.id),data:()=>({value:fixture[r.id]}),docs:[]});
+    window._db={};window._fbReady=true;window._fsDoc=ref;window._fsCollection=ref;
+    window._fsGetDoc=async r=>snapshot(r);window._fsGetDocs=async()=>({docs:[],forEach:()=>{}});
+    window._fsOnSnapshot=(r,next)=>{queueMicrotask(()=>next(snapshot(r)));return()=>{};};
+    window._fsSetDoc=async()=>{};window._fsUpdateDoc=async()=>{};window._fsServerTs=()=>new Date().toISOString();
+    window._fsRunTxn=async()=>{throw new Error('미리보기에서는 거래를 저장하지 않습니다.');};
+  }
+  const bootstrap='<script>('+sandbox.toString()+')();<\/script>';
+  source=source.replace('<head>','<head>'+bootstrap);
+  document.querySelector('iframe').srcdoc=source;
+})().catch(error=>document.querySelector('header').textContent=error.message);
+</script></body></html>

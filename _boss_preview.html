@@ -1,0 +1,23 @@
+<!doctype html><meta charset="utf-8"><title>보스 미리보기</title>
+<style>
+ body{margin:0;padding:18px;background:#1a1d24;color:#e8ecf2;font:14px system-ui,sans-serif;}
+ h1{font-size:15px;margin:0 0 12px;}
+ .row{display:flex;gap:24px;align-items:flex-end;flex-wrap:wrap;margin-bottom:22px;}
+ .cell{text-align:center;}
+ .cell b{display:block;font-size:12px;margin-top:6px;color:#9aa5b4;font-weight:700;}
+ .stage{background:linear-gradient(180deg,#252a34,#1a1d24);border-radius:14px;padding:14px 20px;}
+ svg{display:block;image-rendering:pixelated;}
+</style>
+<h1>확대 검사 — 평상시 / 분노</h1>
+<div class="row">
+  <div class="stage" id="big1"></div><div class="stage" id="big2"></div>
+</div>
+<h1>실제로 쓰일 크기</h1>
+<div class="row" id="sizes"></div>
+<script src="boss-sprites.js"></script>
+<script>
+ const cell=(h,l)=>'<div class="cell">'+h+'<b>'+l+'</b></div>';
+ big1.innerHTML = BOSS_SVG('golem',{size:300});
+ big2.innerHTML = BOSS_SVG('golem',{size:300,rage:true});
+ sizes.innerHTML = [32,48,64,96,140,160].map(s=>cell(BOSS_SVG('golem',{size:s}), s+'px')).join('');
+</script>

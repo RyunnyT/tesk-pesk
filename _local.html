@@ -1,0 +1,69 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>로컬 확인 — Tesk &amp; Pesk</title>
+<style>
+  :root{--line:#e6e8ef;--sub:#6b7280;--hint:#9aa1ad;--text:#1a1a2e;--card:#fff;--bg:#f4f3ef;
+        --tesk:#1a472a;--pesk:#1a3a72;--gold:#c9921a;--coral:#d94f2a}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Pretendard,'Malgun Gothic',system-ui,sans-serif;background:var(--bg);
+       color:var(--text);padding:32px 18px 70px;line-height:1.65}
+  .wrap{max-width:640px;margin:0 auto}
+  h1{font-size:22px;margin-bottom:6px}
+  .lead{font-size:13.5px;color:var(--sub);margin-bottom:24px}
+  a.card{display:block;background:var(--card);border:1px solid var(--line);border-radius:16px;
+     padding:18px 20px;margin-bottom:12px;text-decoration:none;color:inherit;
+     transition:transform .15s,box-shadow .15s}
+  a.card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.08)}
+  .card h2{font-size:16px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .card p{font-size:12.5px;color:var(--sub);}
+  .tag{font-size:10.5px;font-weight:800;border-radius:99px;padding:3px 9px;margin-left:auto}
+  .tag.easy{background:#e6f4ea;color:#0f9d58}
+  .tag.login{background:#fdf3e0;color:var(--gold)}
+  .warn{background:#fff1f2;border:1px solid #fecaca;color:#9f1239;border-radius:14px;
+        padding:14px 16px;font-size:12.5px;margin:22px 0 0;line-height:1.7}
+  .warn b{color:#7f1d1d}
+  .steps{background:var(--card);border:1px solid var(--line);border-radius:14px;
+         padding:14px 18px;margin-top:18px;font-size:12.5px;color:var(--sub)}
+  .steps b{color:var(--text)}
+  code{background:#f1f3f8;border-radius:5px;padding:1px 6px;font-size:12px}
+</style></head><body>
+<div class="wrap">
+  <h1>로컬 확인</h1>
+  <p class="lead">지금 컴퓨터에서 돌고 있는 최신 코드를 봅니다. 아직 배포되지 않은 내용이에요.</p>
+  <a class="card" href="/_teacher_ui_preview.html"><h2>🍃 교사 UI 미리보기 <span class="tag easy">예시 학급</span></h2><p>새로 정리한 교사 메뉴, 오늘의 학급, 모험 학습과 모바일 화면을 확인합니다. 실제 학급 데이터에 저장되지 않습니다.</p></a>
+  <a class="card" href="/_adventure_preview.html"><h2>⚔️ 액션 모험 체험 <span class="tag easy">테스트 데이터</span></h2><p>검·지팡이·도끼 조작과 펫 스킬을 체험합니다. 실제 학급 기록은 바뀌지 않습니다.</p></a>
+
+  <a class="card" href="/_rating_lab.html">
+    <h2>🧪 문항·레이팅 확인 <span class="tag easy">로그인 필요 없음</span></h2>
+    <p>문제를 직접 풀며 실력 레이팅과 경험치가 어떻게 움직이는지 봅니다.
+       진단 10문항, 유형 24개 생성 샘플, 정답률 수렴 시뮬레이션까지 여기서 다 됩니다.
+       <b>가장 빠르게 확인하는 곳입니다.</b></p>
+  </a>
+
+  <a class="card" href="/landing.html">
+    <h2>🎮 학생 화면 (Pesk) <span class="tag login">로그인 필요</span></h2>
+    <p>학급코드 → 아이디/비밀번호로 들어간 뒤 <b>마이룸 → ⚔️ 모험</b> 탭을 보세요.
+       진단을 마치면 몬스터 전투가 시작되고, 펫이 공격력을 올려 줍니다.</p>
+  </a>
+
+  <a class="card" href="/tesk_teacher_v2.html">
+    <h2>🍃 교사 화면 (Tesk) <span class="tag login">로그인 필요</span></h2>
+    <p>🎓 학습 퀘스트 현황에서 <b>모험에서 푼 문제가 제대로 잡히는지</b> 확인해 보세요.
+       이번에 고친 핵심이 그 부분입니다.</p>
+  </a>
+
+  <div class="warn">
+    ⚠️ <b>실제 학급 데이터에 연결됩니다.</b><br>
+    로컬로 열어도 Firebase 는 진짜 학급을 봅니다. 학생 화면에서 문제를 풀면
+    그 학생의 XP·코인·기록이 실제로 바뀝니다.
+    <b>체험용 계정이나 테스트 학생으로 들어가세요.</b>
+  </div>
+
+  <div class="steps">
+    <b>끝낼 때</b> — 같이 열린 검은 창(명령 프롬프트)을 닫으면 서버가 꺼집니다.<br>
+    <b>참고</b> — 로컬에서 <code>http://localhost:8765/</code> 를 그냥 열면
+    학생 화면이 아니라 <b>데스크톱 위젯용 index.html</b> 이 나옵니다.
+    배포할 때만 landing 이 index 로 복사되기 때문이에요. 위 버튼으로 들어가세요.
+  </div>
+</div>
+</body></html>

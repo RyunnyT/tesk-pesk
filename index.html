@@ -541,7 +541,7 @@ body.editing #canvas { right:var(--panel-w); }
   <button class="tb-btn" id="bring-front-btn" onclick="bringToFrontApp()">앞으로</button>
   <button class="tb-btn" id="grid-toggle" onclick="toggleGrid()">격자 보기</button>
   <button class="tb-btn" id="link-btn" onclick="openLinkPanel()" style="background:var(--tesk);color:#fff;border-color:var(--tesk);">🔗 연동</button>
-  <button class="tb-btn" onclick="openHomepage()">🌐 홈페이지</button>
+  <button class="tb-btn" onclick="openHomepage()" oncontextmenu="event.preventDefault();setHomepageUrl();" title="좌클릭: 홈페이지 열기 / 우클릭: 주소 설정">🌐 홈페이지</button>
   <div id="add-widget-wrap">
     <button class="tb-btn" id="add-widget-btn" onclick="toggleAddMenu()">＋ 위젯 추가</button>
     <div id="add-menu">
@@ -1025,19 +1025,55 @@ function save(k, v) {
 }
 
 // ── Firebase에서 전체 불러오기 ──
+// Tesk 웹은 'tesk-*' 접두사로 저장하므로 양쪽 키를 모두 시도하고
+// exe 내부는 접두사 없는 키로 사용하므로 매핑해서 저장합니다.
 async function loadFromFirebase() {
   if (!window._fbReady || !window._db) return;
-  const keys = ['students','todos','schedules','calEvents','ddays','timetable',
-                 'attendance','grades','notices','counsels','memo','wl'];
+  const keyMap = {
+    // [exeLocalKey] : fbKey (Tesk 웹과 일치)
+    students:      'tesk-students',
+    calEvents:     'tesk-calEvents',
+    todos:         'tesk-todos',
+    schedules:     'tesk-schedules',
+    ddays:         'tesk-ddays',
+    timetable:     'tesk-timetable',
+    attendance:    'tesk-attendance',
+    grades:        'tesk-grades',
+    notices:       'tesk-notices',
+    counsels:      'tesk-counsels',
+    memo:          'tesk-memo',
+    wl:            'tesk-wl',
+    shopItems:     'tesk-shop',
+    jobs:          'tesk-jobs',
+    missions:      'tesk-missions',
+    lessons:       'tesk-lessons',
+    writings:           'tesk-writings',
+    stockPrices:        'tesk-stock-prices',
+    bankPlans:          'tesk-bank-plans',
+    taxItems:           'tesk-tax-items',
+    counselRequests:    'tesk-counsel-requests',
+    purchaseLog:        'pesk-purchase-log',
+    teacherNotif:       'tesk-teacher-notif',
+  };
   setSyncStatus('syncing');
   let loaded = 0;
-  for (const k of keys) {
+  for (const [localK, fbK] of Object.entries(keyMap)) {
     try {
-      const snap = await window._fsGetDoc(
-        window._fsDoc(window._db, 'classrooms', TESK_ROOM, 'data', k)
+      // 1순위: tesk-* 접두사 (웹과 동일 경로)
+      let snap = await window._fsGetDoc(
+        window._fsDoc(window._db, 'classrooms', TESK_ROOM, 'data', fbK)
       );
+      // 2순위: 접두사 없는 구 exe 경로 (하위 호환)
+      if (!snap.exists()) {
+        snap = await window._fsGetDoc(
+          window._fsDoc(window._db, 'classrooms', TESK_ROOM, 'data', localK)
+        );
+      }
       if (snap.exists()) {
-        localStorage.setItem(k, JSON.stringify(snap.data().value));
+        const val = snap.data().value;
+        localStorage.setItem(localK, JSON.stringify(val));
+        // 접두사 키도 함께 저장해 웹/exe 모두 호환
+        localStorage.setItem(fbK, JSON.stringify(val));
         loaded++;
       }
     } catch(e) {}
@@ -1411,22 +1447,58 @@ async function renderClassLive(){
   el.innerHTML = '<div style="text-align:center;padding:10px;color:#9ca3af;font-size:11px;">불러오는 중...</div>';
   try {
     const db = window._db;
-    const [stuSnap, noticeSnap, counselSnap] = await Promise.all([
+    const [stuSnap, counselReqSnap, metaSnap, jobsSnap, purchaseLogSnap, shopSnap] = await Promise.all([
       window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','tesk-students')),
       window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','tesk-counsel-requests')),
       window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'info','meta')),
+      window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','tesk-jobs')),
+      window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','pesk-purchase-log')),
+      window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data','tesk-shop')),
     ]);
     const students = stuSnap.exists() ? (stuSnap.data().value || []) : [];
-    const counselReqs = noticeSnap.exists() ? (noticeSnap.data().value || []) : [];
-    const meta = counselSnap.exists() ? counselSnap.data() : {};
+    const counselReqs = counselReqSnap.exists() ? (counselReqSnap.data().value || []) : [];
+    const meta = metaSnap.exists() ? metaSnap.data() : {};
+    const jobs = jobsSnap.exists() ? (jobsSnap.data().value || []) : [];
+    const purchaseLogs = purchaseLogSnap.exists() ? (purchaseLogSnap.data().value || []) : [];
+    const shopItems = shopSnap.exists() ? (shopSnap.data().value || []) : [];
     const pendingCounsel = Array.isArray(counselReqs) ? counselReqs.filter(r=>r.status==='pending').length : 0;
     const className = meta.className || localStorage.getItem('tesk-exe-class-name') || '학급';
+    const totalPoints = students.reduce((a,s)=>a+(s.points||0),0);
+    const jobAssignedCount = (function(){
+      const nums = new Set();
+      (jobs||[]).forEach(j=>{
+        const arr = Array.isArray(j.studentNums) ? j.studentNums : (j.studentNum!=null?[j.studentNum]:[]);
+        arr.forEach(n=>nums.add(n));
+      });
+      return nums.size;
+    })();
+    const todayStart = (function(){ const d=new Date(); d.setHours(0,0,0,0); return d.getTime(); })();
+    const todayBuys = (purchaseLogs||[]).filter(l=>l.type==='buy' && (l.ts||0) >= todayStart).length;
+    const recentLogs = (purchaseLogs||[]).slice(-5).reverse();
+    const shopCount = (shopItems||[]).length;
     el.innerHTML =
       `<div style="font-size:11px;font-weight:700;color:#6b7280;letter-spacing:.05em;margin-bottom:10px;text-transform:uppercase;">📡 실시간 연동 · ${className}</div>`
-      + `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">`
-      + `<div style="background:#f0fdf4;border-radius:10px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:900;color:#1a472a;">${students.length}</div><div style="font-size:10px;color:#6b7280;">전체 학생</div></div>`
-      + `<div style="background:${pendingCounsel>0?'#fff7ed':'#f9fafb'};border-radius:10px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:900;color:${pendingCounsel>0?'#ea580c':'#374151'};">${pendingCounsel}</div><div style="font-size:10px;color:#6b7280;">상담 신청 대기</div></div>`
+      + `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">`
+      + `<div style="background:#f0fdf4;border-radius:10px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#1a472a;">${students.length}</div><div style="font-size:9px;color:#6b7280;">전체 학생</div></div>`
+      + `<div style="background:#fef3c7;border-radius:10px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#92400e;">${totalPoints.toLocaleString()}</div><div style="font-size:9px;color:#6b7280;">총 포인트</div></div>`
+      + `<div style="background:#ede9fe;border-radius:10px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#5b21b6;">${jobAssignedCount}</div><div style="font-size:9px;color:#6b7280;">직업 배정</div></div>`
+      + `<div style="background:${pendingCounsel>0?'#fff7ed':'#f9fafb'};border-radius:10px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:900;color:${pendingCounsel>0?'#ea580c':'#374151'};">${pendingCounsel}</div><div style="font-size:9px;color:#6b7280;">상담 대기</div></div>`
       + `</div>`
+      + `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">`
+      + `<div style="background:#e0f2fe;border-radius:10px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#0369a1;">${shopCount}</div><div style="font-size:9px;color:#6b7280;">매점 상품</div></div>`
+      + `<div style="background:#fce7f3;border-radius:10px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#9d174d;">${todayBuys}</div><div style="font-size:9px;color:#6b7280;">오늘 구매</div></div>`
+      + `</div>`
+      + (recentLogs.length>0 ? (
+          `<div style="font-size:11px;color:#6b7280;margin-bottom:4px;font-weight:600;">최근 매점 활동</div>`
+          + `<div style="background:#f9fafb;border-radius:8px;padding:6px 8px;margin-bottom:10px;">`
+          + recentLogs.map(l=>{
+              const icon = l.type==='buy'?'🛒':(l.type==='use'?'✅':'•');
+              const name = l.studentName || (l.studentNum?('#'+l.studentNum):'학생');
+              const item = l.itemName || '';
+              return `<div style="font-size:10px;color:#374151;padding:2px 0;display:flex;gap:4px;align-items:center;"><span>${icon}</span><span style="font-weight:600;">${name}</span><span style="color:#9ca3af;">·</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item}</span></div>`;
+            }).join('')
+          + `</div>`
+        ) : '')
       + `<div style="font-size:11px;color:#6b7280;margin-bottom:6px;font-weight:600;">학생 현황</div>`
       + `<div style="display:flex;flex-wrap:wrap;gap:4px;">`
       + students.slice(0,20).map(s=>`<div style="font-size:10px;padding:3px 7px;background:#f3f4f6;border-radius:99px;">${s.num}번 ${s.name}</div>`).join('')
@@ -1463,8 +1535,25 @@ function closeApp(){
   if(pyBridge&&pyBridge.close_app) pyBridge.close_app();
 }
 function openHomepage(){
-  if(pyBridge&&pyBridge.open_url) pyBridge.open_url('https://tesk-two.vercel.app');
-  else window.open('https://tesk-two.vercel.app','_blank');
+  // 사용자 설정 URL 우선 → 없으면 기본값
+  const url = localStorage.getItem('tesk-homepage-url') || 'https://tesk-two.vercel.app';
+  if(pyBridge&&pyBridge.open_url) pyBridge.open_url(url);
+  else window.open(url,'_blank');
+}
+function setHomepageUrl(){
+  const cur = localStorage.getItem('tesk-homepage-url') || 'https://tesk-two.vercel.app';
+  const v = prompt('Tesk 홈페이지 주소를 입력하세요 (https:// 포함)', cur);
+  if(v===null) return;
+  const trimmed = v.trim();
+  if(!trimmed){
+    localStorage.removeItem('tesk-homepage-url');
+    alert('기본 주소로 되돌렸습니다.');
+  } else if(!/^https?:\/\//.test(trimmed)){
+    alert('올바른 주소가 아닙니다. https:// 또는 http:// 로 시작해야 합니다.');
+  } else {
+    localStorage.setItem('tesk-homepage-url', trimmed);
+    alert('저장되었습니다.');
+  }
 }
 
 function sendToBack(){

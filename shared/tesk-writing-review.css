@@ -1,0 +1,111 @@
+/* 글쓰기 첨삭 모드 · 문구 · 모음집 (교사) */
+.wr-settings{margin-bottom:14px;padding:0!important;overflow:hidden}
+.wr-settings>summary{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 18px;cursor:pointer;font-weight:800;list-style:none}
+.wr-settings>summary::-webkit-details-marker{display:none}
+.wr-settings>summary::after{content:'▾';margin-left:auto;color:var(--sub)}
+.wr-settings[open]>summary::after{content:'▴'}
+.wr-settings-sum{font-weight:500;font-size:12px;color:var(--sub)}
+.wr-settings>.card{margin:0 12px 12px!important;box-shadow:none}
+.wr-submit-summary{padding:10px 14px;border-radius:12px;background:var(--surface);font-size:12px;color:var(--sub)}
+.wr-submit-summary>summary{cursor:pointer;line-height:1.6}
+.wr-preview{font-size:12px;color:var(--sub);margin-top:4px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.wr-review{display:grid;grid-template-columns:250px minmax(0,1fr);gap:16px;align-items:start}
+.wr-queue{position:sticky;top:12px;max-height:calc(100vh - 140px);overflow:auto;background:var(--card,#fff);border:1px solid var(--border);border-radius:16px;padding:10px}
+.wr-q-head{display:flex;justify-content:space-between;align-items:center;padding:4px 6px 8px;font-size:13px}
+.wr-q-head span{font-size:11px;color:var(--sub)}
+.wr-q-label{font-size:10px;font-weight:800;color:var(--sub);padding:8px 6px 4px}
+.wr-q-item{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;border:1px solid transparent;background:none;border-radius:12px;padding:9px 10px;cursor:pointer;font-family:inherit;color:inherit}
+.wr-q-item:hover{background:var(--surface)}
+.wr-q-item.on{background:var(--purple-l,#f3effe);border-color:var(--purple,#7c3aed)}
+.wr-q-item:focus-visible{outline:2px solid var(--purple,#7c3aed);outline-offset:1px}
+.wr-q-top{display:flex;justify-content:space-between;gap:6px;font-size:12px}
+.wr-q-top small{color:var(--sub);font-size:10px;white-space:nowrap}
+.wr-q-title{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wr-q-prev{font-size:11px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wr-q-empty{font-size:12px;color:var(--sub);text-align:center;padding:16px 6px}
+.wr-q-keys{font-size:10px;color:var(--hint);padding:10px 6px 2px;line-height:1.8}
+.wr-q-keys kbd{font-family:inherit;border:1px solid var(--border);border-radius:4px;padding:0 4px;background:var(--surface)}
+.wr-tools{display:flex;gap:6px;align-items:center;margin-left:auto;margin-right:6px;flex-wrap:wrap}
+.wr-danger{background:var(--coral-l,#fdecea)!important;color:var(--coral,#c24136)!important;border:none}
+.wr-anth-badge{font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px;background:#eef2ff;color:#4338ca}
+.wr-anth-badge.declined{background:var(--surface);color:var(--sub)}
+/* 첨삭 화면: 학생 글 전체 → 그 아래 같은 너비의 피드백 칸 (한 줄로 쌓는다) */
+.wr-review .teach-writing-layout{grid-template-columns:minmax(0,1fr)}
+.wr-review .teach-writing-layout>.wr-original{position:static;max-height:none;overflow:visible;margin-bottom:0!important}
+.wr-review .wr-original p{font-size:15px!important;line-height:1.9!important}
+.wr-review #pesk-fb-text{min-height:180px;font-size:14px;line-height:1.8}
+.wr-h-item{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;background:none;border:none;border-top:1px solid var(--border);padding:9px 4px;cursor:pointer;font-family:inherit;color:inherit;font-size:12px}
+.wr-h-item:hover{background:var(--surface)}
+.wr-h-item small{color:var(--sub)}
+
+.wr-phrases{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.wr-chip{border:1px solid var(--border);background:var(--surface);border-radius:99px;padding:5px 11px;font-size:12px;cursor:pointer;font-family:inherit;color:inherit;max-width:100%}
+.wr-chip:hover{border-color:var(--purple,#7c3aed);color:var(--purple,#7c3aed)}
+.wr-chip.add{border-style:dashed;color:var(--purple,#7c3aed)}
+.wr-chip.ghost{background:none;color:var(--sub)}
+.wr-chip.edit{border-color:var(--coral,#c24136)}
+.wr-chip.edit b{color:var(--coral,#c24136)}
+
+.wr-modal{position:fixed;inset:0;z-index:3000;background:rgba(15,23,20,.45);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto}
+.wr-modal-box{width:100%;max-width:720px;background:var(--card,#fff);border-radius:20px;padding:20px 22px;box-shadow:0 24px 60px rgba(0,0,0,.25)}
+.wr-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px}
+.wr-modal-head b{font-size:17px;display:block}
+.wr-modal-head small{color:var(--sub);font-size:12px}
+.wr-opts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.wr-opts>span{width:44px;font-size:12px;font-weight:800;color:var(--sub)}
+.wr-opt{display:flex;flex-direction:column;border:1.5px solid var(--border);border-radius:12px;padding:7px 12px;cursor:pointer;font-size:13px;min-width:110px}
+.wr-opt input{position:absolute;opacity:0;pointer-events:none}
+.wr-opt small{font-size:10.5px;color:var(--sub)}
+.wr-opt.on{border-color:var(--purple,#7c3aed);background:var(--purple-l,#f3effe)}
+.wr-opt:focus-within{outline:2px solid var(--purple,#7c3aed);outline-offset:1px}
+.wr-ai-box{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0}
+.wr-ai-box small{color:var(--sub);font-size:11.5px}
+.wr-note{font-size:12.5px;color:var(--text);background:var(--surface);border-radius:10px;padding:9px 12px;margin:10px 0}
+.wr-muted{color:var(--sub)}
+.wr-text{white-space:pre-wrap;font-size:14px;line-height:1.9;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin:8px 0;max-height:46vh;overflow:auto;background:var(--card,#fff)}
+.wr-edit{display:inline;border:none;background:none;padding:0;font:inherit;cursor:pointer;border-radius:4px}
+.wr-edit del{color:var(--hint);text-decoration:line-through}
+.wr-edit ins{display:none}
+.wr-edit.on del{color:#c24136}
+.wr-edit.on ins{display:inline;text-decoration:none;background:#dcfce7;color:#166534;font-weight:700;margin-left:2px;padding:0 2px;border-radius:3px}
+.wr-edit:not(.on){background:#f1f5f9}
+.wr-edit:focus-visible{outline:2px solid var(--purple,#7c3aed)}
+.wr-edit-list{list-style:none;padding:0;margin:8px 0;max-height:24vh;overflow:auto;font-size:12.5px}
+.wr-edit-list li{padding:5px 2px;border-bottom:1px solid var(--border)}
+.wr-edit-list del{color:#c24136}
+.wr-edit-list ins{color:#166534;text-decoration:none;font-weight:700}
+.wr-edit-list small{color:var(--sub);margin-left:4px}
+.wr-modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;flex-wrap:wrap}
+.wr-anth-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.wr-anth-head>div{flex:1;min-width:160px}
+.wr-anth-head b{display:block;font-size:17px}
+.wr-anth-head small{color:var(--sub);font-size:12px}
+.wr-anth-item{margin-bottom:12px}
+.wr-anth-item-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.wr-anth-item-head b{display:block;font-size:15px}
+.wr-anth-item-head small{color:var(--sub);font-size:12px}
+.wr-anth-item .wr-text{max-height:none;border:none;padding:8px 0 0;background:none}
+
+@media (max-width:1100px){
+  .wr-review{grid-template-columns:200px minmax(0,1fr);gap:12px}
+}
+@media (max-width:760px){
+  .wr-review{grid-template-columns:1fr}
+  .wr-queue{position:static;max-height:210px}
+}
+@media (max-width:640px){
+  .wr-opts>span{width:100%}
+  .wr-modal{padding:12px 8px}
+  .wr-modal-box{padding:16px}
+}
+
+/* 맞춤법 · 어색한 문장 고치기 (교사 첨삭 화면, 원문 아래) */
+.wr-proof{margin-top:12px}
+.wr-proof-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.wr-proof-head>b{font-size:14px;margin-right:auto}
+.wr-proof-levels{display:flex;gap:6px;flex-wrap:wrap}
+.wr-chip.on{background:var(--purple-l,#f3effe);border-color:var(--purple,#7c3aed);color:var(--purple,#7c3aed);font-weight:700}
+.wr-proof-help{font-size:12px;margin:8px 0 0}
+.wr-proof .wr-text{max-height:none}
+.wr-proof-foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
