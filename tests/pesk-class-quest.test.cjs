@@ -126,3 +126,45 @@ test('communal activities cannot be purchased or used as personal goods, and all
   f.run('myStudentNum=2');assert.match(f.c.buildClassRewardInventory(),/체육 시간 1회/);
   f.c.applyClassBossPurchases(Q.complete(out.buys,out.buys[0].id));assert.match(f.c.buildClassRewardInventory(),/제공 완료/);
 });
+
+test('participation tiers: 1 day title only, mid days base reward, top days extra XP; old rounds keep the old rule',()=>{
+  const d=n=>Array.from({length:n},(_,i)=>'2026-10-'+String(i+1).padStart(2,'0'));
+  const prog={1:{xp:0,boss:{roundId:'round1',dmg:40,days:d(1)}},2:{xp:0,boss:{roundId:'round1',dmg:30,days:d(3)}},3:{xp:0,boss:{roundId:'round1',dmg:30,days:d(5)}}};
+  const set={...cfg,tiered:true,tierMid:3,tierTop:5,rewardXp:100,rewardXpBonus:40,rewardItemId:'pencil',rewardTitle:'용사'};
+  const out=Q.plan(set,prog,items,[]);
+  assert.deepEqual(out.tiers,{1:1,2:2,3:3});
+  assert.equal(out.all[1].xp,0);assert.ok(out.all[1].boss.titles.length===1,'1 day still earns the title');
+  assert.equal(out.all[2].xp,100);assert.equal(out.all[3].xp,140);
+  assert.deepEqual(out.buys.filter(b=>b.scope==='student').map(b=>b.studentNum).sort(),[2,3],'free riders get no personal item');
+  const legacy=Q.plan({...set,tiered:false},prog,items,[]);
+  assert.deepEqual([legacy.all[1].xp,legacy.all[2].xp,legacy.all[3].xp],[100,100,100]);
+});
+test('days survive normalisation, roll over to prevDays on a new round, and drive the ranking',()=>{
+  const rec=G.normalizeBossRec({roundId:'r1',dmg:50,days:['2026-10-02','2026-10-01','2026-10-02','bad']});
+  assert.deepEqual(rec.days,['2026-10-01','2026-10-02']);
+  const next=G.bossRollRound(rec,'r2');assert.equal(next.dmg,0);assert.deepEqual(next.days,[]);assert.equal(next.prevDays,2);assert.equal(next.prevRoundId,'r1');
+  const same=G.bossRollRound(rec,'r1');assert.equal(same.dmg,50);assert.deepEqual(same.days,rec.days,'same round keeps its record');
+  const c={enabled:true,roundId:'r2'};
+  const day=k=>({tried:10,correct:k});
+  const p={
+    1:{boss:{roundId:'r2',dmg:10,days:['2026-10-05','2026-10-06','2026-10-07'],prevRoundId:'r1',prevDays:1},daily:{'2026-10-05':day(5),'2026-10-06':day(5),'2026-10-07':day(5)}},
+    2:{boss:{roundId:'r2',dmg:99,days:['2026-10-05'],prevRoundId:'r1',prevDays:4},daily:{'2026-10-05':day(10)}},
+    3:{boss:{roundId:'r2',dmg:5,days:['2026-10-05','2026-10-06','2026-10-07']},daily:{'2026-10-05':{tried:3,correct:3}}},
+    4:{boss:{roundId:'r1',dmg:500,days:['2026-09-01']}}
+  };
+  const st=[1,2,3,4].map(n=>({num:n,name:'s'+n}));
+  const r=G.bossRanking(c,p,st,5);
+  assert.deepEqual(r.steady.map(x=>[x.num,x.rank]),[[1,1],[3,1],[2,3]],'ties share a rank; damage does not matter');
+  assert.deepEqual(r.accurate.map(x=>[x.num,x.value]),[[2,100],[1,50]],'needs 10+ questions on boss days');
+  assert.deepEqual(r.growth.map(x=>[x.num,x.value]),[[3,3],[1,2]]);
+  assert.deepEqual(r.absent.map(x=>x.num),[4],'old round records are not participation');
+  assert.equal(G.bossRanking(c,p,st,1).steady.length,2,'top limit keeps everyone tied at the cut');
+});
+test('finishing today\'s reading unlocks the boss, and reading tickets do not use up hunt preparation',()=>{
+  const c={enabled:true,roundId:'r',entryNeed:5};
+  assert.equal(G.bossChallenge(c,{daily:{}},'2026-10-06').unlocked,false);
+  assert.equal(G.bossChallenge(c,{litDay:'2026-10-06'},'2026-10-06').unlocked,true);
+  assert.equal(G.bossChallenge(c,{litDay:'2026-10-05'},'2026-10-06').unlocked,false);
+  assert.equal(G.normalizeGame({huntAttempts:0,huntEnergy:Array(8).fill(12)}).huntAttempts,0);
+  assert.equal(G.normalizeGame({huntEnergy:[12,12,12]}).huntAttempts,3,'legacy records without the field still count');
+});

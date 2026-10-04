@@ -2,6 +2,9 @@
 <html lang="ko">
 <head>
 <script src="shared/teaching-core.js?v=20261001counsel3"></script>
+<script src="shared/todo-schedule.js?v=20261004todo2"></script>
+<script src="shared/literacy-core.js?v=20261004lit1"></script>
+<script src="shared/pesk-progression.js?v=20261004grow1"></script>
 <link rel="stylesheet" href="shared/tesk-teaching.css?v=20261001counsel3">
 <script src="shared/peer-survey.js?v=20260929class1"></script>
 <script src="shared/peer-analysis.js?v=20260920"></script>
@@ -18,17 +21,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- 아바타 스프라이트 (Universal LPC Spritesheet, CC-BY-SA 3.0 / GPL 3.0) -->
 <script src="avatar-sprites.js"></script>
-<script src="avatar-extras.js"></script>
+<script src="avatar-extras.js?v=20261004grow1"></script>
 <!-- 여자 아바타 몸/머리 + 여성 의상 (LPC) -->
 <script src="avatar-female.js"></script>
 <!-- 우리 반 보스 계산 (학생앱과 같은 규칙을 쓴다) -->
-<script src="rpg-monsters.js?v=20260919boss1"></script>
+<script src="rpg-monsters.js?v=20261004grow1"></script>
 <script src="shared/pesk-boss-catalog.js?v=20260910rpg2"></script>
-<script src="shared/pesk-boss-quest.js?v=20260918tablet1"></script>
-<script src="shared/tesk-class-quest-ui.js?v=20260918tablet1"></script>
+<script src="shared/pesk-boss-quest.js?v=20261004rank1"></script>
+<script src="shared/tesk-class-quest-ui.js?v=20261004rank1"></script>
 <link rel="stylesheet" href="shared/pesk-teacher-adventure.css?v=20260910rpg2">
 <!-- 학습 퀘스트 문제 생성기 (초등 3~6학년 교육과정) -->
-<script src="quiz-bank.js?v=20260912mixed1"></script>
+<script src="quiz-bank.js?v=20261004grow1"></script>
 <script src="shared/pesk-writing-store.js?v=20261001read1"></script>
 <script src="shared/pesk-subjects.js"></script>
 <script src="shared/economy-ownership.js?v=20260930bank1"></script>
@@ -780,6 +783,27 @@ body{font-family:'Geist','Pretendard',sans-serif;
   transition:transform .3s cubic-bezier(.34,1.56,.64,1);overflow:hidden;max-height:90vh;overflow-y:auto;
 }
 .modal-bg.open .modal{transform:translateY(0) scale(1);}
+.todo-week-btn{display:flex;align-items:center;gap:10px;width:100%;margin-top:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;background:var(--surface);cursor:pointer;text-align:left;font:inherit;color:var(--text);}
+.todo-week-btn:hover{border-color:var(--tesk);}
+.todo-week-btn .tw-ic{font-size:18px;}
+.todo-week-btn .tw-main{flex:1;min-width:0;}
+.todo-week-btn .tw-title{display:block;font-size:13px;font-weight:800;}
+.todo-week-btn .tw-today{display:block;font-size:11px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.todo-week-btn .tw-go{font-size:12px;font-weight:700;color:var(--tesk);white-space:nowrap;}
+.todo-week{width:100%;border-collapse:separate;border-spacing:0 6px;}
+.todo-week th{font-size:12px;color:var(--sub);font-weight:700;padding:0 2px 2px;}
+.todo-week th.we{color:var(--hint);}
+.todo-week th.today{color:var(--tesk);}
+.todo-week td{text-align:center;padding:0 2px;}
+.todo-week td.act{text-align:left;padding-right:8px;white-space:nowrap;}
+.todo-week .act b{font-size:13px;}
+.todo-week .act small{display:block;font-size:10.5px;color:var(--hint);font-weight:500;white-space:normal;max-width:190px;line-height:1.35;}
+.todo-week .act .soon{font-size:10px;font-weight:700;color:var(--gold);background:var(--gold-l);border-radius:6px;padding:1px 5px;margin-left:4px;}
+.todo-cell{width:34px;height:34px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:15px;line-height:1;color:transparent;}
+.todo-cell.on{background:var(--tesk);border-color:var(--tesk);color:#fff;}
+.todo-cell.we:not(.on){background:#f7f7fa;}
+.todo-cell:focus-visible{outline:2px solid var(--tesk);outline-offset:2px;}
+@media (max-width:560px){.todo-cell{width:28px;height:28px;font-size:13px;}.todo-week .act small{display:none;}}
 .modal-header{
   padding:20px 22px 16px;display:flex;align-items:center;justify-content:space-between;
   border-bottom:0.5px solid var(--border);position:sticky;top:0;background:var(--card);z-index:1;
@@ -997,6 +1021,7 @@ window.addEventListener('error', function(e){
     <button type="button" class="nav-item" onclick="goPage('adventure')" data-page="adventure"><span class="ni" data-icon="compass" aria-hidden="true"></span><span>모험 학습</span></button>
     <button type="button" class="nav-item" onclick="goPage('writing')" data-page="writing"><span class="ni" data-icon="pen" aria-hidden="true"></span><span>글쓰기 지도</span><span class="badge" id="writing-badge" style="display:none;">0</span></button>
     <button type="button" class="nav-item" onclick="goPage('exam')" data-page="exam"><span class="ni" data-icon="file" aria-hidden="true"></span><span>시험지 분석기</span></button>
+    <button type="button" class="nav-item" onclick="goPage('literacy')" data-page="literacy"><span class="ni" data-icon="book" aria-hidden="true"></span><span>오늘의 지문</span></button>
     <div class="nav-section-label">학생 이해</div>
     <button type="button" class="nav-item" onclick="window.resetCounselView&&resetCounselView();goPage('counsel')" data-page="counsel"><span class="ni" data-icon="chat" aria-hidden="true"></span><span>상담 기록</span><span class="badge" id="counsel-badge" style="display:none;">0</span></button>
     <button type="button" class="nav-item" onclick="goPage('friends')" data-page="friends"><span class="ni" data-icon="heart" aria-hidden="true"></span><span>친구관계 분석</span></button>
@@ -1067,6 +1092,7 @@ window.addEventListener('error', function(e){
             <button class="btn btn-sm btn-secondary" onclick="exportCalendarToExe()">📤 exe</button>
             <button class="btn btn-sm btn-primary" onclick="openCalEventModal()">+ 일정 추가</button>
           </div>
+          <button type="button" class="todo-week-btn" id="todo-week-btn" onclick="openTodoWeekModal()"></button>
           <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:10px;font-size:11px;"></div>
           <div id="cal-events" style="margin-top:12px;font-size:12px;"></div>
         </div>
@@ -1167,10 +1193,15 @@ window.addEventListener('error', function(e){
         </div>
 
         <div class="card">
-          <div class="card-header"><div class="card-title">🤝 공동 퀘스트 · 우리 반 보스</div>
+          <div class="card-header"><div class="card-title">🗿 보스 · 우리 반 보스</div>
             <div id="boss-status" style="font-size:11px;font-weight:800;color:var(--hint);"></div></div>
           <div id="boss-panel" style="padding:12px;"></div>
           <div id="class-quest-inventory" style="padding:0 12px 12px;"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">🧩 주간 퀘스트 · 🔁 복수 몬스터</div></div>
+          <div id="quest-panel" style="padding:12px;"></div>
         </div>
         <details class="card" style="margin-bottom:16px;"><summary style="cursor:pointer;font-weight:700">이전 문제 수 목표 설정</summary>
           <div class="card-header"><div class="card-title">기존 학습 목표</div>
@@ -1321,6 +1352,13 @@ window.addEventListener('error', function(e){
     </div>
 
     <!-- ── 시험지 분석기 ── -->
+    <div class="page" id="page-literacy">
+      <div class="page-header"><div>
+        <div class="page-title">오늘의 지문</div>
+        <div class="page-desc">비문학 지문을 읽고 구조도 빈칸을 채우는 문해력 학습이에요. 주제를 정하고, AI가 만든 지문을 검토해 승인하면 정한 요일에 학생에게 열려요.</div>
+      </div></div>
+      <div id="literacy-content"></div>
+    </div>
     <div class="page" id="page-exam">
       <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
         <div>
@@ -2056,6 +2094,11 @@ window.addEventListener('error', function(e){
   </div>
 </div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-cal-event')">취소</button><button class="btn btn-primary" onclick="addCalEventFromModal()">추가</button></div></div></div>
 
+<div class="modal-bg" id="modal-todo-week" onclick="closeOnBg(event,'modal-todo-week')"><div class="modal" style="max-width:640px;"><div class="modal-header"><div class="modal-title">🧒 학생 할 일 요일표</div><button class="modal-close" onclick="closeModal('modal-todo-week')">✕</button></div><div class="modal-body">
+  <p class="insight-help" style="margin:0 0 12px;">체크한 요일에 학생 앱 홈의 <b>오늘 할 일</b>로 떠요. 매주 그대로 반복되고, 바꾸고 싶을 때만 체크를 고치면 그날부터 바로 반영돼요. 체크가 없는 날에도 모험·글쓰기는 학생이 탭에서 자유롭게 할 수 있어요.</p>
+  <div id="todo-week-table"></div>
+</div><div class="modal-footer"><button class="btn btn-primary" onclick="closeModal('modal-todo-week')">닫기</button></div></div></div>
+
 <div class="modal-bg" id="modal-add-job" onclick="closeOnBg(event,'modal-add-job')"><div class="modal"><div class="modal-header"><div class="modal-title">직업 추가</div><button class="modal-close" onclick="closeModal('modal-add-job')">✕</button></div><div class="modal-body"><div class="form-group"><label class="form-label">직업명</label><input class="form-input" id="job-title-inp" placeholder="도서관 사서"></div><div class="form-group"><label class="form-label">담당 학생</label><select class="form-input form-select" id="job-stu-sel"></select></div><div class="form-group"><label class="form-label">주간 월급</label><input class="form-input" type="number" id="job-salary" placeholder="150"></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-add-job')">취소</button><button class="btn btn-primary" onclick="addJob()">임명</button></div></div></div>
 
 <!-- 시험 분석 모달 -->
@@ -2636,7 +2679,7 @@ const SYNC_KEYS=['tesk-settings','tesk-students','tesk-missions','tesk-shop','te
   'tesk-jobs','tesk-records','tesk-exams','tesk-writings','tesk-counsels',
   'tesk-counsel-requests','tesk-friends','tesk-observations','tesk-seats','tesk-activities','tesk-accounts',
   'tesk-stock-prices','tesk-portfolios','tesk-taxes','tesk-salary-tax-enabled','tesk-badge-discount','tesk-bank-plans','tesk-bank-badge-bonus',
-  'tesk-student-badges','tesk-cal-events','tesk-quick-points','tesk-checklist-items','tesk-challenges','tesk-challenge-awards','tesk-writing-rubric-reports','tesk-economy-restrictions','pesk-deposits','pesk-checklists','pesk-challenge-submissions','pesk-writing-topic','pesk-writing-duty','pesk-class-boss','tesk-writing-phrases'];
+  'tesk-student-badges','tesk-cal-events','tesk-quick-points','tesk-checklist-items','tesk-challenges','tesk-challenge-awards','tesk-writing-rubric-reports','tesk-economy-restrictions','pesk-deposits','pesk-checklists','pesk-challenge-submissions','pesk-writing-topic','pesk-writing-duty','pesk-class-boss','tesk-writing-phrases','pesk-todo-schedule','pesk-literacy','pesk-quest-config'];
 
 // ── 학급 데이터 백업/복원 ──
 const BACKUP_DOC_KEYS = [...new Set([
@@ -4168,7 +4211,7 @@ function addActivity(msg){
 /* ══════════════════════════════════════
    페이지 전환
    ══════════════════════════════════════ */
-const PAGE_TITLES={home:'오늘의 학급',students:'학생 관리',exam:'시험지 분석기',writing:'글쓰기 지도',
+const PAGE_TITLES={home:'오늘의 학급',students:'학생 관리',exam:'시험지 분석기',literacy:'오늘의 지문',writing:'글쓰기 지도',
   counsel:'상담 기록',friends:'친구관계 분석',report:'종합 보고서',
   points:'포인트 지급',economy:'학급 경제',missions:'미션 & 배지','ai-assist':'교사 도우미',records:'생활기록부',stats:'학급 통계',
   checklist:'생활 체크리스트',adventure:'모험 학습',myroom:'마이룸 관리',workspace:'설정 · 연동'};
@@ -4191,7 +4234,7 @@ function renderPage(id){
   const r={home:renderHome,students:renderStudents,points:renderPoints,economy:renderEconomy,
     missions:renderMissions,'ai-assist':renderAiAssist,records:renderRecords,stats:renderStats,
     exam:renderExam,writing:renderWriting,counsel:renderCounsel,friends:renderFriends,report:renderReport,
-    checklist:renderTeacherChecklistPanel,adventure:loadQuiz,myroom:loadMyRoom,workspace:renderHome};
+    checklist:renderTeacherChecklistPanel,adventure:loadQuiz,literacy:renderLiteracy,myroom:loadMyRoom,workspace:renderHome};
   if(r[id]) r[id]();
   // 포인트 지급 페이지는 학생별 주식·예금 잔액을 보여주므로 캐시가 비어있으면 로드 후 한 번 더 렌더
   if(id==='points'){
@@ -4207,6 +4250,478 @@ function renderPage(id){
   }
 }
 
+/* ══════════════════════════════════════
+   📖 오늘의 지문 — 회차 계획 · AI 생성 · 검토/승인 · 결과
+   · 회차 날짜는 학생 할 일 요일표의 '오늘의 지문' 요일에서 나온다.
+   · 승인한 지문만 학생에게 보인다. 학생 기록은 pesk-quiz-progress[번호].literacy[날짜] 에 있다.
+   ══════════════════════════════════════ */
+let litOpenDate = null;
+let litBusy = false;
+let litProgress = null;     // 열린 회차의 학생 기록 (서버에서 읽어 옴)
+function litData(){
+  const raw = load('pesk-literacy', null);
+  const v = (raw && typeof raw === 'object') ? raw : {};
+  return {cfg: LiteracyCore.normalizeCfg(v.cfg || {grade: Number(load('pesk-quiz-config',{})?.grade) || undefined}),
+          sheets: (v.sheets && typeof v.sheets === 'object') ? v.sheets : {}};
+}
+/* 다른 창의 변경을 덮어쓰지 않도록 서버 문서를 트랜잭션으로 고친다 (연결이 없으면 로컬만) */
+async function litMutate(fn){
+  const today = LiteracyCore.ymd(new Date());
+  const keep = LiteracyCore.addDays(today, -150);
+  const tidy = v => {
+    const out = {cfg: LiteracyCore.normalizeCfg(v.cfg), sheets: {}};
+    Object.entries(v.sheets || {}).forEach(([d, s]) => { if(d >= keep) out.sheets[d] = s; });
+    return out;
+  };
+  if(!window._fbReady || !window._db || !window._fsRunTxn){
+    const next = tidy(fn(litData()) || litData());
+    saveLocal('pesk-literacy', next);
+    return next;
+  }
+  const ref = window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','pesk-literacy');
+  let next;
+  await window._fsRunTxn(window._db, async (txn)=>{
+    const snap = await txn.get(ref);
+    const cur = snap.exists() ? (snap.data().value || {}) : litData();
+    next = tidy(fn({cfg: LiteracyCore.normalizeCfg(cur.cfg), sheets: {...(cur.sheets || {})}}) || cur);
+    txn.set(ref, {value: next, updatedAt: new Date().toISOString()});
+  });
+  saveLocal('pesk-literacy', next);
+  return next;
+}
+async function litPullServer(){
+  if(!window._fbReady || !window._db) return;
+  try{
+    const snap = await window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','pesk-literacy'));
+    if(snap.exists()) saveLocal('pesk-literacy', snap.data().value);
+  }catch(e){ console.warn('오늘의 지문 불러오기 실패', e); }
+}
+function litDays(){
+  return TodoSchedule.normalize(load('pesk-todo-schedule', null)).weekly.literacy || [];
+}
+function litRows(){
+  const {sheets} = litData();
+  const today = LiteracyCore.ymd(new Date());
+  const upcoming = LiteracyCore.upcomingDates(litDays(), today, 8);
+  const subjects = LiteracyCore.suggestSubjects(upcoming);
+  const past = Object.keys(sheets).filter(d => d < today && d >= LiteracyCore.addDays(today, -21));
+  const extra = Object.keys(sheets).filter(d => d >= today && !upcoming.includes(d));
+  const dates = [...new Set(past.concat(upcoming, extra))].sort();
+  return dates.map(d => {
+    const s = sheets[d] || {};
+    return {date: d, subject: s.subject || subjects[upcoming.indexOf(d)] || '사회', topic: s.topic || '',
+            status: s.status || 'empty', hasSheet: !!s.sheet, past: d < today, today: d === today};
+  });
+}
+const LIT_STATUS = {empty:['주제 필요','var(--hint)','var(--surface)'], topic:['지문 만들기 전','var(--gold)','var(--gold-l)'],
+  draft:['검토 중','var(--blue)','var(--blue-l)'], approved:['승인됨 · 공개','var(--tesk)','var(--tesk-l)']};
+function litStatusOf(r){ return r.status === 'approved' ? 'approved' : r.hasSheet ? 'draft' : r.topic ? 'topic' : 'empty'; }
+const litDateLabel = d => d.slice(5).replace('-','/') + ' (' + LiteracyCore.dowName(d) + ')';
+
+async function renderLiteracy(){
+  const el = document.getElementById('literacy-content');
+  if(!el) return;
+  if(!renderLiteracy._pulled){ renderLiteracy._pulled = true; await litPullServer(); }
+  LiteracyCore.injectStyles();
+  const {cfg} = litData();
+  const days = litDays();
+  const rows = litRows();
+  const num = (id, label, v, min, max, help) => '<label class="qz-field" style="flex:0 0 auto;"><span>' + label + '</span>'
+    + '<input class="form-input" type="number" id="' + id + '" min="' + min + '" max="' + max + '" value="' + v + '" style="width:96px;">'
+    + (help ? '<small>' + help + '</small>' : '') + '</label>';
+  const cfgCard = '<div class="card" style="margin-bottom:16px;">'
+    + '<div class="card-header"><div class="card-title">⚙️ 운영 설정</div>'
+    + '<div style="font-size:12px;color:var(--sub);">공개 요일: <b style="color:var(--tesk);">' + TodoSchedule.dowLabel(days) + '</b> '
+    + '<a href="#" onclick="openTodoWeekModal();return false;" style="color:var(--tesk);font-weight:700;">요일 바꾸기 ›</a></div></div>'
+    + '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">'
+    + '<label class="qz-field" style="flex:0 0 auto;"><span>학년</span><select class="form-input" id="lit-grade" style="width:96px;">'
+    + [3,4,5,6].map(g=>'<option value="'+g+'"'+(g===cfg.grade?' selected':'')+'>'+g+'학년</option>').join('') + '</select></label>'
+    + num('lit-base','기본 보상 🪙',cfg.coinBase,0,500,'다 풀면')
+    + num('lit-bonus','정확도 보너스 🪙',cfg.coinBonus,0,500,'')
+    + num('lit-bonusmin','보너스 기준',cfg.bonusMin,1,4,'처음 채점 n개 이상')
+    + num('lit-grace','놓친 회차 기간',cfg.graceDays,0,6,'공개일 뒤 며칠까지')
+    + num('lit-essay','서술형 확인 보상 🪙',cfg.coinEssay,0,500,'선생님 확인 시')
+    + '<button class="btn btn-sm btn-primary" id="lit-save-cfg">설정 저장</button></div>'
+    + '<div class="insight-help" style="margin-top:10px;">승인한 지문만 공개일에 학생 홈 <b>오늘 할 일</b>에 뜨고, 놓친 학생도 기간 안에 풀면 같은 보상을 받아요. 보너스는 <b>처음 채점했을 때</b>의 정답 수로 정해져서, 답을 바꿔 가며 맞혀도 받을 수 없어요.</div></div>';
+
+  const rowHtml = rows.length ? rows.map(r => {
+    const st = LIT_STATUS[litStatusOf(r)];
+    const lock = r.status === 'approved' ? ' disabled' : '';
+    return '<tr data-lit-row="' + r.date + '"' + (r.date === litOpenDate ? ' style="background:var(--tesk-l);"' : '') + '>'
+      + '<td style="white-space:nowrap;font-weight:700;padding:0 6px;' + (r.past ? 'color:var(--hint);' : '') + '">' + litDateLabel(r.date) + (r.today ? ' <span style="color:var(--tesk);">오늘</span>' : '') + '</td>'
+      + '<td><select class="form-input" data-lit-subject style="padding:6px 8px;font-size:12.5px;"' + lock + '>' + LiteracyCore.SUBJECTS.map(s=>'<option'+(s===r.subject?' selected':'')+'>'+s+'</option>').join('') + '</select></td>'
+      + '<td style="width:100%;"><input class="form-input" data-lit-topic value="' + escHtml(r.topic) + '" placeholder="주제를 입력하거나 AI로 채우세요" maxlength="40" style="padding:6px 10px;font-size:13px;"' + lock + '></td>'
+      + '<td style="white-space:nowrap;"><span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:99px;color:' + st[1] + ';background:' + st[2] + ';">' + st[0] + '</span></td>'
+      + '<td style="white-space:nowrap;">'
+      + (r.hasSheet ? '<button class="btn btn-sm btn-secondary" data-lit-open>열기</button>'
+                    : '<button class="btn btn-sm btn-primary" data-lit-gen' + (r.topic && !litBusy ? '' : ' disabled title="주제를 먼저 정하세요"') + '>✨ 지문 만들기</button>')
+      + '</td></tr>';
+  }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--hint);padding:18px;">요일표에 \'오늘의 지문\' 요일이 없어요. 요일을 체크하면 회차가 생겨요.</td></tr>';
+
+  const listCard = '<div class="card" style="margin-bottom:16px;">'
+    + '<div class="card-header"><div class="card-title">🗓️ 회차 계획</div>'
+    + '<button class="btn btn-sm btn-primary" id="lit-fill-topics"' + (litBusy ? ' disabled' : '') + '>✨ 빈 주제 AI로 채우기</button></div>'
+    + '<div class="insight-help" style="margin:-4px 0 10px;">앞으로 8회차가 요일표에서 자동으로 생겨요. 분야는 한 주에 사회 계열·과학 계열을 번갈아 제안하고, 바꿀 수 있어요. 주제를 고치면 바로 저장돼요.</div>'
+    + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:separate;border-spacing:0 6px;font-size:13px;">'
+    + '<thead><tr style="color:var(--sub);font-size:11.5px;text-align:left;"><th style="padding:0 6px;">날짜</th><th>분야</th><th>주제</th><th>상태</th><th></th></tr></thead>'
+    + '<tbody>' + rowHtml + '</tbody></table></div></div>';
+
+  el.innerHTML = cfgCard + listCard + '<div id="lit-editor"></div>';
+  bindLiteracyPage(el);
+  if(litOpenDate) renderLitEditor();
+}
+function bindLiteracyPage(el){
+  el.querySelector('#lit-save-cfg')?.addEventListener('click', saveLitCfg);
+  el.querySelector('#lit-fill-topics')?.addEventListener('click', fillLitTopics);
+  el.querySelectorAll('[data-lit-row]').forEach(tr => {
+    const date = tr.dataset.litRow;
+    const patch = () => litMutate(v => {
+      const s = v.sheets[date] || {date, status:'empty'};
+      if(s.status === 'approved') return v;
+      v.sheets[date] = {...s, date, subject: tr.querySelector('[data-lit-subject]').value,
+        topic: tr.querySelector('[data-lit-topic]').value.trim().slice(0, 40), updatedAt: new Date().toISOString()};
+      return v;
+    }).then(()=>renderLiteracy()).catch(e=>showToast('⚠️ 저장 실패: ' + e.message));
+    tr.querySelector('[data-lit-subject]')?.addEventListener('change', patch);
+    tr.querySelector('[data-lit-topic]')?.addEventListener('change', patch);
+    tr.querySelector('[data-lit-gen]')?.addEventListener('click', ()=>generateLitSheet(date));
+    tr.querySelector('[data-lit-open]')?.addEventListener('click', ()=>{ litOpenDate = date; litProgress = null; renderLiteracy(); });
+  });
+}
+async function saveLitCfg(){
+  const v = id => document.getElementById(id)?.value;
+  try{
+    await litMutate(d => ({...d, cfg: LiteracyCore.normalizeCfg({grade:v('lit-grade'), coinBase:v('lit-base'), coinBonus:v('lit-bonus'),
+      bonusMin:v('lit-bonusmin'), graceDays:v('lit-grace'), coinEssay:v('lit-essay')})}));
+    showToast('📖 오늘의 지문 설정을 저장했어요');
+    addActivity('📖 오늘의 지문 설정 저장');
+    renderLiteracy();
+  }catch(e){ showToast('⚠️ 저장 실패: ' + e.message); }
+}
+async function fillLitTopics(){
+  if(litBusy) return;
+  const rows = litRows().filter(r => !r.past && !r.topic && r.status !== 'approved');
+  if(!rows.length) return showToast('채울 빈 주제가 없어요');
+  const {cfg, sheets} = litData();
+  litBusy = true; renderLiteracy();
+  showToast('✨ AI가 주제를 고르는 중… (' + rows.length + '회차)');
+  try{
+    const used = Object.values(sheets).map(s => s.topic).filter(Boolean);
+    const out = await callTeachAIJson(LiteracyCore.buildTopicPrompt({grade: cfg.grade,
+      slots: rows.map(r => ({date: r.date, dow: LiteracyCore.dowName(r.date), subject: r.subject})), used}),
+      {temperature: 0.6, maxTokens: 3000}, '{"topics":[{"date":"YYYY-MM-DD","topic":"주제"}]}');
+    const list = Array.isArray(out?.topics) ? out.topics : [];
+    let n = 0;
+    await litMutate(v => {
+      rows.forEach(r => {
+        const hit = list.find(t => t && t.date === r.date);
+        const topic = String(hit?.topic || '').trim().slice(0, 40);
+        const cur = v.sheets[r.date] || {};
+        if(!topic || cur.topic || cur.status === 'approved') return;
+        v.sheets[r.date] = {...cur, date: r.date, subject: cur.subject || r.subject, topic, status: cur.status || 'empty', updatedAt: new Date().toISOString()};
+        n++;
+      });
+      return v;
+    });
+    showToast(n ? '✨ 주제 ' + n + '개를 채웠어요. 마음에 안 들면 고쳐 쓰세요.' : '⚠️ AI가 주제를 돌려주지 않았어요. 다시 시도해 주세요.');
+  }catch(e){ showToast('⚠️ 주제 만들기 실패: ' + e.message); }
+  finally{ litBusy = false; renderLiteracy(); }
+}
+async function generateLitSheet(date){
+  if(litBusy) return;
+  const {cfg, sheets} = litData();
+  const cur = sheets[date] || {};
+  const row = litRows().find(r => r.date === date) || {};
+  const topic = cur.topic || row.topic;
+  const subject = cur.subject || row.subject || '사회';
+  if(!topic) return showToast('⚠️ 주제를 먼저 정해 주세요');
+  if(cur.status === 'approved') return showToast('승인된 지문이에요. 승인을 취소한 뒤 다시 만들 수 있어요.');
+  const usedWords = Object.values(sheets).filter(s => s.sheet && s.date !== date)
+    .flatMap(s => LiteracyCore.blanksOf(s.sheet).map(b => b.answer));
+  litBusy = true; litOpenDate = date; renderLiteracy();
+  showToast('✨ 지문을 만드는 중이에요… (30초 정도)');
+  try{
+    const base = LiteracyCore.buildSheetPrompt({grade: cfg.grade, subject, topic, date, usedWords});
+    let r = null;
+    for(let attempt = 0; attempt < 2; attempt++){
+      const prompt = attempt === 0 ? base
+        : base + '\n\n# 이전 응답에서 고쳐야 할 점 (반드시 고쳐서 다시 출력)\n- ' + r.errors.join('\n- ');
+      const out = await callTeachAIJson(prompt, {temperature: 0.5, maxTokens: 6000}, '{"title":"","paragraphs":[],"glossary":[],"map":{},"final_quiz":{},"essay_suggestion":""}');
+      r = LiteracyCore.fromAi(out, {grade: cfg.grade, seed: date});
+      if(r.ok) break;
+    }
+    await litMutate(v => {
+      const s = v.sheets[date] || {};
+      if(s.status === 'approved') return v;
+      v.sheets[date] = {...s, date, subject, topic, status: 'draft', sheet: r.sheet,
+        essay: {on: false, question: r.essaySuggestion || s.essay?.question || ''}, updatedAt: new Date().toISOString()};
+      return v;
+    });
+    showToast(r.ok ? '📖 지문을 만들었어요. 읽어 보고 승인해 주세요.' : '⚠️ 지문에 고칠 점이 있어요. 아래에서 확인해 주세요.');
+  }catch(e){ showToast('⚠️ 지문 만들기 실패: ' + e.message); }
+  finally{ litBusy = false; renderLiteracy(); }
+}
+
+function renderLitEditor(){
+  const box = document.getElementById('lit-editor');
+  if(!box) return;
+  const {sheets, cfg} = litData();
+  const s = sheets[litOpenDate];
+  if(!s || !s.sheet){ box.innerHTML = ''; return; }
+  const v = LiteracyCore.validate(s.sheet, {grade: cfg.grade});
+  const approved = s.status === 'approved';
+  const msgs = v.errors.map(e=>'<div style="color:var(--coral);">✗ ' + escHtml(e) + '</div>').join('')
+    + v.warnings.map(e=>'<div style="color:var(--gold);">⚠ ' + escHtml(e) + '</div>').join('');
+  const sh = v.sheet;
+  const f = (label, html) => '<div class="form-group" style="margin-bottom:10px;"><label class="form-label">' + label + '</label>' + html + '</div>';
+  const inp = (key, val, ph) => '<input class="form-input" data-lit-f="' + key + '" value="' + escHtml(val) + '" placeholder="' + (ph || '') + '">';
+  const gl = sh.glossary.length < 2 ? sh.glossary.concat([{term:'',meaning:''}]) : sh.glossary;
+  const brs = sh.map.branches.length < 4 ? sh.map.branches.concat([{label:'',text:'',sub:'',evidence:''}]) : sh.map.branches;
+  const editForm = '<details style="margin-top:12px;"' + (v.ok ? '' : ' open') + '><summary style="cursor:pointer;font-weight:800;font-size:13px;color:var(--tesk);">✏️ 직접 고치기</summary>'
+    + '<div style="margin-top:10px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface);">'
+    + f('제목', inp('title', sh.title))
+    + f('지문 (문단마다 한 칸, 비우면 문단이 빠져요)', sh.paragraphs.map((p,i)=>'<textarea class="form-input" data-lit-f="p' + i + '" rows="3" style="margin-bottom:6px;">' + escHtml(p) + '</textarea>').join(''))
+    + f('용어 풀이 (빈칸 정답과 다른 낱말)', gl.map((g,i)=>'<div style="display:flex;gap:6px;margin-bottom:6px;"><input class="form-input" style="width:120px;" data-lit-f="gt' + i + '" value="' + escHtml(g.term) + '" placeholder="낱말"><input class="form-input" data-lit-f="gm' + i + '" value="' + escHtml(g.meaning) + '" placeholder="뜻"></div>').join(''))
+    + f('구조도 가운데', inp('center', sh.map.center))
+    + f('구조도 가지 — 빈칸 정답을 {{ }} 로 감싸요 (정확히 3개, 지문에 그대로 있는 낱말) · 오른쪽 칸은 근거 문단', brs.map((b,i)=>'<div style="display:grid;grid-template-columns:100px 1fr 64px;gap:6px;margin-bottom:4px;">'
+        + '<input class="form-input" data-lit-f="bl' + i + '" value="' + escHtml(b.label) + '" placeholder="가지 이름">'
+        + '<input class="form-input" data-lit-f="bt' + i + '" value="' + escHtml(b.text) + '" placeholder="내용 {{정답}}">'
+        + '<input class="form-input" type="number" min="1" max="6" data-lit-f="be' + i + '" value="' + (b.evidence||'') + '" title="근거 문단"></div>'
+        + '<input class="form-input" data-lit-f="bs' + i + '" value="' + escHtml(b.sub) + '" placeholder="덧붙임 (선택)" style="margin:0 0 10px;font-size:12px;">').join(''))
+    + f('4번 문제', inp('qt', sh.final_quiz.text))
+    + f('4번 보기 (정답에 체크)', sh.final_quiz.choices.concat(['','','','']).slice(0,4).map((c,i)=>'<label style="display:flex;gap:6px;align-items:center;margin-bottom:6px;"><input type="radio" name="lit-ans" value="' + i + '"' + (i===sh.final_quiz.answer?' checked':'') + '><input class="form-input" data-lit-f="qc' + i + '" value="' + escHtml(c) + '"></label>').join(''))
+    + f('4번 근거 문단 · 해설', '<div style="display:flex;gap:6px;"><input class="form-input" type="number" min="1" max="6" style="width:70px;" data-lit-f="qe" value="' + (sh.final_quiz.evidence||'') + '"><input class="form-input" data-lit-f="qx" value="' + escHtml(sh.final_quiz.explain) + '" placeholder="교사용 해설"></div>')
+    + '<button class="btn btn-sm btn-primary" id="lit-apply-edit">고친 내용 확인하고 저장</button>'
+    + '</div></details>';
+  const essay = s.essay || {on:false, question:''};
+  const essayBox = '<div style="margin-top:12px;padding:14px;border:1px solid var(--border);border-radius:12px;">'
+    + '<label class="qz-switch"><input type="checkbox" id="lit-essay-on"' + (essay.on ? ' checked' : '') + '> ✍️ 이 회차에 서술형 문제 내기 (선택)</label>'
+    + '<textarea class="form-input" id="lit-essay-q" rows="2" style="margin-top:8px;" maxlength="200" placeholder="서술형 문제">' + escHtml(essay.question || '') + '</textarea>'
+    + '<div class="insight-help">AI가 예시를 넣어 두었어요. 고쳐 쓰거나 직접 내세요. 학생은 4문항을 다 푼 뒤 답을 쓰고, 선생님이 아래 결과에서 확인하면 보상을 줄 수 있어요.</div>'
+    + '<button class="btn btn-sm btn-secondary" id="lit-save-essay" style="margin-top:8px;">서술형 설정 저장</button></div>';
+  box.innerHTML = '<div class="card" style="border-left:4px solid ' + (approved ? 'var(--tesk)' : 'var(--blue)') + ';">'
+    + '<div class="card-header"><div class="card-title">📖 ' + litDateLabel(litOpenDate) + ' · ' + escHtml(s.subject||'') + ' · ' + escHtml(s.topic||'') + '</div>'
+    + '<button class="btn btn-sm btn-secondary" id="lit-close">닫기</button></div>'
+    + (msgs ? '<div style="font-size:12.5px;line-height:1.7;margin-bottom:10px;padding:10px 12px;border-radius:10px;background:var(--surface);">' + msgs + '</div>' : '')
+    + '<div class="insight-help" style="margin-bottom:10px;">학생 화면과 같은 모양이에요. 초록 빈칸이 정답이고, 초성은 앱이 정답에서 자동으로 만들어요. <b>사실이 맞는지 꼭 확인해 주세요.</b></div>'
+    + '<div style="max-width:880px;">' + LiteracyCore.renderSheet(sh, {dateLabel: litDateLabel(litOpenDate), subject: s.subject, reveal: true}) + '</div>'
+    + editForm + essayBox
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">'
+    + (approved
+        ? '<button class="btn btn-secondary" id="lit-unapprove">승인 취소 (학생에게서 숨기기)</button>'
+        : '<button class="btn btn-primary" id="lit-approve"' + (v.ok ? '' : ' disabled title="고칠 점을 먼저 해결하세요"') + '>✅ 승인하고 공개</button>'
+          + '<button class="btn btn-secondary" id="lit-regen"' + (litBusy ? ' disabled' : '') + '>✨ 다시 만들기</button>'
+          + '<button class="btn btn-secondary" id="lit-delete" style="color:var(--coral);margin-left:auto;">지문 지우기</button>')
+    + '</div></div>'
+    + '<div class="card" style="margin-top:16px;"><div class="card-header"><div class="card-title">📊 학생 결과</div><button class="btn btn-sm btn-secondary" id="lit-reload-results">새로고침</button></div><div id="lit-results-body" style="font-size:13px;color:var(--sub);">불러오는 중…</div></div>';
+  box.querySelector('#lit-close').onclick = () => { litOpenDate = null; renderLiteracy(); };
+  box.querySelector('#lit-apply-edit').onclick = applyLitEdit;
+  box.querySelector('#lit-approve')?.addEventListener('click', () => setLitApproved(true));
+  box.querySelector('#lit-unapprove')?.addEventListener('click', () => setLitApproved(false));
+  box.querySelector('#lit-regen')?.addEventListener('click', () => generateLitSheet(litOpenDate));
+  box.querySelector('#lit-save-essay').onclick = saveLitEssay;
+  box.querySelector('#lit-delete')?.addEventListener('click', deleteLitSheet);
+  box.querySelector('#lit-reload-results').onclick = () => { litProgress = null; renderLitResults(); };
+  renderLitResults();
+}
+function readLitForm(){
+  const box = document.getElementById('lit-editor');
+  const g = k => box.querySelector('[data-lit-f="' + k + '"]')?.value ?? '';
+  const count = prefix => box.querySelectorAll('[data-lit-f^="' + prefix + '"]').length;
+  const paragraphs = []; for(let i = 0; i < count('p'); i++) paragraphs.push(g('p' + i));
+  const glossary = []; for(let i = 0; i < count('gt'); i++) glossary.push({term: g('gt' + i), meaning: g('gm' + i)});
+  const branches = []; for(let i = 0; i < count('bl'); i++) branches.push({label: g('bl' + i), text: g('bt' + i), sub: g('bs' + i), evidence: Number(g('be' + i))});
+  const ans = Number(box.querySelector('input[name="lit-ans"]:checked')?.value);
+  return {title: g('title'), paragraphs: paragraphs.filter(p => p.trim()), glossary, map: {center: g('center'), branches},
+    final_quiz: {text: g('qt'), choices: [0,1,2,3].map(i => g('qc' + i)), answer: Number.isInteger(ans) ? ans : -1, evidence: Number(g('qe')), explain: g('qx')}};
+}
+async function applyLitEdit(){
+  const date = litOpenDate;
+  const v = LiteracyCore.validate(readLitForm(), {grade: litData().cfg.grade});
+  const wasApproved = litData().sheets[date]?.status === 'approved';
+  if(wasApproved && !v.ok) return showToast('⚠️ 승인된 지문은 고칠 점이 없어야 저장돼요: ' + v.errors[0]);
+  try{
+    await litMutate(d => { const s = d.sheets[date] || {}; d.sheets[date] = {...s, sheet: v.sheet, updatedAt: new Date().toISOString()}; return d; });
+    showToast(v.ok ? '💾 고친 내용을 저장했어요' : '💾 저장했어요. 고칠 점이 ' + v.errors.length + '개 남았어요');
+    renderLitEditor();
+  }catch(e){ showToast('⚠️ 저장 실패: ' + e.message); }
+}
+async function setLitApproved(on){
+  const date = litOpenDate;
+  const s = litData().sheets[date];
+  if(on){
+    const v = LiteracyCore.validate(s?.sheet, {grade: litData().cfg.grade});
+    if(!v.ok) return showToast('⚠️ ' + v.errors[0]);
+  }else if(!confirm('승인을 취소하면 학생 화면에서 이 지문이 사라져요. 이미 푼 학생의 기록과 보상은 그대로 남아요. 취소할까요?')) return;
+  try{
+    await litMutate(d => { const x = d.sheets[date]; if(x) d.sheets[date] = {...x, status: on ? 'approved' : 'draft', approvedAt: on ? new Date().toISOString() : null}; return d; });
+    showToast(on ? '✅ 승인했어요. ' + litDateLabel(date) + '에 학생에게 열려요' : '승인을 취소했어요');
+    addActivity((on ? '📖 오늘의 지문 승인: ' : '📖 오늘의 지문 승인 취소: ') + date + ' ' + (s?.topic || ''));
+    renderLiteracy();
+  }catch(e){ showToast('⚠️ 저장 실패: ' + e.message); }
+}
+async function saveLitEssay(){
+  const date = litOpenDate;
+  const on = !!document.getElementById('lit-essay-on')?.checked;
+  const question = String(document.getElementById('lit-essay-q')?.value || '').trim().slice(0, 200);
+  if(on && !question) return showToast('⚠️ 서술형 문제를 입력해 주세요');
+  try{
+    await litMutate(d => { const x = d.sheets[date]; if(x) d.sheets[date] = {...x, essay: {on, question}}; return d; });
+    showToast(on ? '✍️ 서술형 문제를 냈어요' : '서술형 문제를 껐어요');
+  }catch(e){ showToast('⚠️ 저장 실패: ' + e.message); }
+}
+async function deleteLitSheet(){
+  const date = litOpenDate;
+  if(!confirm('이 회차의 지문을 지울까요? 주제는 남겨 둬요.')) return;
+  try{
+    await litMutate(d => { const x = d.sheets[date]; if(x && x.status !== 'approved') d.sheets[date] = {date, subject: x.subject, topic: x.topic, status: 'empty'}; return d; });
+    litOpenDate = null; renderLiteracy();
+  }catch(e){ showToast('⚠️ 삭제 실패: ' + e.message); }
+}
+async function renderLitResults(){
+  const body = document.getElementById('lit-results-body');
+  if(!body) return;
+  const date = litOpenDate;
+  if(!window._fbReady || !window._db){ body.textContent = 'Firebase에 연결되면 학생 결과가 보여요.'; return; }
+  try{
+    if(!litProgress){
+      const snap = await window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','pesk-quiz-progress'));
+      litProgress = snap.exists() ? (snap.data().value || {}) : {};
+    }
+  }catch(e){ body.textContent = '학생 결과를 불러오지 못했어요: ' + e.message; return; }
+  if(date !== litOpenDate || !document.getElementById('lit-results-body')) return;
+  const {cfg} = litData();
+  const list = students.slice().sort((a,b)=>Number(a.num)-Number(b.num)).map(s => ({s, rec: (litProgress[s.num] || litProgress[String(s.num)] || {}).literacy?.[date] || null}));
+  const done = list.filter(x => x.rec?.done).length;
+  const essays = list.filter(x => x.rec?.essay);
+  body.innerHTML = '<div style="margin-bottom:10px;color:var(--text);"><b>' + done + '</b> / ' + list.length + '명 완료 <span style="color:var(--hint);font-size:12px;">· 숫자는 처음 채점했을 때 맞힌 수</span></div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">' + list.map(x => {
+        const r = x.rec;
+        const label = !r ? '안 함' : r.done ? r.first + '/4' : '푸는 중 (' + r.first + '/4)';
+        const color = !r ? 'var(--hint)' : r.done ? (r.first >= cfg.bonusMin ? 'var(--tesk)' : 'var(--blue)') : 'var(--gold)';
+        return '<span style="font-size:11.5px;padding:4px 9px;border-radius:99px;background:var(--surface);border:1px solid var(--border);color:' + color + ';">' + escHtml(x.s.num + '. ' + x.s.name) + ' · ' + label + '</span>';
+      }).join('') + '</div>'
+    + (essays.length ? '<div style="font-weight:800;color:var(--text);margin-bottom:6px;">✍️ 서술형 답</div>' + essays.map(x =>
+        '<div style="padding:10px 12px;border:1px solid var(--border);border-radius:12px;margin-bottom:6px;background:var(--surface);">'
+        + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;"><b style="color:var(--text);">' + escHtml(x.s.num + '. ' + x.s.name) + '</b>'
+        + (x.rec.essayOk ? '<span style="font-size:12px;color:var(--tesk);font-weight:800;">👍 확인함</span>'
+            : '<button class="btn btn-sm btn-primary" data-lit-essay-ok="' + Number(x.s.num) + '">👍 확인' + (cfg.coinEssay ? ' +' + cfg.coinEssay + '🪙' : '') + '</button>') + '</div>'
+        + '<div style="margin-top:6px;color:var(--text);line-height:1.6;white-space:pre-wrap;">' + escHtml(x.rec.essay) + '</div></div>').join('') : '');
+  body.querySelectorAll('[data-lit-essay-ok]').forEach(b => b.onclick = () => confirmLitEssay(Number(b.dataset.litEssayOk), b));
+}
+/* 서술형 확인: 먼저 기록에 확인 표시를 남기고(트랜잭션), 이번에 처음 표시한 경우에만 보상을 준다 → 두 번 눌러도 한 번만 지급 */
+async function confirmLitEssay(num, btn){
+  const date = litOpenDate;
+  if(btn) btn.disabled = true;
+  try{
+    let first = false;
+    await _mutateServerDoc('pesk-quiz-progress', v => {
+      const all = {...(v || {})};
+      const key = all[num] ? num : String(num);
+      const stu = all[key];
+      const rec = stu?.literacy?.[date];
+      if(!rec || !rec.essay || rec.essayOk) return v;
+      first = true;
+      all[key] = {...stu, literacy: {...stu.literacy, [date]: {...rec, essayOk: true, essayOkAt: new Date().toISOString()}}};
+      return all;
+    });
+    const {cfg} = litData();
+    const idx = students.findIndex(s => Number(s.num) === Number(num));
+    if(first && cfg.coinEssay > 0 && idx >= 0) await givePoint(idx, cfg.coinEssay, '오늘의 지문 서술형 (' + date.slice(5).replace('-','/') + ')');
+    if(first) addActivity('📖 오늘의 지문 서술형 확인: ' + (students[idx]?.name || num));
+    litProgress = null;
+    if(document.getElementById('page-literacy')?.classList.contains('active')) renderLitResults();
+  }catch(e){ showToast('⚠️ 확인 실패: ' + e.message); if(btn) btn.disabled = false; }
+}
+
+/* ══════════════════════════════════════
+   🧩 주간 퀘스트 · 🔁 복수 몬스터 (교사)
+   · 퀘스트는 학생마다 무작위 3개. 선생님은 종류 켜기/끄기, 목표·보상, 모두에게 고정할 퀘스트, 단원을 정한다.
+   · 설정은 pesk-quest-config 에 교사만 쓰고 학생은 읽는다.
+   ══════════════════════════════════════ */
+function questCfgT(){ return window.PeskProgress ? PeskProgress.normalizeQuestCfg(load('pesk-quest-config', null)) : null; }
+function revengeLabelT(key){
+  const P = window.PeskProgress, k = P && P.parseKey(key);
+  if(!k) return key;
+  if(k.subject === 'english') return '🔤 영단어 ' + k.word;
+  const sem = window.QUIZ ? window.QUIZ.curriculum().find(s => s.grade === k.grade && s.term === k.term) : null;
+  const u = sem && sem.units.find(x => x.no === k.unitNo);
+  return '📐 ' + k.grade + '-' + k.term + ' ' + (u ? u.name : k.unitNo + '단원') + ' · 난이도 ' + k.tier;
+}
+function renderQuestT(){
+  const box = document.getElementById('quest-panel');
+  if(!box) return;
+  const P = window.PeskProgress;
+  if(!P){ box.innerHTML = '<div style="color:var(--coral);font-size:12px;">shared/pesk-progression.js 를 불러오지 못했어요.</div>'; return; }
+  const cfg = questCfgT();
+  const c = typeof qzConfig === 'object' && qzConfig ? qzConfig : {grade:5, term:1};
+  const sem = window.QUIZ ? window.QUIZ.curriculum().find(s => s.grade === Number(c.grade) && s.term === Number(c.term)) : null;
+  const units = sem ? sem.units.filter(u => u.supported) : [];
+  const frag = (id, k, v) => '<label style="display:inline-flex;align-items:center;gap:2px;font-size:11px;">' + P.FRAGS[k].icon
+    + '<input class="form-input" type="number" min="0" max="50" data-q-reward="' + id + ':' + k + '" value="' + (v || 0) + '" style="width:52px;padding:4px 6px;font-size:12px;"></label>';
+  const rows = P.QUEST_IDS.map(id => {
+    const q = P.QUESTS[id], t = cfg.types[id];
+    return '<tr><td style="padding:4px 6px;"><label class="qz-switch"><input type="checkbox" data-q-on="' + id + '"' + (t.on ? ' checked' : '') + '> ' + q.icon + ' ' + escHtml(q.name)
+      + (q.needs ? ' <small style="color:var(--hint);">(' + (q.needs === 'literacy' ? '지문 요일이 있을 때' : '보스가 있을 때') + ')</small>' : '') + '</label></td>'
+      + '<td><input class="form-input" type="number" min="1" max="100" data-q-target="' + id + '" value="' + t.target + '" style="width:64px;padding:4px 6px;font-size:12px;"></td>'
+      + '<td style="white-space:nowrap;">' + P.FRAG_IDS.map(k => frag(id, k, t.reward[k])).join(' ') + '</td>'
+      + '<td style="text-align:center;"><input type="checkbox" data-q-pin="' + id + '"' + (cfg.pinned.includes(id) ? ' checked' : '') + ' title="모든 학생에게 이 퀘스트를 먼저 줘요"></td></tr>';
+  }).join('');
+  const unitPick = units.length ? '<div style="margin-top:10px;"><div style="font-size:12px;font-weight:800;margin-bottom:4px;">📐 "문제 맞히기" 퀘스트로 셀 단원 <span style="font-weight:600;color:var(--hint);">(고르지 않으면 모험 문제 전체)</span></div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + units.map(u => {
+        const key = c.grade + '-' + c.term + '-' + u.no;
+        return '<label class="qz-switch" style="font-size:12px;"><input type="checkbox" data-q-unit="' + key + '" data-q-unit-name="' + escHtml(u.name) + '"' + (cfg.unitKeys.includes(key) ? ' checked' : '') + '> ' + u.no + '. ' + escHtml(u.name) + '</label>';
+      }).join('') + '</div></div>' : '';
+  // 미리보기: 앞 번호 학생 3명이 이번 주에 받는 퀘스트
+  const week = P.weekKey(qzTodayKey());
+  const sched = TodoSchedule.normalize(load('pesk-todo-schedule', null));
+  const ctx = {literacy: (sched.weekly.literacy || []).length > 0, boss: !!(bossCfgT().enabled && bossCfgT().roundId)};
+  const sample = students.slice().sort((a,b)=>a.num-b.num).slice(0,3).map(s => '<div style="font-size:11.5px;color:var(--sub);">' + escHtml(s.num + '. ' + s.name) + ': '
+    + P.pickQuests(cfg, week, String(s.num), ctx).map(q => q.icon + ' ' + escHtml(q.name) + ' ' + q.target + (q.unit || '')).join(' · ') + '</div>').join('');
+  // 🔁 자주 틀리는 유형 — 지금 복수 몬스터로 기다리는 학생 수
+  const count = {};
+  Object.entries(qzProgress || {}).forEach(([num, p]) => {
+    if(!/^\d+$/.test(num) || !p) return;
+    P.revengeNormalize(p.revenge).forEach(x => { count[x.k] = (count[x.k] || 0) + 1; });
+    (Array.isArray(p.review) ? p.review : []).forEach(x => { if(x && x.code){ const k = 'r:' + x.code; count[k] = (count[k] || 0) + 1; } });
+  });
+  const top = Object.entries(count).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const weekKills = Object.values(qzProgress || {}).reduce((a, p) => a + (p && p.wk && p.wk.week === week ? Number(p.wk.revenge) || 0 : 0), 0);
+  const mistakes = '<div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border);">'
+    + '<div style="font-size:13px;font-weight:800;margin-bottom:6px;">🔁 자주 틀리는 유형 <span style="font-weight:600;color:var(--hint);font-size:11px;">지금 복수 몬스터로 다시 풀어야 하는 학생 수 · 이번 주 처치 ' + weekKills + '번</span></div>'
+    + (top.length ? '<ol style="margin:0;padding-left:20px;font-size:12px;line-height:1.8;">' + top.map(([k, n]) => '<li>' + escHtml(k.startsWith('r:') ? '📐 ' + ((window.QRATE && window.QRATE.TYPES[k.slice(2)] && window.QRATE.TYPES[k.slice(2)].name) || k.slice(2)) : revengeLabelT(k)) + ' · <b>' + n + '명</b></li>').join('') + '</ol>'
+      : '<div style="font-size:12px;color:var(--hint);">아직 기록이 없어요. 학생이 틀린 문제는 1일·3일·7일 뒤 복수 몬스터로 다시 나와요.</div>')
+    + '</div>';
+  box.innerHTML = '<label class="qz-switch" style="margin-bottom:8px;"><input type="checkbox" id="q-enabled"' + (cfg.enabled ? ' checked' : '') + '> 주간 퀘스트 켜기</label>'
+    + '<p class="insight-help" style="margin:0 0 8px;">월요일마다 학생마다 <b>무작위로 ' + cfg.count + '개</b>가 나와요. 📌을 체크한 퀘스트는 모든 학생에게 먼저 들어가요(최대 3개). 받은 조각은 도감에서 제작 아이템을 만드는 데만 써요.</p>'
+    + '<div style="overflow-x:auto;"><table style="width:100%;font-size:12.5px;border-collapse:collapse;"><thead><tr style="color:var(--sub);font-size:11px;text-align:left;"><th style="padding:4px 6px;">퀘스트</th><th>목표</th><th>보상 (📖 지식 · 🔁 극복 · 🔥 용기)</th><th>📌 고정</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+    + unitPick
+    + '<div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap;"><button class="btn btn-sm btn-primary" onclick="saveQuestT()">퀘스트 설정 저장</button>'
+    + '<span style="font-size:11px;color:var(--hint);">이번 주(' + week.slice(5).replace('-','/') + '~) 예시</span></div>'
+    + '<div style="margin-top:6px;">' + (sample || '<div style="font-size:11.5px;color:var(--hint);">학생이 없어요</div>') + '</div>'
+    + mistakes;
+}
+function saveQuestT(){
+  const box = document.getElementById('quest-panel');
+  if(!box || !window.PeskProgress) return;
+  const P = window.PeskProgress, types = {};
+  P.QUEST_IDS.forEach(id => {
+    const reward = {};
+    P.FRAG_IDS.forEach(k => { const v = parseInt(box.querySelector('[data-q-reward="' + id + ':' + k + '"]')?.value, 10); if(v > 0) reward[k] = Math.min(50, v); });
+    types[id] = {on: !!box.querySelector('[data-q-on="' + id + '"]')?.checked,
+      target: Math.max(1, Math.min(100, parseInt(box.querySelector('[data-q-target="' + id + '"]')?.value, 10) || P.QUESTS[id].target)), reward};
+  });
+  const pinned = P.QUEST_IDS.filter(id => box.querySelector('[data-q-pin="' + id + '"]')?.checked);
+  if(pinned.length > 3) return showToast('⚠️ 고정 퀘스트는 3개까지예요');
+  const unitBoxes = [...box.querySelectorAll('[data-q-unit]:checked')];
+  const cfg = {enabled: !!document.getElementById('q-enabled')?.checked, count: 3, types, pinned,
+    unitKeys: unitBoxes.map(b => b.dataset.qUnit), unitLabel: unitBoxes.map(b => b.dataset.qUnitName).join('·').slice(0, 40),
+    updatedAt: new Date().toISOString()};
+  save('pesk-quest-config', cfg);
+  showToast('🧩 주간 퀘스트 설정을 저장했어요');
+  addActivity('🧩 주간 퀘스트 설정 저장');
+  renderQuestT();
+}
 /* ══════════════════════════════════════
    홈
    ══════════════════════════════════════ */
@@ -4251,6 +4766,7 @@ function renderCalendar(){
     html += `<div onclick="openCalEventForDate('${dateStr}')" style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;position:relative;${isToday?'background:var(--tesk);color:#fff;font-weight:700;':'background:#fafafa;color:'+color+';'}">${d}${hasEvent?`<div style="position:absolute;bottom:2px;display:flex;gap:1px;">${dots}</div>`:''}</div>`;
   }
   grid.innerHTML = html;
+  renderTodoWeekButton();
   // 이번 달 이벤트 목록 (유형별 그룹)
   const monthEvents = Object.entries(calEvents).filter(([d])=>d.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)).sort();
   const typeLabels = {school:'🏫 학교',personal:'🙋 개인','class':'📚 학급',exam:'📝 시험'};
@@ -4290,6 +4806,56 @@ function addCalEventFromModal(){
   closeModal('modal-cal-event');
   renderCalendar();
   showToast('📅 일정 추가됨!');
+}
+/* ── 🧒 학생 할 일 요일표 (달력 위 버튼) ──
+   체크한 요일에만 학생 홈 '오늘 할 일'에 뜬다. 날짜별 예외 없이 이 표 하나로만 운영한다. */
+function todoSchedule(){ return TodoSchedule.normalize(load('pesk-todo-schedule', null)); }
+function renderTodoWeekButton(){
+  const btn = document.getElementById('todo-week-btn');
+  if(!btn) return;
+  const s = todoSchedule();
+  const now = new Date();
+  const on = TodoSchedule.activeOn(s, now).map(id=>TodoSchedule.ACTIVITIES.find(a=>a.id===id)).filter(a=>!a.soon);
+  btn.innerHTML = '<span class="tw-ic" aria-hidden="true">🧒</span><span class="tw-main">'
+    + '<span class="tw-title">학생 할 일 요일표</span>'
+    + '<span class="tw-today">오늘(' + TodoSchedule.DOW[now.getDay()] + ') 학생 할 일: '
+    + (on.length ? on.map(a=>a.icon + ' ' + a.label).join(' · ') : '없음') + '</span></span>'
+    + '<span class="tw-go">요일 바꾸기 ›</span>';
+}
+function renderTodoWeekTable(){
+  const box = document.getElementById('todo-week-table');
+  if(!box) return;
+  const s = todoSchedule();
+  const order = [1,2,3,4,5,6,0];
+  const today = new Date().getDay();
+  box.innerHTML = '<table class="todo-week"><thead><tr><th></th>'
+    + order.map(d=>'<th class="' + (d===0||d===6 ? 'we' : '') + (d===today ? ' today' : '') + '">' + TodoSchedule.DOW[d] + '</th>').join('')
+    + '</tr></thead><tbody>'
+    + TodoSchedule.ACTIVITIES.map(a=>'<tr><td class="act"><b>' + a.icon + ' ' + escHtml(a.label) + '</b>'
+        + (a.soon ? '<span class="soon">준비 중</span>' : '')
+        + '<small>' + escHtml(a.note) + '</small></td>'
+        + order.map(d=>{
+            const on = s.weekly[a.id].includes(d);
+            return '<td><button type="button" class="todo-cell' + (on ? ' on' : '') + (d===0||d===6 ? ' we' : '') + '"'
+              + ' aria-pressed="' + on + '" aria-label="' + escHtml(a.label) + ' ' + TodoSchedule.DOW[d] + '요일"'
+              + ' onclick="toggleTodoWeek(\'' + a.id + '\',' + d + ')">✓</button></td>';
+          }).join('')
+        + '</tr>').join('')
+    + '</tbody></table>';
+}
+function openTodoWeekModal(){
+  renderTodoWeekTable();
+  openModal('modal-todo-week');
+}
+function toggleTodoWeek(id, dow){
+  const next = TodoSchedule.toggle(todoSchedule(), id, dow);
+  save('pesk-todo-schedule', {weekly: next.weekly, updatedAt: new Date().toISOString()});
+  renderTodoWeekTable();
+  renderTodoWeekButton();
+  if(id === 'writing' && document.getElementById('page-writing')?.classList.contains('active')) renderWriting();
+  if(id === 'literacy' && document.getElementById('page-literacy')?.classList.contains('active')) renderLiteracy();
+  const a = TodoSchedule.ACTIVITIES.find(x=>x.id===id);
+  showToast(a.icon + ' ' + a.label + ': ' + TodoSchedule.dowLabel(next.weekly[id]));
 }
 function delCalEvent(dateStr, idx){
   if(!calEvents[dateStr]) return;
@@ -7781,15 +8347,16 @@ function renderBoss(){
               + 'border:1px solid var(--border);border-radius:99px;padding:3px 9px;">'
               + escHtml(x.name) + ' ' + x.dmg.toLocaleString() + '</span>'; }).join('')
             + '</div><div style="margin-top:5px;font-size:10.5px;color:var(--hint);">'
-            + '번호순으로 보여줍니다 — 등수는 매기지 않아요.</div>'
+            + '번호순 · 누적 데미지예요. 학생 화면에는 아래 부문별 상위 5명만 보여요.</div>'
           : '')
+      + bossRankingT(c)
       + '</div>' : '';
 
   box.innerHTML = live+bossPersonalRewardFormT(c)+classBossRewardSummaryT()+'<h3 style="margin:0;font-size:17px">우리 반을 기다리는 보스</h3><p style="font-size:12px;color:var(--sub);margin-top:6px">그림을 고르면 바로 사용할 수 있어요. 이름과 체력은 아래에서 바꿀 수 있어요.</p>'+bossCharacterGrid(c.character)
     + '<p style="font-size:12px;color:var(--sub);line-height:1.65;margin-bottom:10px;">'
-    + '보스는 모험 몬스터와 분리돼 있어요. 학생은 <b>공동 퀘스트</b> 탭에서 <b>하루 한 번</b> 보스에게 도전해요. 친구들과 같은 시간에 접속할 필요는 없어요.<br>'
+    + '보스는 모험 몬스터와 분리돼 있어요. 학생은 <b>보스</b> 탭에서 <b>하루 한 번</b> 보스에게 도전해요. 친구들과 같은 시간에 접속할 필요는 없어요.<br>'
     + '모험에서 모은 공격권은 보스에 쓰지 않아요. 보스전은 아래 <b>하루 공격 횟수</b>만큼 공격하고, 공격 1회 기본 피해는 12예요.<br>'
-    + '<b>도전 조건</b>은 "오늘 푼 문제 수" <b>또는</b> "오늘 모험에서 몬스터 1마리 처치"입니다. 매일 리셋되니 뒤처진 학생도 오늘 풀면 바로 들어와요.<br>'
+    + '<b>도전 조건</b>은 "오늘 푼 문제 수" <b>또는</b> "오늘 모험에서 몬스터 1마리 처치" <b>또는</b> "오늘의 지문 완료"입니다. 매일 리셋되니 뒤처진 학생도 오늘 풀면 바로 들어와요.<br>'
     + '못 깨면 보스는 사라지지 않고 그대로 남습니다. 새 보스를 내야 체력이 초기화돼요.</p>'
     + '<div class="qz-row">'
     + '<label class="qz-field"><span>보스 이름</span>'
@@ -7818,6 +8385,25 @@ function renderBoss(){
     + '보스 처치 순간의 설정으로 <b>참여 학생 개인 보상</b>과 <b>학급 전체 활동</b>을 지급해요. 이미 지급한 판에는 설정 변경이 소급 적용되지 않아요. 공동 활동 후 아래에서 제공 완료로 표시하세요.</p>';
   renderClassQuestInventoryT();
 }
+/* 🏆 교사용 순위 — 학생 화면(상위 5명)과 달리 전원과 미참여 학생까지 보여 준다 */
+function bossRankingT(c){
+  if(!window.RPG || !window.RPG.bossRanking) return '';
+  const r = window.RPG.bossRanking(c, qzProgress, students, 999);
+  const tierName = ['미참여','칭호','기본 보상','추가 보상'];
+  const col = (title, list, fmt) => '<div style="flex:1;min-width:180px;"><div style="font-size:12px;font-weight:800;margin-bottom:4px;">' + title + '</div>'
+    + (list.length ? '<ol style="margin:0;padding-left:20px;font-size:11.5px;line-height:1.7;">' + list.map(x => '<li' + (x.rank <= 5 ? ' style="font-weight:800;"' : '') + '>' + escHtml(x.name) + ' · ' + fmt(x.value) + '</li>').join('') + '</ol>'
+      : '<div style="font-size:11px;color:var(--hint);">아직 없어요</div>') + '</div>';
+  const tiers = c.tiered ? '<div style="margin-top:8px;font-size:11.5px;color:var(--sub);">보상 단계 · ' + [3,2,1].map(t => tierName[t] + ' ' + r.rows.filter(x => x.tier === t).length + '명').join(' · ') + '</div>' : '';
+  return '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);">'
+    + '<div style="font-size:12.5px;font-weight:800;margin-bottom:6px;">🏆 이번 판 순위 <span style="font-weight:600;color:var(--hint);font-size:11px;">굵게 = 학생에게 공개되는 상위 5명</span></div>'
+    + '<div style="display:flex;gap:12px;flex-wrap:wrap;">'
+    + col('🔥 꾸준상 (참여일)', r.steady, v => v + '일')
+    + col('🎯 정확상 (참여한 날 정답률, 10문제 이상)', r.accurate, v => v + '%')
+    + col('📈 성장상 (지난 판보다)', r.growth, v => '+' + v + '일')
+    + '</div>' + tiers
+    + (r.absent.length ? '<div style="margin-top:8px;font-size:11.5px;color:var(--coral);">아직 참여하지 않은 학생 ' + r.absent.length + '명: ' + r.absent.map(x => escHtml(x.name)).join(', ') + '</div>' : '')
+    + '</div>';
+}
 function _bossForm(){
   const el = function(id){ return document.getElementById(id); };
   const c = bossCfgT();
@@ -7835,6 +8421,10 @@ function _bossForm(){
     rewardXp: Math.max(0,Math.min(100000,num('boss-reward-xp',c.rewardXp))),
     rewardItemId: txt('boss-reward-item',''),
     rewardItemQty: Math.max(1,Math.min(20,num('boss-reward-qty',c.rewardItemQty))),
+    tiered: el('boss-tiered') ? !!el('boss-tiered').checked : c.tiered,
+    tierMid: Math.max(1, Math.min(30, num('boss-tier-mid', c.tierMid))),
+    tierTop: Math.max(Math.max(1, Math.min(30, num('boss-tier-mid', c.tierMid))) + 1, Math.min(31, num('boss-tier-top', c.tierTop))),
+    rewardXpBonus: Math.max(0, Math.min(100000, num('boss-reward-xp-bonus', c.rewardXpBonus))),
     note: txt('boss-note', '').slice(0, 60)
   };
 }
@@ -8274,6 +8864,7 @@ async function loadQuiz(){
     qzProgress = pSnap.exists() ? (pSnap.data().value || {}) : {};
     qzFillForm();
     renderBoss();
+    renderQuestT();
 
     const today = qzTodayKey();
     const rows = students.slice().sort((a,b)=>a.num-b.num).map(stu=>{
@@ -11400,7 +11991,7 @@ function reuseWritingTopic(idx){
    ✍️ 일일 글쓰기 의무 — 미제출이 쌓이면 매점 이용 제한
 
    · 첫 미제출은 경고만, 정해진 횟수부터 잠금 (기본 2회)
-   · 평일만 세므로 주말이 끼어도 억울하게 쌓이지 않는다
+   · 요일표의 글쓰기 요일만 세므로 쉬는 요일이 끼어도 억울하게 쌓이지 않는다
    · 글을 내면 그 자리에서 풀린다. 선생님이 개별 예외도 지정할 수 있다
    · 잠겨도 펫 밥·놀기·씻기는 무료라 그대로 된다 (이중 처벌 방지)
    ══════════════════════════════════════ */
@@ -11416,17 +12007,17 @@ function writingDutyCfg(){
     exempt: Array.isArray(c.exempt) ? c.exempt.map(Number).filter(Number.isFinite) : []
   };
 }
-/* 학생별 연속 미제출 평일 수 — 학생 앱과 같은 규칙으로 센다 */
+/* 학생별 연속 미제출 횟수 — 요일표의 글쓰기 요일만, 학생 앱과 같은 규칙으로 센다 */
 function writingMissStreakOf(num, cfg){
   const mine = peskWritingsAll.filter(w=>Number(w.studentNum) === Number(num));
   const days = new Set(mine.map(getPeskWritingDateKey));
+  const sched = todoSchedule();
   const now = new Date();
   const cur = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if(now.getHours() < cfg.deadlineHour) cur.setDate(cur.getDate() - 1);
   let streak = 0;
   for(let i = 0; i < 30; i++){
-    const dow = cur.getDay();
-    if(dow !== 0 && dow !== 6){
+    if(TodoSchedule.isOn(sched, 'writing', cur)){
       const key = cur.getFullYear()+'-'+_pad2(cur.getMonth()+1)+'-'+_pad2(cur.getDate());
       if(days.has(key)) break;
       streak++;
@@ -11468,8 +12059,9 @@ function buildWritingDutyCard(){
     + '<div style="font-size:11px;font-weight:800;color:' + (c.enabled ? 'var(--coral)' : 'var(--hint)') + ';">'
     + (c.enabled ? '켜짐 · ' + c.lockAfter + '회부터 매점 잠금' : '꺼짐') + '</div></div>'
     + '<div style="font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:10px;">'
-    + '마감 시각이 지난 <b>평일</b>에 글을 안 내면 연속 횟수가 쌓여요. 첫 회는 경고만 하고, 정한 횟수부터 매점 이용이 잠깁니다. '
-    + '<b>글을 내면 즉시 풀려요.</b> 주말은 세지 않고, 펫 밥·놀기·씻기는 잠겨도 그대로 됩니다.</div>'
+    + '마감 시각이 지난 <b>글쓰기 요일</b>(지금: ' + TodoSchedule.dowLabel(todoSchedule().weekly.writing) + ')에 글을 안 내면 연속 횟수가 쌓여요. 첫 회는 경고만 하고, 정한 횟수부터 매점 이용이 잠깁니다. '
+    + '<b>글을 내면 즉시 풀려요.</b> 글쓰기 요일이 아닌 날은 세지 않고, 펫 밥·놀기·씻기는 잠겨도 그대로 됩니다. '
+    + '<a href="#" onclick="openTodoWeekModal();return false;" style="color:var(--tesk);font-weight:700;">요일 바꾸기 ›</a></div>'
     + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">'
     + '<label class="qz-field" style="flex:0 0 auto;"><span>마감 시각</span>'
     +   '<input class="form-input" type="number" min="0" max="23" id="wd-hour" style="width:90px;" value="' + c.deadlineHour + '"></label>'

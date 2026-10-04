@@ -28,7 +28,15 @@ const EX = {
   w_staff_arcane: {cat:'weapon', base:'weapon/w_staff',   name:'비전 지팡이', tint:'#a86bff', glow:'#cfa8ff', boost:0.24, minLevel:13, price:2800},
   w_axe_gold:     {cat:'weapon', base:'weapon/w_axe',     name:'황금 도끼',   tint:'#ffc93c', glow:'#ffe08a', boost:0.4, minLevel:15, price:3200},
   w_crystal_rose: {cat:'weapon', base:'weapon/w_crystal', name:'장미 수정',   tint:'#ff7aa8', glow:'#ffc2d8', boost:0.26, minLevel:9,  price:1900},
-  w_spear_storm:  {cat:'weapon', base:'weapon/w_spear',   name:'폭풍 창',     tint:'#4fd6c4', glow:'#9ff2e6', boost:0.26, minLevel:10, price:2100}
+  w_spear_storm:  {cat:'weapon', base:'weapon/w_spear',   name:'폭풍 창',     tint:'#4fd6c4', glow:'#9ff2e6', boost:0.26, minLevel:10, price:2100},
+
+  // ── 🧩 제작 아이템 (상점에서 팔지 않음 · 조각으로 만든다 · shared/pesk-progression.js RECIPES) ──
+  a_hood_scholar: {cat:'hat',    base:'hat/a_hood',       name:'학자의 후드',       tint:'#3d6fd6', glow:'#8fb4ff', boost:0.2,  minLevel:1, price:0, craft:true},
+  w_staff_wisdom: {cat:'weapon', base:'weapon/w_staff',   name:'지혜의 지팡이',     tint:'#2f9ad6', glow:'#9fdcff', boost:0.3,  minLevel:1, price:0, craft:true},
+  t_plate_rise:   {cat:'top',    base:'top/t_plate',      name:'다시 일어서는 갑옷', tint:'#8a5cd6', glow:'#c6a8ff', boost:0.22, minLevel:1, price:0, craft:true},
+  e_boot_grit:    {cat:'shoes',  base:'shoes/e_boot',     name:'극복의 장화',       tint:'#7a4fd0', glow:'#b99bff', boost:0.2,  minLevel:1, price:0, craft:true},
+  w_sword_brave:  {cat:'weapon', base:'weapon/w_sword',   name:'용기의 검',         tint:'#ff8a1f', glow:'#ffc06a', boost:0.34, minLevel:1, price:0, craft:true},
+  a_barbuta_brave:{cat:'hat',    base:'hat/a_barbuta',    name:'용기의 투구',       tint:'#e8642b', glow:'#ffa36a', boost:0.26, minLevel:1, price:0, craft:true}
 };
 
 /* 원본이 실제로 있는 것만 등록 (스프라이트 구성이 바뀌어도 깨지지 않게) */
@@ -38,8 +46,8 @@ Object.keys(EX).forEach(id=>{
   if(!HAS[e.base]){ delete EX[id]; return; }
   if(!Array.isArray(window.AV_MANIFEST[e.cat])) window.AV_MANIFEST[e.cat] = [];
   window.AV_MANIFEST[e.cat].push({
-    id, name: e.name, price: e.price, extra: true,
-    minLevel: e.minLevel, glow: e.glow
+    id, name: e.name, price: e.craft ? 999999 : e.price, extra: true,
+    minLevel: e.minLevel, glow: e.glow, craft: !!e.craft
   });
 });
 
@@ -147,7 +155,18 @@ const ROOMS = [
    v:{wallA:'#241b3d',wallB:'#3c2a5e',floorA:'#2a2140',floorB:'#3b2f57',
       wallLine:'rgba(120,220,255,.14)',floorLine:'rgba(255,120,220,.14)',
       winSky1:'#ff7ad9',winSky2:'#5b8cff',winFrame:'#120e1f',
-      deco:'radial-gradient(circle at 20% 35%,rgba(255,122,217,.5) 2px,transparent 4px),radial-gradient(circle at 75% 18%,rgba(91,140,255,.5) 2px,transparent 4px)'}}
+      deco:'radial-gradient(circle at 20% 35%,rgba(255,122,217,.5) 2px,transparent 4px),radial-gradient(circle at 75% 18%,rgba(91,140,255,.5) 2px,transparent 4px)'}},
+  // ── 🧩 제작 · 도감 보상 방 (상점에서 팔지 않음) ──
+  {id:'r_library', name:'도서관 방', price:999999, minLevel:1, craft:true,
+   v:{wallA:'#7a5236',wallB:'#9a6b48',floorA:'#5b3b26',floorB:'#6e4a31',
+      wallLine:'rgba(255,220,160,.14)',floorLine:'rgba(0,0,0,.18)',
+      winSky1:'#fff2c8',winSky2:'#ffd27a',winFrame:'#3b2616',
+      deco:'repeating-linear-gradient(90deg,rgba(200,60,60,.35) 0 6px,rgba(60,110,200,.35) 6px 11px,rgba(230,180,60,.35) 11px 15px,transparent 15px 18px)'}},
+  {id:'r_collector', name:'수집가의 방', price:999999, minLevel:1, craft:true,
+   v:{wallA:'#2b2350',wallB:'#463a7a',floorA:'#6b4f2a',floorB:'#8a6a3a',
+      wallLine:'rgba(255,215,120,.16)',floorLine:'rgba(0,0,0,.16)',
+      winSky1:'#ffe9a8',winSky2:'#c9a2ff',winFrame:'#d8b04a',
+      deco:'radial-gradient(circle at 18% 30%,rgba(255,215,120,.6) 2px,transparent 4px),radial-gradient(circle at 62% 22%,rgba(255,215,120,.45) 2px,transparent 4px),radial-gradient(circle at 84% 48%,rgba(201,162,255,.5) 2px,transparent 4px)'}}
 ];
 window.AV_ROOMS = ROOMS;
 window.AV_ROOM = id => ROOMS.find(r=>r.id===id) || ROOMS[0];
@@ -159,7 +178,7 @@ window.AV_ROOM_STYLE = function(id){
   return parts.join(';');
 };
 if(window.AV_MANIFEST){
-  window.AV_MANIFEST.room = ROOMS.map(r=>({id:r.id, name:r.name, price:r.price, minLevel:r.minLevel, isRoom:true}));
+  window.AV_MANIFEST.room = ROOMS.map(r=>({id:r.id, name:r.name, price:r.price, minLevel:r.minLevel, isRoom:true, craft:!!r.craft}));
 }
 })();
 
@@ -287,6 +306,8 @@ const PETS = [
    pal:{D:'#1e1c22',B:'#4a4552',L:'#6b6577',E:'#ffd93d',N:'#f08a9b',W:'#8a8496'}},
   {id:'p_slime_p',name:'분홍 슬라임', g:'slime',  price:1500, minLevel:5,
    pal:{D:'#9c3f6b',B:'#f07ab0',L:'#ffd0e6',E:'#4a1f33',N:'#fff',W:'#fff'}},
+  {id:'p_slime_r',name:'무지개 슬라임', g:'slime',  price:999999, minLevel:1, craft:true,
+   pal:{D:'#6a3fb8',B:'#4fc9e8',L:'#fff27a',E:'#2a1650',N:'#ff7ab0',W:'#ffffff'}},
   {id:'p_chick_g',name:'황금 병아리', g:'chick',  price:2000, minLevel:5,
    pal:{D:'#7a4a00',B:'#f5b400',L:'#fff3a8',E:'#2b2119',N:'#c96400',W:'#ffffff'}}
 ];
@@ -313,6 +334,6 @@ window.AV_PET_URL = function(id){
   return _pc[id] = cv.toDataURL('image/png');
 };
 if(window.AV_MANIFEST){
-  window.AV_MANIFEST.pet = PETS.map(p=>({id:p.id, name:p.name, price:p.price, minLevel:p.minLevel, isPet:true}));
+  window.AV_MANIFEST.pet = PETS.map(p=>({id:p.id, name:p.name, price:p.price, minLevel:p.minLevel, isPet:true, craft:!!p.craft}));
 }
 })();

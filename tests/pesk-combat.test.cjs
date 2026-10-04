@@ -24,7 +24,7 @@ test('hold meter has bounded positions and a wider focus window',()=>{
 });
 test('correct answer creates a resumable attack, not immediate damage',()=>{
   const g=prepare();assert.equal(g.hp,36);assert.equal(g.petCharge,1);
-  assert.deepEqual(G.normalizeGame(JSON.parse(JSON.stringify(g))).pendingAttack,ticket());
+  assert.deepEqual(G.normalizeGame(JSON.parse(JSON.stringify(g))).pendingAttack,{...ticket(),power:10});
   assert.throws(()=>prepare(g),/ATTACK_PENDING/);
 });
 test('one attack is consumed exactly once and cannot repeat rewards',()=>{
@@ -247,4 +247,22 @@ test('typed English accepts capitals, shows no answer options, and wrong input g
   await f.c.rpgSubmitShort();assert.equal(f.docs['pesk-quiz-progress'][1].correct,1);assert.match(f.c.buildRpgPanel({num:1,points:5}),/정답이에요/);
   await f.c.rpgNext();f.run('rpgEnsureQuestion();rpgQ=QUIZ.prepareQuestion(rpgQ,"typed-wrong",{responseMode:"short"})');
   f.elements['rpg-short-answer'].value='wrongword';await f.c.rpgSubmitShort();assert.equal(f.docs['pesk-quiz-progress'][1].correct,1);assert.equal(f.docs['pesk-quiz-progress'][1].tried,2);assert.match(f.c.buildRpgPanel({num:1,points:5}),/정답:/);
+});
+test('equipped item power adds up and multiplies the real damage (1% per point, capped)',()=>{
+  const full=C.powerOf({weapon:'w_axe_gold',top:'t_plate',bottom:'l_plate',shoes:'e_plate',hat:'a_horned_flame',pet:'p_chick_g'},'legend');
+  assert.equal(full.total,51);assert.equal(full.bonusPct,41);assert.equal(full.parts.length,6);
+  assert.equal(C.powerOf({}).total,10,'bare hands keep the base power');
+  assert.equal(C.itemPower('weapon','w_new_unknown'),6,'new items fall back to the slot default');
+  assert.equal(C.itemPower('face','f_smile'),0,'faces and hair never add power');
+  assert.equal(C.itemPower('pet','p_dog','rare'),5);
+  assert.equal(C.powerMultiplier(999),1.5);assert.equal(C.powerMultiplier(undefined),1);
+  const plain=resolve(prepare()).damage;
+  const strong=C.resolve({...prepare(),pendingAttack:{...prepare().pendingAttack,power:40}},{ticketId:'attack1',automatic:false,position:.7},G,R).damage;
+  assert.equal(plain,14);assert.equal(strong,18,'12 x 1.15 strong hit x 1.30 power');
+});
+test('old tickets without power keep their previous damage and power survives saving',()=>{
+  const g=prepare();assert.equal(G.normalizeGame({...g,pendingAttack:{...g.pendingAttack}}).pendingAttack.power,10);
+  assert.equal(G.normalizeGame({...g,pendingAttack:{...g.pendingAttack,power:33}}).pendingAttack.power,33);
+  assert.equal(G.normalizeGame({...g,pendingAttack:{...g.pendingAttack,power:500}}).pendingAttack.power,60);
+  assert.equal(resolve(prepare()).damage,14);
 });

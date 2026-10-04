@@ -7,7 +7,7 @@ const MOVES={sword:['회전 베기','slash',135],axe:['대지 가르기','quake'
 function create(o={}){
  const weapon=C.weaponProfile(o.weaponStyle||'sword',o.weaponId||''),hp=clamp(Number.isFinite(Number(o.heroHp))?Number(o.heroHp):100,0,100);
  return {weapon,move:MOVES[weapon.id],pet:C.petProfile(o.petId,1,o.petTier),ready:o.petCharge>=3,boss:!!o.boss,grade:Number(o.grade)||3,
- t:0,x:140,y:250,targetX:140,targetY:250,enemyX:435,enemyY:250,ammo:clamp(Math.round(Number(o.ammo)||6),1,30),ammoUsed:0,
+ t:0,x:140,y:250,targetX:140,targetY:250,enemyX:435,enemyY:250,ammo:clamp(Math.round(Number(o.ammo)||6),1,30),ammoUsed:0,power:clamp(Math.round(Number(o.power)||10),10,60),
  hp,initialHp:hp,hpLost:0,hits:0,dodges:0,bumps:0,skillUsed:false,combo:false,shield:0,guardUntil:0,speedUntil:0,slow:0,
  cooldown:{a:0,s:0,d:0,f:0},attackAt:2.8,warning:null,effects:[],particles:[],labels:[],events:[],burstAt:[],flash:0,heroFlash:0,hitStop:0,kick:0,stagger:0,finishAt:null,finished:false,paused:false,report:null};
 }
@@ -157,7 +157,7 @@ function mount(host,o,onFinish){
   if(stopped)return;if(!canvas.isConnected){destroy();return;}const dt=last?(now-last)/1000:0;last=now;
   step(s,dt,{direction:stick.x||Number(held.has('arrowright'))-Number(held.has('arrowleft')),vertical:stick.y||Number(held.has('arrowdown'))-Number(held.has('arrowup')),x:aim,y:aimY});
   for(const e of s.events.splice(0))status.textContent=e.text;
-  hud.textContent='♥ '+s.hp+'/100 · 공격권 '+(s.ammo-s.ammoUsed)+'/'+s.ammo+' · '+s.hits+'회 명중';
+  hud.textContent='♥ '+s.hp+'/100 · 💪 '+s.power+' · 공격권 '+(s.ammo-s.ammoUsed)+'/'+s.ammo+' · '+s.hits+'회 명중';
   for(const b of skillButtons){const k=b.dataset.rpgAction,cd=Math.max(0,s.cooldown[k]-s.t);b.disabled=s.paused||cd>0||(k!=='d'&&s.ammoUsed>=s.ammo)||(k==='f'&&(!s.pet||!s.ready||s.skillUsed||(s.pet.tier==='legend'&&s.hits<3)));const name=k==='a'?'기본 공격':k==='s'?s.move[0]:k==='d'?'방어':s.pet?.skill||'펫 없음';b.textContent=(touch?{a:'⚔',s:'✨',d:'🛡',f:'🐾'}[k]:k.toUpperCase())+' · '+name+(Number.isFinite(cd)&&cd>0?' '+Math.ceil(cd)+'초':'');}
   draw();if(s.finished){const result=s.report;destroy();onFinish(result);return;}frame=requestAnimationFrame(loop);
  }

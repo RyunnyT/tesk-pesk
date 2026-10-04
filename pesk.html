@@ -13,28 +13,31 @@
 <link href="https://cdn.jsdelivr.net/npm/pretendard@latest/dist/web/static/pretendard.css" rel="stylesheet">
 <!-- 아바타 스프라이트 (Universal LPC Spritesheet, CC-BY-SA 3.0 / GPL 3.0) -->
 <script src="avatar-sprites.js"></script>
-<script src="avatar-extras.js"></script>
+<script src="avatar-extras.js?v=20261004grow1"></script>
 <!-- 여자 아바타 몸/머리 + 여성 의상 (LPC) -->
 <script src="avatar-female.js"></script>
 <!-- 펫 도감 (벡터 픽셀 · 3단계 진화) -->
 <script src="pet-sprites.js"></script>
 <!-- 모험 학습 문제 생성기 (초등 3~6학년 교육과정) -->
-<script src="quiz-bank.js?v=20260912mixed1"></script>
+<script src="quiz-bank.js?v=20261004grow1"></script>
 <!-- 학습 RPG: 실력 레이팅·유형별 생성기 / 몬스터·경험치 -->
 <script src="quiz-rating.js?v=20260912mixed1"></script>
-<script src="rpg-monsters.js?v=20260919boss1"></script>
+<script src="rpg-monsters.js?v=20261004grow1"></script>
 <script src="boss-sprites.js"></script>
 <script src="shared/pesk-writing-store.js?v=20260920teach1"></script>
 <script src="shared/writing-proofread.js?v=20260928wr1"></script>
 <script src="shared/pesk-learning-sync.js?v=20260918"></script>
 <script src="shared/peer-survey.js?v=20260920"></script>
-<script src="shared/pesk-combat.js?v=20260919boss1"></script>
-<script src="shared/pesk-shooter.js?v=20260918tablet1"></script>
+<script src="shared/pesk-combat.js?v=20261004grow1"></script>
+<script src="shared/pesk-shooter.js?v=20261004atk1"></script>
 <script src="shared/pesk-subjects.js"></script>
+<script src="shared/todo-schedule.js?v=20261004todo2"></script>
+<script src="shared/literacy-core.js?v=20261004lit1"></script>
+<script src="shared/pesk-progression.js?v=20261004grow1"></script>
 <script src="shared/economy-ownership.js?v=20260930bank1"></script>
 <script src="shared/pesk-boss-catalog.js?v=20260910rpg2"></script>
-<script src="shared/pesk-boss-quest.js?v=20260918tablet1"></script>
-<script src="shared/pesk-class-quest-ui.js?v=20260919boss1"></script>
+<script src="shared/pesk-boss-quest.js?v=20261004rank1"></script>
+<script src="shared/pesk-class-quest-ui.js?v=20261004tab1"></script>
 <link rel="stylesheet" href="shared/pesk-combat.css?v=20260918tablet1">
 <!-- Firebase SDK -->
 <script type="module">
@@ -287,7 +290,8 @@ html,body{min-height:100vh;font-family:'Pretendard','Geist',sans-serif;
   position:fixed;left:50%;bottom:10px;transform:translateX(-50%);
   width:min(560px, calc(100% - 18px));
   z-index:220;
-  display:grid;grid-template-columns:repeat(5,1fr);gap:6px;
+  /* 버튼 수(모험·보스 유무)에 맞춰 칸이 정해진다 */
+  display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;
   padding:8px;
   padding-bottom:max(8px, env(safe-area-inset-bottom));
   background:rgba(255,255,255,0.94);
@@ -301,7 +305,7 @@ html,body{min-height:100vh;font-family:'Pretendard','Geist',sans-serif;
   min-height:54px;border:none;border-radius:16px;background:transparent;
   color:var(--sub);font-family:inherit;font-weight:800;font-size:11px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-  cursor:pointer;touch-action:manipulation;white-space:nowrap;padding:0 8px;
+  cursor:pointer;touch-action:manipulation;white-space:nowrap;padding:0 4px;min-width:0;
 }
 .bottom-tab-btn .bt-icon{font-size:18px;line-height:1;}
 .bottom-tab-btn.active{background:var(--pesk);color:#fff;box-shadow:0 5px 16px rgba(79,142,247,0.28);}
@@ -1188,7 +1192,7 @@ async function loadData(){
                 'tesk-bank-plans','tesk-bank-badge-bonus','pesk-deposits',
                 'tesk-checklist-items','pesk-checklists','tesk-challenges','pesk-challenge-submissions','tesk-challenge-awards','pesk-purchase-log','tesk-economy-restrictions',
                 'pesk-avatars','pesk-avatar-prices','pesk-quiz-config','pesk-quiz-progress',
-                'pesk-writing-topic','pesk-writing-duty','pesk-class-boss'];
+                'pesk-writing-topic','pesk-writing-duty','pesk-class-boss','pesk-todo-schedule','pesk-literacy','pesk-quest-config'];
     const snaps=await Promise.all(keys.map(k=>
       window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data',k))
     ));
@@ -1246,6 +1250,9 @@ async function loadData(){
     _applyWritingDuty((snaps[26] && snaps[26].exists()) ? snaps[26].data().value : null);
     applyClassBossPurchases((snaps[9] && snaps[9].exists()) ? (snaps[9].data().value || []) : []);
     _applyBossCfg((snaps[27] && snaps[27].exists()) ? snaps[27].data().value : null);
+    _applyTodoSchedule((snaps[28] && snaps[28].exists()) ? snaps[28].data().value : null);
+    _applyLiteracy((snaps[29] && snaps[29].exists()) ? snaps[29].data().value : null);
+    _applyQuestCfg((snaps[30] && snaps[30].exists()) ? snaps[30].data().value : null);
 
     // 아주 옛 버전이 기기에 남긴 예금 목록은 서버로 올리지 않고 지운다.
     // 기기 저장값은 학생이 마음대로 고칠 수 있어서, 올리면 없는 예금을 만들어 해지할 수 있었다.
@@ -1858,8 +1865,7 @@ function renderEconomyPanels(me){
   const shopPanel = document.getElementById('panel-shop');
   if(shopPanel && shopPanel.style.display !== 'none') shopPanel.innerHTML = buildShopPanel(current);
   // 마이룸은 보고 있을 때만 다시 그림 (아바타 합성 비용 절약)
-  const roomPanel = document.getElementById('panel-myroom');
-  if(roomPanel && roomPanel.style.display !== 'none') scheduleAdventureRefresh();
+  if(avAnyVisible()) scheduleAdventureRefresh();
   refreshTodayPanel();
 }
 
@@ -1955,6 +1961,7 @@ function renderDashboard(){
     + '<div class="tab-bar">'
     + '<button class="tab-btn active" id="tab-home" onclick="showTab(\'home\')">🏠 오늘</button>'
     + (window.RPG ? '<button class="tab-btn" id="tab-adventure" onclick="openAdventure()">⚔️ 모험</button>' : '')
+    + (window.RPG ? '<button class="tab-btn" id="tab-boss" onclick="openAdventure(\'boss\')">🗿 보스</button>' : '')
     + '<button class="tab-btn" id="tab-shop" onclick="showTab(\'shop\')">🏪 매점</button>'
     + '<button class="tab-btn" id="tab-myroom" onclick="showTab(\'myroom\')">🧍 마이룸</button>'
     + '<button class="tab-btn" id="tab-writing" onclick="showTab(\'writing\')">✍️ 글쓰기</button>'
@@ -1966,6 +1973,8 @@ function renderDashboard(){
     // ── 패널들 ──
     + '<div id="panel-home">' + homeHtml + '</div>'
     + '<div id="panel-shop" style="display:none">' + shopHtml + '</div>'
+    + '<div id="panel-adventure" style="display:none"></div>'
+    + '<div id="panel-boss" style="display:none"></div>'
     + '<div id="panel-myroom" style="display:none">' + buildMyRoomPanel(me) + '</div>'
     + '<div id="panel-writing" style="display:none">' + writingHtml + '</div>'
     + '<div id="panel-counsel" style="display:none">' + counselHtml + '</div>'
@@ -1985,6 +1994,7 @@ function renderDashboard(){
     + '<nav class="bottom-tabbar" aria-label="Pesk 하단 메뉴">'
     + '<button class="bottom-tab-btn active" id="bottom-tab-home" onclick="showTab(\'home\')"><span class="bt-icon">🏠</span><span>오늘</span></button>'
     + (window.RPG ? '<button class="bottom-tab-btn" id="bottom-tab-adventure" onclick="openAdventure()"><span class="bt-icon">⚔️</span><span>모험</span></button>' : '')
+    + (window.RPG ? '<button class="bottom-tab-btn" id="bottom-tab-boss" onclick="openAdventure(\'boss\')"><span class="bt-icon">🗿</span><span>보스</span></button>' : '')
     + '<button class="bottom-tab-btn" id="bottom-tab-shop" onclick="showTab(\'shop\')"><span class="bt-icon">🏪</span><span>상점</span></button>'
     + '<button class="bottom-tab-btn" id="bottom-tab-writing" onclick="showTab(\'writing\')"><span class="bt-icon">✍️</span><span>글쓰기</span></button>'
     + '<button class="bottom-tab-btn" id="bottom-tab-more" onclick="toggleBottomMore()"><span class="bt-icon">⋯</span><span>더보기</span></button>'
@@ -2011,6 +2021,12 @@ function renderDashboard(){
     checklistPanel.insertAdjacentHTML('afterend','<div id="panel-challenge" style="display:none">' + challengeHtml + '</div>');
   }
   const moreMenu = document.getElementById('bottom-more-menu');
+  if(checklistPanel && !document.getElementById('panel-literacy')){
+    checklistPanel.insertAdjacentHTML('afterend','<div id="panel-literacy" style="display:none"></div>');
+  }
+  if(moreMenu && !document.getElementById('more-tab-literacy')){
+    moreMenu.insertAdjacentHTML('afterbegin',"<button class=\"bottom-more-item\" id=\"more-tab-literacy\" onclick=\"openLiteracy()\"><span class=\"mi\">📖</span><span>오늘의 지문</span></button>");
+  }
   if(moreMenu && !document.getElementById('more-tab-challenge')){
     moreMenu.insertAdjacentHTML('afterbegin',"<button class=\"bottom-more-item\" id=\"more-tab-challenge\" onclick=\"showTab('challenge')\"><span class=\"mi\">🏁</span><span>챌린지</span></button>");
   }
@@ -2128,10 +2144,18 @@ function markWritingFeedbackSeen(){
   try{ localStorage.setItem(TODAY_FB_SEEN_KEY(), JSON.stringify([...seen].slice(-200))); }catch(_e){}
 }
 
-/* 모험 탭 — 마이룸 안의 모험(또는 공동 퀘스트) 화면을 바로 연다 */
+/* 모험·보스 탭 — 마이룸과 분리된 독립 탭을 연다 */
 function openAdventure(sub){
-  avRoomTab = sub === 'boss' ? 'boss' : 'rpg';
-  showTab('myroom');
+  showTab(sub === 'boss' ? 'boss' : 'adventure');
+}
+/* 지금 보이는 게임 화면: 'rpg'(모험 탭) · 'boss'(보스 탭) · ''(둘 다 아님) */
+function advActive(){
+  const vis = id => { const el = document.getElementById(id); return !!el && el.style.display !== 'none'; };
+  return vis('panel-adventure') ? 'rpg' : vis('panel-boss') ? 'boss' : '';
+}
+/* 아바타·모험·보스 화면 중 하나라도 보이는가 (실시간 갱신 여부 판단) */
+function avAnyVisible(){
+  return !!advActive() || (()=>{ const el = document.getElementById('panel-myroom'); return !!el && el.style.display !== 'none'; })();
 }
 
 function _todayChallengeMarked(sub){
@@ -2144,8 +2168,8 @@ function _todayChallengeMarked(sub){
 function buildTodayTasks(me){
   const tasks = [];
   const today = todayISO();
-  // 모험 학습
-  if(window.RPG && qzCfg().enabled !== false){
+  // 모험 학습 — 요일표에 체크된 날만 할 일로 띄운다 (탭에서는 언제든 할 수 있다)
+  if(window.RPG && qzCfg().enabled !== false && todoOn('adventure')){
     const cfg = qzCfg();
     const d = qzDaily();
     const limit = Math.max(1, Number(cfg.dailyQuestionLimit) || 20);
@@ -2161,19 +2185,21 @@ function buildTodayTasks(me){
   }
   // 우리 반 보스
   try{
-    if(window.RPG && bossOn() && !bossNow().cleared){
+    if(window.RPG && bossOn() && !bossNow().cleared && todoOn('adventure')){
       const e = bossEntry();
       if(e.usedToday) tasks.push({icon:'🤝', done:true, go:"openAdventure('boss')", title:'오늘 보스 도전 완료', desc:'보스는 하루에 한 번 도전할 수 있어요.'});
       else if(e.pending || e.ok) tasks.push({icon:'🤝', go:"openAdventure('boss')", hot:true, title:'우리 반 보스에 도전할 수 있어요!', desc:'친구들과 함께 보스를 쓰러뜨려요. 지금 ' + bossNow().pct + '% 진행됐어요.'});
       else tasks.push({icon:'🔒', go:'openAdventure()', title:'보스 도전까지 ' + e.left + '문제', desc:'모험에서 ' + e.left + '문제를 더 풀거나 몬스터 1마리를 쓰러뜨리면 열려요.'});
     }
   }catch(_e){}
-  // 글쓰기 — 주말에는 의무가 없으니 쓴 경우에만 보여준다
+  // 오늘의 지문 — 승인된 지문이 열려 있는 동안 (놓친 회차 기간 포함)
+  try{ tasks.push(...litTodayTasks()); }catch(_e){}
+  try{ const n = questClaimableCount(); if(n) tasks.push({icon:'🧩', hot:true, go:'openAdventure()', title:'주간 퀘스트 보상 ' + n + '개', desc:'모험 탭에서 조각을 받아요.'}); }catch(_e){}
+  // 글쓰기 — 글쓰기 요일이 아니면 쓴 경우에만 보여준다
   const wroteToday = (peskWritings || []).some(w => _writingDayKey(w) === today);
-  const day = new Date().getDay();
   if(wroteToday){
     tasks.push({icon:'✍️', done:true, go:"showTab('writing')", title:'오늘 글쓰기 완료', desc:'선생님이 읽고 피드백을 보내주실 거예요.'});
-  }else if(day !== 0 && day !== 6){
+  }else if(todoOn('writing')){
     const exempt = writingDuty && writingDuty.exempt.includes(Number(myStudentNum));
     const due = writingDuty && !exempt ? ' · ' + writingDuty.deadlineHour + '시까지' : '';
     tasks.push({icon:'✍️', go:"showTab('writing')", title:'오늘의 글쓰기', desc:'아직 오늘 글을 쓰지 않았어요' + due});
@@ -2191,7 +2217,7 @@ function buildTodayTasks(me){
   }
   // 학급 챌린지 (오늘 아직 표시하지 않은 것)
   const manual = (classChallenges?.manual || []).filter(ch => ch.active !== false);
-  if(manual.length){
+  if(manual.length && todoOn('challenge')){
     const left = manual.filter(ch => {
       const sub = challengeSubmissions?.[ch.id]?.[myStudentNum] || challengeSubmissions?.[ch.id]?.[String(myStudentNum)];
       return !_todayChallengeMarked(sub);
@@ -2790,12 +2816,20 @@ function refreshWritingListOnly(){
 }
 
 /* ── ✍️ 일일 글쓰기 의무 ──
-   선생님이 켜두면, 마감 시각이 지난 평일에 글을 안 낸 것이 연속으로 쌓인다.
+   선생님이 켜두면, 마감 시각이 지난 글쓰기 요일에 글을 안 낸 것이 연속으로 쌓인다.
    첫 번째 미제출은 경고만 하고, 정해진 횟수(기본 2회)부터 매점 이용이 잠긴다.
-   · 주말·공휴일 대신 평일만 센다. 아파서 하루 빠진 정도로 바로 잠기지 않게 하기 위함.
+   · 요일표(오늘 할 일)의 글쓰기 요일만 센다. 기본은 평일. 아파서 하루 빠진 정도로 바로 잠기지 않게 하기 위함.
    · 잠겨도 펫 밥·놀기·씻기는 무료라 그대로 된다 (이중 처벌 방지).
    · 글을 내면 그 순간 연속 기록이 0이 되어 바로 풀린다. */
 let writingDuty = null;
+/* 🧒 오늘 할 일 요일표 — 교사가 체크한 요일에만 홈 '오늘 할 일'에 띄운다.
+   체크가 없는 날도 탭에서는 자유롭게 할 수 있다. 저장한 적 없는 학급은 예전과 같은 기본값. */
+let todoSchedule = window.TodoSchedule ? TodoSchedule.normalize(null) : null;
+function _applyTodoSchedule(raw){ if(window.TodoSchedule) todoSchedule = TodoSchedule.normalize(raw); }
+function todoOn(id, date){
+  if(!todoSchedule) return id === 'writing' ? ![0,6].includes((date||new Date()).getDay()) : true;
+  return TodoSchedule.isOn(todoSchedule, id, date || new Date());
+}
 function _applyWritingDuty(raw){
   const d = (raw && typeof raw === 'object') ? raw : null;
   // 0시 마감이 유효하므로 `|| 기본값` 금지 (0 이 falsy 라 기본값으로 튕긴다)
@@ -2826,8 +2860,7 @@ function writingMissStreak(){
   // 오늘은 마감 시각이 지나야 '미제출'로 친다
   if(now.getHours() < writingDuty.deadlineHour) cur.setDate(cur.getDate() - 1);
   for(let i = 0; i < 30; i++){
-    const dow = cur.getDay();
-    if(dow !== 0 && dow !== 6){          // 평일만
+    if(todoOn('writing', cur)){          // 요일표의 글쓰기 요일만
       const key = cur.getFullYear() + '-' + String(cur.getMonth()+1).padStart(2,'0') + '-' + String(cur.getDate()).padStart(2,'0');
       if(submitted.has(key)) break;
       streak++;
@@ -5317,7 +5350,7 @@ const AV_PRESETS = [
 const AV_CATS = ['face','hair','top','bottom','shoes','hat','weapon','room','pet'];
 const AV_DRAWN = ['face','hair','top','bottom','shoes','hat','weapon'];   // 캐릭터에 그려지는 부위
 let avCat = 'hair';
-let avRoomTab = 'me';       // 'me' | 'class'
+let avRoomTab = 'me';       // 'me' | 'class' | 'dex'
 const AV_IMG = {};          // key → HTMLImageElement
 const AV_CACHE = {};        // 합성 결과 dataURL 캐시
 const AV_BLANK = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
@@ -5399,7 +5432,7 @@ function avOutfitBase(eq){
   return base;
 }
 function avOwns(cat, item){
-  return avPriceOf(cat, item) === 0 || avState().owned.includes(item.id);
+  return (!item.craft && avPriceOf(cat, item) === 0) || avState().owned.includes(item.id);
 }
 
 /* ── 스프라이트 미리 불러오기 (합성을 동기로 하기 위해) ── */
@@ -5463,7 +5496,7 @@ function buildMyRoomPanel(me){
           + ' alt="' + escHtml((window.AV_PET(eq.pet)||{}).name||'') + '" onclick="openPetEvolution()">'
         : '')
     + '<div class="av-hero' + (glow ? ' fancy' : '') + '"' + (glow ? ' style="--fx:' + glow + '"' : '') + '>'
-    + '<div class="av-tag">' + escHtml(me ? me.name : '나')
+    + '<div class="av-tag' + (mySetFx(eq).royal >= 2 ? ' gold' : '') + '">' + escHtml(me ? me.name : '나')
     + (window.RPG && window.RPG.titleOf(qzState().game && qzState().game.gxp)
         ? '<span class="av-title">' + escHtml(window.RPG.titleOf(qzState().game.gxp)) + '</span>' : '')
     + '</div>'
@@ -5482,18 +5515,14 @@ function buildMyRoomPanel(me){
   const lv = qzLevel();
   const subTabs = '<div class="av-subtabs">'
     + '<button class="av-subtab' + (avRoomTab==='me'?' active':'') + '" onclick="avShowRoomTab(\'me\')">🧍 내 방</button>'
-    + (window.RPG ? '<button class="av-subtab' + (avRoomTab==='rpg'?' active':'') + '" onclick="avShowRoomTab(\'rpg\')">⚔️ 모험<span class="av-lv-chip">Lv.'
-        + window.RPG.gameLevel((qzState().game||{}).gxp) + '</span></button>' : '')
-    + (window.RPG ? '<button class="av-subtab' + (avRoomTab==='boss'?' active':'') + '" onclick="avShowRoomTab(\'boss\')">🤝 공동 퀘스트'
-        + (bossOn() ? '<span class="av-lv-chip">' + (bossNow().cleared ? '완료' : bossNow().pct + '%') + '</span>' : '') + '</button>' : '')
     + '<button class="av-subtab' + (avRoomTab==='class'?' active':'') + '" onclick="avShowRoomTab(\'class\')">👥 우리 반</button>'
+    + '<button class="av-subtab' + (avRoomTab==='dex'?' active':'') + '" onclick="avShowRoomTab(\'dex\')">📚 도감</button>'
     + '</div>';
 
-  // 퀘스트 탭은 모험에 합쳤다. 예전 설정이 남아 있으면 모험으로 보낸다
-  if(avRoomTab === 'quiz')  avRoomTab = 'rpg';
-  if(avRoomTab === 'rpg')   return stage + subTabs + buildRpgPanel(me);
-  if(avRoomTab === 'boss')  return stage + subTabs + buildBossPanel(me);
+  // 모험·보스는 마이룸 밖의 독립 탭이다 (panel-adventure / panel-boss)
+  if(!['me','class','dex'].includes(avRoomTab)) avRoomTab = 'me';
   if(avRoomTab === 'class') return stage + subTabs + buildAvClassGallery() + avCreditHtml();
+  if(avRoomTab === 'dex') return stage + subTabs + buildDexPanel();
 
   const presets = '<div class="av-presets">'
     + '<button class="av-preset" onclick="avRandomOutfit()"><div class="av-dice">🎲</div><span>랜덤</span></button>'
@@ -5539,8 +5568,9 @@ function buildMyRoomPanel(me){
       const label = on ? '착용 중'
                   : have ? '가지고 있음'
                   : locked ? '🔒 Lv.' + need
+                  : item.craft ? '🧩 제작'
                   : price.toLocaleString() + ' 🪙';
-      const dis = locked || (!have && coins < price);
+      const dis = locked || (!have && !item.craft && coins < price);
       return '<button class="av-item' + (on ? ' on' : '') + (locked ? ' locked' : '') + (fancy ? ' fancy' : '') + '"'
         + (dis ? ' disabled' : '')
         + (fancy && item.glow ? ' style="--fx:' + item.glow + '"' : '')
@@ -5550,6 +5580,7 @@ function buildMyRoomPanel(me){
         + (roomSwatch || '<img src="' + preview + '" alt="" class="'
             + (avCat==='pet' ? 'av-pet-thumb' + (pTier && pTier.glow ? ' glow' : '') : '') + '"'
             + (pTier && pTier.glow ? ' style="--fx:' + pTier.glow + '"' : '') + '>')
+        + (avPowerOfItem(avCat, item.id) ? '<span class="av-item-atk">💪+' + avPowerOfItem(avCat, item.id) + '</span>' : '')
         + '<span class="av-item-name">' + escHtml(item.name) + '</span>'
         + '<span class="av-item-price' + (have && !on ? ' have' : '') + (locked ? ' lock' : '') + '">' + label + '</span>'
         + pEvo + '</button>';
@@ -5576,7 +5607,7 @@ function buildMyRoomPanel(me){
     : '';
 
   const _swatches = swatches;
-  return stage + subTabs + genderPick + buildPetCard(me) + presets
+  return stage + subTabs + genderPick + (window.PeskCombat ? avPowerCardHtml() : '') + buildPetCard(me) + presets
     + '<div class="av-shop-head"><div class="section-title" style="margin:0;">👕 옷장</div>'
     + '<div style="font-size:13px;font-weight:700;color:var(--gold);">보유 ' + coins.toLocaleString() + ' 🪙'
     + '<span style="color:var(--hint);font-weight:600;margin-left:6px;">· 꾸미기에 쓴 코인 ' + Number(a.spent||0).toLocaleString() + '</span></div></div>'
@@ -5639,7 +5670,7 @@ function petLevelOfCare(care){
 function petCareForLevel(lv){ return Math.max(0, (Math.max(1, lv) - 1) * PET_CARE_PER_LEVEL); }
 /* 옷장의 펫 아이템 → 펫 도감의 종류. 같은 종류라도 팔레트가 달라 다른 펫으로 보인다 */
 const PET_SPECIES_OF = {p_chick:'chick', p_cat:'cat', p_dog:'dog', p_slime:'slime',
-                        p_rabbit:'rabbit', p_cat_bk:'cat', p_slime_p:'slime', p_chick_g:'chick'};
+                        p_rabbit:'rabbit', p_cat_bk:'cat', p_slime_p:'slime', p_slime_r:'slime', p_chick_g:'chick'};
 
 /* ── 등급 ──
    비싼 펫이 색만 다르면 값을 낼 이유가 없다. 등급마다 실제로 달라지는 것:
@@ -5656,7 +5687,7 @@ const PET_TIERS = {
 };
 const PET_TIER_OF = {
   p_chick:'common', p_cat:'common', p_dog:'common', p_slime:'common', p_rabbit:'common',
-  p_cat_bk:'rare',  p_slime_p:'unique',
+  p_cat_bk:'rare',  p_slime_p:'unique', p_slime_r:'rare',
   p_chick_g:'legend'
 };
 function petTier(id){ return PET_TIERS[PET_TIER_OF[id] || 'common'] || PET_TIERS.common; }
@@ -6175,7 +6206,7 @@ function bossMyRec(){
   return (r.roundId === rid) ? r : {roundId: rid, dmg: 0, titles: r.titles};
 }
 
-/* ── 🤝 공동 퀘스트 · 우리 반 보스 (전용 탭) ──
+/* ── 🗿 보스 · 우리 반 보스 (전용 탭) ──
    모험과 완전히 분리한다. 모험에서 모은 공격권은 보스에 쓰지 않는다.
    · 도전 조건: 오늘 N문제를 풀었거나, 오늘 모험에서 몬스터를 한 마리 쓰러뜨렸다
    · 하루 한 번: 시작하는 순간 오늘 기회를 쓴다. 공격 횟수는 보스전 전용(선생님 설정)
@@ -6197,10 +6228,10 @@ function buildBossPanel(me){
   const roster = names
     ? '<div class="boss-roster"><div class="boss-roster-title">함께 싸운 친구들</div>'
       + '<div class="boss-conts">' + names + '</div>'
-      + '<p class="rpg-hint">번호순이에요 — 등수는 매기지 않아요.</p></div>'
+      + '<p class="rpg-hint">번호순이에요. 순위는 위의 부문별 순위에서 볼 수 있어요.</p></div>'
     : '<p class="rpg-hint">아직 아무도 도전하지 않았어요. 첫 번째가 되어볼까요?</p>';
   const card = buildClassBossQuestCard(true);
-  const wrap = action => '<div class="boss-panel">' + bossStageHtml() + action + card + roster + '</div>';
+  const wrap = action => '<div class="boss-panel">' + bossStageHtml() + action + bossMyTierHtml() + card + bossRankingHtml() + roster + '</div>';
 
   if(b.cleared) return wrap('');
   if(rpgBusy) return wrap('<div class="combat-action" role="status" data-learning-save>보스전 기록을 저장하고 있어요…</div>');
@@ -6208,23 +6239,65 @@ function buildBossPanel(me){
   if(e.usedToday)
     return wrap('<div class="boss-done">✅ <b>오늘 보스 도전을 마쳤어요!</b><br>보스는 하루에 한 번 도전할 수 있어요. 내일 또 함께 때려요.</div>');
   if(!e.unlocked)
-    return wrap('<div class="boss-lock">🔒 <b>오늘 ' + e.left + '문제를 더 풀거나, 모험에서 몬스터 1마리를 쓰러뜨리면 도전할 수 있어요.</b>'
+    return wrap('<div class="boss-lock">🔒 <b>오늘 ' + e.left + '문제를 더 풀거나, 모험에서 몬스터 1마리를 쓰러뜨리거나, 📖 오늘의 지문을 끝내면 도전할 수 있어요.</b>'
       + '<br>지금까지 오늘 ' + e.done + ' / ' + e.need + '문제를 풀었어요.'
-      + '<button class="rpg-go" onclick="avShowRoomTab(\'rpg\')">⚔️ 모험하러 가기 →</button></div>');
+      + '<button class="rpg-go" onclick="openAdventure()">⚔️ 모험하러 가기 →</button></div>');
   return wrap('<div class="boss-ready">⚔️ <b>오늘 도전할 수 있어요!</b> 보스전은 하루 한 번, '
     + b.cfg.dailyAmmo + '번 공격할 수 있어요. 모험에서 모은 공격권은 쓰지 않아요.'
     + '<button class="rpg-go" onclick="bossStartFight()">보스 치러 가기 →</button></div>');
 }
-/* 모험 화면 위쪽 한 줄 안내 — 보스 도전 자격이 생기면 공동 퀘스트로 보낸다 */
+/* 🔥 내 참여일과 보상 단계 — 하루만 더 하면 되는 목표를 보여 준다 */
+function bossMyTierHtml(){
+  const b = bossNow();
+  if(!b || !b.on || !window.RPG.bossDays) return '';
+  const c = b.cfg, rec = (qzState() || {}).boss;
+  const days = window.RPG.bossDays(rec, c);
+  if(!c.tiered){
+    return '<div class="boss-tier"><div class="boss-tier-head">🔥 이번 판 참여 <b>' + days + '일</b></div>'
+      + '<div class="boss-tier-note">이번 판은 한 번이라도 피해를 주면 모두 같은 보상을 받아요.</div></div>';
+  }
+  const steps = [
+    {need:1, label:'칭호', on: days >= 1},
+    {need:c.tierMid, label:'기본 보상' + (c.rewardXp ? ' (XP ' + c.rewardXp + ')' : ''), on: days >= c.tierMid},
+    {need:c.tierTop, label:'추가 보상' + (c.rewardXpBonus ? ' (XP +' + c.rewardXpBonus + ')' : ''), on: days >= c.tierTop}
+  ];
+  const next = steps.find(x => !x.on);
+  return '<div class="boss-tier"><div class="boss-tier-head">🔥 이번 판 참여 <b>' + days + '일</b>'
+    + (next ? '<span>' + (next.need - days) + '일 더 하면 <b>' + escHtml(next.label) + '</b>!</span>' : '<span>최고 단계 달성! 🎉</span>') + '</div>'
+    + '<div class="boss-steps">' + steps.map(x => '<div class="boss-step' + (x.on ? ' on' : '') + '"><b>' + x.need + '일</b><small>' + escHtml(x.label) + '</small></div>').join('') + '</div>'
+    + '<div class="boss-tier-note">보스를 쓰러뜨리면 참여한 날 수에 따라 보상을 받아요. 하루에 한 번 도전해서 피해를 주면 1일이 쌓여요.</div></div>';
+}
+/* 🏆 이번 판 부문별 순위 — 상위 5명만 이름을 보여 주고, 나머지는 내 기록만 본다 */
+let bossRankTab = 'steady';
+function bossRankingHtml(){
+  const b = bossNow();
+  if(!b || !b.on || !window.RPG.bossRanking) return '';
+  const r = window.RPG.bossRanking(b.cfg, allQuizProgress, students, 5);
+  const tabs = [['steady','🔥 꾸준상','참여일'],['accurate','🎯 정확상','정답률'],['growth','📈 성장상','지난 판보다']];
+  const fmt = (k, v) => k === 'steady' ? v + '일' : k === 'accurate' ? v + '%' : '+' + v + '일';
+  const list = r[bossRankTab] || [];
+  const me = r.rows.find(x => Number(x.num) === Number(myStudentNum));
+  const myVal = !me ? '' : bossRankTab === 'steady' ? me.days + '일'
+    : bossRankTab === 'accurate' ? (me.acc === null ? '참여한 날 10문제 이상 풀면 기록돼요' : me.acc + '%')
+    : (me.growth > 0 ? '+' + me.growth + '일' : '지난 판보다 더 참여하면 기록돼요');
+  const medal = n => n === 1 ? '🥇' : n === 2 ? '🥈' : n === 3 ? '🥉' : n + '등';
+  return '<div class="boss-rank"><div class="boss-rank-head">🏆 이번 판 순위 <small>상위 5명 · 판마다 새로 시작</small></div>'
+    + '<div class="boss-rank-tabs">' + tabs.map(t => '<button type="button" class="' + (bossRankTab === t[0] ? 'on' : '') + '" onclick="bossRankTab=\'' + t[0] + '\';avRefresh()">' + t[1] + '</button>').join('') + '</div>'
+    + (list.length ? '<ol class="boss-rank-list">' + list.map(x => '<li class="' + (Number(x.num) === Number(myStudentNum) ? 'me' : '') + '"><span class="boss-rank-n">' + medal(x.rank) + '</span><span class="boss-rank-name">' + escHtml(x.name) + '</span><b>' + fmt(bossRankTab, x.value) + '</b></li>').join('') + '</ol>'
+      : '<p class="rpg-hint">아직 기록이 없어요. 첫 번째 주인공이 되어 볼까요?</p>')
+    + (me ? '<div class="boss-rank-me">나의 기록 · ' + tabs.find(t => t[0] === bossRankTab)[2] + ': <b>' + escHtml(myVal) + '</b></div>' : '')
+    + '</div>';
+}
+/* 모험 화면 위쪽 한 줄 안내 — 보스 도전 자격이 생기면 보스 탭으로 보낸다 */
 function bossNudgeHtml(){
   const b = bossNow();
   if(!b || !b.on || b.cleared) return '';
   const e = bossEntry();
   if(e.pending || e.ok)
     return '<div class="boss-nudge ready">🤝 <b>오늘 우리 반 보스에 도전할 수 있어요!</b>'
-      + '<button class="rpg-go" onclick="avShowRoomTab(\'boss\')">공동 퀘스트로 →</button></div>';
+      + '<button class="rpg-go" onclick="openAdventure(\'boss\')">보스로 →</button></div>';
   if(e.usedToday) return '';
-  return '<div class="boss-nudge">🔒 우리 반 보스 · 오늘 ' + e.left + '문제 더 풀거나 몬스터 1마리를 쓰러뜨리면 도전할 수 있어요.</div>';
+  return '<div class="boss-nudge">🔒 우리 반 보스 · 오늘 ' + e.left + '문제 더 풀거나 몬스터 1마리를 쓰러뜨리거나 오늘의 지문을 끝내면 도전할 수 있어요.</div>';
 }
 function bossActionHtml(t){
   if(bossShooterReport?.id===t.id)
@@ -6243,7 +6316,7 @@ async function bossStartFight(){
   if(!bossEntry().pending){
     const eq = avEquipped(), pet = window.PeskCombat.petProfile(eq.pet, eq.pet ? petLevelOfCare(petNow(eq.pet).care) : 1, petTierKey(eq.pet));
     const ticket = {id:uid()+'-boss-'+Date.now().toString(36), mode:'shooter', monsterId:'__boss__', weaponStyle:rpgWeapon().id,
-      weaponId:eq.weapon||'', petId:eq.pet||'', petTier:pet?.tier||'common', petSkill:'', expMultiplier:1};
+      weaponId:eq.weapon||'', petId:eq.pet||'', petTier:pet?.tier||'common', petSkill:'', expMultiplier:1, power:avPower(eq).total};
     rpgBusy = true; qzBusy = true;
     try{
       await rpgMutateProgress((current,all,cfg)=>{
@@ -6252,8 +6325,8 @@ async function bossStartFight(){
         const e = G.bossChallenge(cfg, current, qzToday());
         if(e.pending) return current;            // 다른 창에서 이미 시작했다 — 이어서 싸운다
         if(!e.unlocked || e.usedToday) throw new Error('BOSS_UNAVAILABLE');
-        const prev = G.normalizeBossRec(current.boss);
-        return {...current, boss:{...prev, roundId:cfg.roundId, dmg:prev.roundId===cfg.roundId ? prev.dmg : 0, day:qzToday(),
+        const prev = G.bossRollRound(current.boss, cfg.roundId);
+        return {...current, boss:{...prev, day:qzToday(),
           pending:{...ticket, bossRound:cfg.roundId, ammo:cfg.dailyAmmo, baseDamage:cfg.dailyAmmo*G.BASE_DMG}}};
       });
       bossFx = '';
@@ -6304,7 +6377,9 @@ async function bossFinishFight(options={}){
       outcome = r;
       // 펫 스킬 충전·전투 기록만 가져온다. 모험 체력·몬스터·모험 공격권은 그대로 둔다
       return {...current, game:{...r.game, heroHp:g.heroHp, hp:g.hp, monsterId:g.monsterId, pendingAttack:g.pendingAttack, carryDamage:g.carryDamage},
-        boss:{...rec, roundId:cfg.roundId, dmg:(rec.roundId===cfg.roundId ? rec.dmg : 0) + r.damage, pending:null}};
+        boss:(()=>{const base = G.bossRollRound(rec, cfg.roundId), playDay = rec.day || qzToday();
+          const days = r.damage > 0 && !base.days.includes(playDay) ? [...base.days, playDay].sort() : base.days;
+          return {...base, dmg:base.dmg + r.damage, days, pending:null};})()};
     });
     saved = true; bossShooterReport = null;
     if(outcome.expired) bossFx = '보스전이 이미 끝났어요. 공동 보상을 확인해보세요!';
@@ -6545,7 +6620,8 @@ function buildAvClassGallery(){
         + ' alt="">' : '';
     // 친구가 지어준 펫 이름 — 이름이 없으면 펫 종류 이름을 대신 보여준다
     const pName = eq.pet ? petNameOf(av, eq.pet, pStage) : '';
-    return '<div class="av-friend' + (r.eq ? '' : ' off') + (mine ? ' me' : '') + '">'
+    const royal = r.eq ? mySetFx(eq).royal : 0;
+    return '<div class="av-friend' + (r.eq ? '' : ' off') + (mine ? ' me' : '') + (royal ? ' royal' + royal : '') + '">'
       + '<div class="av-friend-room" style="' + fStyle + '"></div>'
       + petImg
       + '<img src="' + avCharDataURL(eq) + '" alt="">'
@@ -6574,9 +6650,13 @@ function avRefresh(){
   if(typeof rpgChargeStart!=='undefined' && rpgChargeStart!==null)return;
   const me = getMyStudent();
   const panel = document.getElementById('panel-myroom');
-  if(panel){
-    panel.innerHTML = buildMyRoomPanel(me);
-    if((avRoomTab === 'rpg' || avRoomTab === 'boss') && typeof rpgAfterRender === 'function') rpgAfterRender();
+  if(panel) panel.innerHTML = buildMyRoomPanel(me);
+  // 모험·보스는 보고 있을 때만 그린다
+  const view = advActive();
+  const advPanel = document.getElementById(view === 'boss' ? 'panel-boss' : 'panel-adventure');
+  if(view && advPanel){
+    advPanel.innerHTML = view === 'boss' ? buildBossPanel(me) : buildRpgPanel(me);
+    if(typeof rpgAfterRender === 'function') rpgAfterRender();
   }
   const mini = document.getElementById('av-mini');
   if(mini){
@@ -6593,10 +6673,9 @@ function scheduleAdventureRefresh(){
   if(_adventureRefreshTimer!==null) return;
   _adventureRefreshTimer=setTimeout(()=>{
     _adventureRefreshTimer=null;
-    const panel=document.getElementById('panel-myroom');
     // Keep the current question and touch keypad stable until the student submits.
-    if(avRoomTab==='rpg' && rpgQ && rpgPicked===null && !rpgGame().pendingAttack)return;
-    if(panel && panel.style.display!=='none' && !document.hidden && !rpgBusy && !qzBusy)avRefresh();
+    if(advActive()==='rpg' && rpgQ && rpgPicked===null && !rpgGame().pendingAttack)return;
+    if(avAnyVisible() && !document.hidden && !rpgBusy && !qzBusy)avRefresh();
     refreshTodayPanel();
   },250);
 }
@@ -6651,16 +6730,12 @@ async function avSetTint(cat, tintId){
   catch(e){ a.equipped[cat + 'Color'] = prev; console.warn('색 저장 실패', e); }
   finally{ _avBusy = false; avRefresh(); }
 }
-function avShowRoomTab(t){ rpgStopShooter();rpgCancelCharge(); avRoomTab = t; avRefresh(); _syncAdventureTabs(); }
-/* 마이룸 안에서 하위 탭을 바꿔도 상단/하단 '모험' 버튼 표시를 맞춘다 */
-function _syncAdventureTabs(){
-  const room = document.getElementById('panel-myroom');
-  if(!room || room.style.display === 'none') return;
-  const advOn = avRoomTab === 'rpg' || avRoomTab === 'boss';
-  ['tab-adventure','bottom-tab-adventure'].forEach(id=>document.getElementById(id)?.classList.toggle('active', advOn));
-  document.getElementById('tab-myroom')?.classList.toggle('active', !advOn);
-  document.getElementById('more-tab-myroom')?.classList.toggle('active', !advOn);
-  document.getElementById('bottom-tab-more')?.classList.toggle('active', !advOn);
+/* 마이룸 하위 탭(내 방 · 우리 반). 예전 이름 'rpg'·'quiz'·'boss' 는 독립 탭으로 보낸다 */
+function avShowRoomTab(t){
+  rpgStopShooter();rpgCancelCharge();
+  if(t === 'rpg' || t === 'quiz') return showTab('adventure');
+  if(t === 'boss') return showTab('boss');
+  avRoomTab = t; avRefresh();
 }
 
 /* ── 착용 상태 저장 (돈이 오가지 않는 경우) ── */
@@ -6790,6 +6865,7 @@ async function avBuy(buyIds, totalPrice, label){
     const serverOwned = new Set(Array.isArray(prev.owned) ? prev.owned : []);
     // 이미 서버에 보유로 기록된 것은 다시 결제하지 않음 (중복 클릭/새로고침 대비)
     const need = buyIds.filter(id => !serverOwned.has(id));
+    if(need.some(id => { const c = avCatOf(id); return !!(c && avFind(c, id)?.craft); })) throw new Error('CRAFT_ONLY');
     const charge = need.reduce((sum, id) => {
       const c = avCatOf(id);
       return sum + (c ? avPriceOf(c, avFind(c, id)) : 0);
@@ -6879,6 +6955,7 @@ async function avPick(cat, id){
   if(!me) return alert('학생 정보를 찾을 수 없어요.');
   const a = avState(), price = avPriceOf(cat, item);
   const needBuy = !avOwns(cat, item);
+  if(needBuy && item.craft){ showFeedbackNotice('🧩 「' + item.name + '」은(는) 도감에서 조각으로 만들 수 있어요.'); return openDex(); }
 
   if(needBuy){
     if(!qzUnlocked(cat, item))
@@ -7532,7 +7609,7 @@ function rpgArenaHtml(monIcon, monColor, bare){
    다시 그리면 요소가 새로 생겨 transition 이 안 걸리므로,
    이전 값으로 그려 두고 다음 프레임에 목표값을 준다. */
 function rpgAfterRender(){
-  const bar = document.querySelector('#panel-myroom .rpg-hp i[data-to]');
+  const bar = document.querySelector('#panel-adventure .rpg-hp i[data-to], #panel-boss .rpg-hp i[data-to]');
   if(!bar) return;
   const to = bar.getAttribute('data-to');
   // requestAnimationFrame 은 화면이 안 보일 때 멈춘다(탭 전환·절전).
@@ -7604,8 +7681,9 @@ async function rpgAnswer(idx,typed){
   const correct = window.QUIZ.sameAnswer(q,chosen);
   const pw = petPower(), weapon = rpgWeapon(), skill = window.PeskCombat.skillFor(avEquipped().pet);
   const petId=avEquipped().pet||'',pet=window.PeskCombat.petProfile(petId,petId?petLevelOfCare(petNow(petId).care):1,petTierKey(petId));
+  const setFx = mySetFx();
   const input = {correct, target:rpgGame().monsterId, day:q._attemptDay, expectedTried:q._attemptTried,
-    passiveGuard:pw.guard,
+    passiveGuard:pw.guard, wrongDmg:setFx.wrongDmg, extraEnergy:q.isReview ? 1 : 0,
     ticket:{id:uid()+'-'+Date.now().toString(36),monsterId:rpgGame().monsterId,
       bossRound:'',weaponStyle:weapon.id,petSkill:skill ? skill.id : '',
       mode:'hunt',weaponId:avEquipped().weapon||'',petId,petTier:pet?.tier||'common',
@@ -7615,7 +7693,9 @@ async function rpgAnswer(idx,typed){
   avRefresh();
   try{
     const result = await qzCommit(q,correct,input);
-    rpgFx=correct?'정답! 공격권 +1':'몬스터의 반격! 모험 체력 −12 · 공격권은 생기지 않아요.';
+    rpgFx=correct
+      ? (q.isReview ? '복수 몬스터를 물리쳤어요! 공격권 +2' + (result && result.fragGain ? ' · 🔁 극복 조각 +' + result.fragGain : '') + (result && result.graduated ? ' · 이 유형 졸업! 🎓' : '') : '정답! 공격권 +1')
+      : '몬스터의 반격! 모험 체력 −' + setFx.wrongDmg + ' · 공격권은 생기지 않아요.';
     rpgClearAnim();
     if(!correct) rpgAnim = {kind:'miss',dmg:0,prevPct:-1};
   }catch(e){
@@ -7679,11 +7759,13 @@ async function rpgBeginHunt(skip=false){
   if(rpgGame().pendingAttack){if(skip)return rpgSkipBattle();return rpgStartShooter();}
   if(!rpgGame().huntEnergy.length||rpgGame().heroHp<=0)return;
   const eq=avEquipped(),pet=window.PeskCombat.petProfile(eq.pet,eq.pet?petLevelOfCare(petNow(eq.pet).care):1,petTierKey(eq.pet));
-  const ticket={id:uid()+'-'+Date.now(),mode:'shooter',weaponStyle:rpgWeapon().id,weaponId:eq.weapon||'',petId:eq.pet||'',petTier:pet?.tier||'common',petSkill:'',expMultiplier:1};
+  const setFx=mySetFx(eq);
+  const ticket={id:uid()+'-'+Date.now(),mode:'shooter',weaponStyle:rpgWeapon().id,weaponId:eq.weapon||'',petId:eq.pet||'',petTier:pet?.tier||'common',petSkill:'',expMultiplier:1+setFx.expPct/100,power:avPower(eq).total};
   rpgBusy=true;qzBusy=true;
   try{await rpgMutateProgress((current,all,cfg)=>{const game=window.RPG.normalizeGame(current.game);if(game.pendingAttack)throw new Error('ATTACK_PENDING');if(!game.huntEnergy.length)throw new Error('NO_ENERGY');if(game.heroHp<=0)throw new Error('REST_REQUIRED');
     // 이미 쓰러진 몬스터에게 출발하지 않는다 — 새 몬스터가 무작위로 나타난다
     if(game.hp<=0){const m=window.RPG.randomMonster(game.monsterId);game.monsterId=m.id;game.hp=m.hp;}
+    if(setFx.petCharge)game.petCharge=Math.max(game.petCharge,setFx.petCharge);   // 🔮 마법사 세트
     game.pendingAttack={...ticket,monsterId:game.monsterId,bossRound:'',ammo:game.huntEnergy.length,baseDamage:game.huntEnergy.reduce((a,b)=>a+b,0)};game.huntEnergy=[];game.huntAttempts=0;return {...current,game};});}
   catch(e){showFeedbackNotice('사냥 준비를 저장하지 못했어요. 에너지를 확인하고 다시 시도해주세요.');await rpgReloadProgress();}
   finally{rpgBusy=false;qzBusy=false;avRefresh();}
@@ -7691,7 +7773,7 @@ async function rpgBeginHunt(skip=false){
 }
 async function rpgRest(){
  if(rpgBusy||rpgGame().pendingAttack)return;rpgBusy=true;
- try{await rpgMutateProgress(current=>{const game=window.RPG.normalizeGame(current.game);if(game.pendingAttack)throw new Error('ATTACK_PENDING');game.heroHp=100;if(!game.huntEnergy.length)game.huntAttempts=0;return {...current,game};});rpgQ=null;rpgPicked=null;rpgFx='모닥불에서 쉬었어요. 체력 회복!';rpgClearAnim();}
+ try{await rpgMutateProgress(current=>{const game=window.RPG.normalizeGame(current.game);if(game.pendingAttack)throw new Error('ATTACK_PENDING');game.heroHp=100+mySetFx().campHeal;if(!game.huntEnergy.length)game.huntAttempts=0;return {...current,game};});rpgQ=null;rpgPicked=null;rpgFx='모닥불에서 쉬었어요. 체력 회복!';rpgClearAnim();}
  catch(e){showFeedbackNotice('휴식을 저장하지 못했어요. 다시 눌러주세요.');}finally{rpgBusy=false;avRefresh();}
 }
 function rpgHuntBar(){const g=rpgGame(),n=g.huntEnergy.length;return '<div class="hunt-preparation"><div><small>준비한 문제 '+g.huntAttempts+' / '+rpgHuntLimit()+'</small><b>⚔ '+n+' <span>회 공격권</span></b><p>정답마다 공격권 +1 · 오답은 몬스터 반격, 체력 −12</p></div><div class="hunt-actions"><button class="rpg-go" '+(!n||rpgBusy||g.heroHp<=0?'disabled':'')+' onclick="rpgBeginHunt()">몬스터 사냥하러 가기'+(n?' · '+n+'회 공격':'')+'</button><button class="combat-basic" '+(!n||rpgBusy||g.heroHp<=0?'disabled':'')+' onclick="rpgBeginHunt(true)">전투 건너뛰기</button></div></div>';}
@@ -7967,9 +8049,46 @@ function rpgPickSubject(sub){
   avRefresh();
 }
 
+/* ── 💪 공격력 ── 장착 아이템 공격력의 합. 사냥·보스 출발 때 공격권에 담겨 실제 피해에 곱해진다 */
+const AV_POWER_LABEL = {weapon:'무기', top:'상의', bottom:'하의', shoes:'신발', hat:'모자', pet:'펫', set:'세트'};
+function avPetTierNow(petId){
+  if(!petId || !window.PeskCombat) return 'common';
+  const p = window.PeskCombat.petProfile(petId, petLevelOfCare(petNow(petId).care), petTierKey(petId));
+  return p ? p.tier : 'common';
+}
+function avPower(eq){
+  eq = eq || avEquipped();
+  if(!window.PeskCombat || !window.PeskCombat.powerOf) return {base:10,total:10,parts:[],bonusPct:0};
+  return window.PeskCombat.powerOf(eq, avPetTierNow(eq.pet));
+}
+function avPowerOfItem(cat, id){
+  if(!window.PeskCombat || !window.PeskCombat.itemPower) return 0;
+  return window.PeskCombat.itemPower(cat, id, cat === 'pet' ? avPetTierNow(id) : '');
+}
+/* 내 공격력 카드 — 합계, 부위별 공격력, 무기·펫 효과 */
+function avPowerCardHtml(){
+  const eq = avEquipped(), pw = avPower(eq);
+  const w = window.PeskCombat.weaponProfile(rpgWeapon().id, eq.weapon || '');
+  const pet = eq.pet ? window.PeskCombat.petProfile(eq.pet, petLevelOfCare(petNow(eq.pet).care), petTierKey(eq.pet)) : null;
+  const rows = pw.parts.map(p => {
+    const item = p.slot === 'pet' ? {name: (pet && pet.name) || ''} : p.slot === 'set' ? {name: '⚔️ 군단 세트'} : avFind(p.slot, p.id);
+    return '<li><span>' + AV_POWER_LABEL[p.slot] + ' · ' + escHtml(item ? item.name : p.id) + '</span><b>+' + p.power + '</b></li>';
+  }).join('');
+  return '<div class="av-power">'
+    + '<div class="av-power-head"><span>💪 내 공격력</span><b>' + pw.total + '</b><small>피해 +' + pw.bonusPct + '%</small></div>'
+    + '<ul class="av-power-list"><li><span>기본</span><b>' + pw.base + '</b></li>' + rows + '</ul>'
+    + '<div class="av-power-fx">'
+    + '<div>' + w.icon + ' <b>' + escHtml(avFind('weapon', eq.weapon)?.name || '맨손 (' + w.name + ' 모양)') + '</b> · ' + escHtml(w.desc) + '</div>'
+    + (pet ? '<div>' + pet.icon + ' <b>' + escHtml(pet.name) + ' (' + escHtml(pet.tierName) + ')</b> · ' + escHtml(pet.skill + ': ' + pet.desc) + (pet.rank > 0 ? ' · ' + escHtml(pet.trait) : '') + '</div>' : '<div>🐾 펫이 없어요 · 펫을 데려오면 공격력과 스킬이 생겨요</div>')
+    + '</div>'
+    + mySetFx(eq).active.map(a => '<div class="av-power-set">' + a.icon + ' <b>' + escHtml(a.name) + ' 세트 ' + a.level + '단계</b> · ' + escHtml(a.text) + '</div>').join('')
+    + '<div class="av-power-note">공격력 1점마다 피해가 1%씩 커져요 (최대 +50%). 사냥이나 보스전을 <b>출발할 때</b> 입고 있는 장비로 계산해요.</div>'
+    + '</div>';
+}
 function rpgEquipmentHtml(){
  const g=rpgGame(),eq=avEquipped(),w=rpgWeapon(),pet=window.PeskCombat.petProfile(eq.pet,eq.pet?petLevelOfCare(petNow(eq.pet).care):1,petTierKey(eq.pet));
- return '<div class="rpg-arena-info"><span title="아바타 장착 무기">'+w.icon+' '+escHtml(avFind('weapon',eq.weapon)?.name||'기본 공격')+'</span><span class="rpg-health '+(g.heroHp<=24?'low':'')+'">♥ '+g.heroHp+'/100</span>'
+ const pw=avPower(eq);
+ return '<div class="rpg-arena-info"><span title="아바타 장착 무기">'+w.icon+' '+escHtml(avFind('weapon',eq.weapon)?.name||'기본 공격')+'</span><span class="rpg-power" title="장착 아이템 공격력의 합 · 피해 +'+pw.bonusPct+'%">💪 '+pw.total+'</span><span class="rpg-health '+(g.heroHp<=24?'low':'')+'">♥ '+g.heroHp+'/'+Math.max(100,g.heroHp)+'</span>'
  +(pet?'<span title="'+escHtml(pet.skill+' · '+pet.trait)+'">'+pet.icon+' '+pet.tierName+' · 스킬 '+g.petCharge+'/3</span>':'')
  +'<label><input type="checkbox" '+(rpgAutoEnabled()?'checked':'')+' onchange="rpgSetAuto(this.checked)"> 항상 건너뛰기</label></div>';
 }
@@ -7996,7 +8115,8 @@ function rpgBattleHtml(me){
   const hpPct = Math.round(g.hp / mon.hp * 100);
   const total = G.totalKills(g);
 
-  const learning=rpgLearnHeadHtml()+(!g.pendingAttack?rpgHuntBar():'');
+  const learning=rpgLearnHeadHtml()+(!g.pendingAttack?revengeNudgeHtml()+questCardHtml()+rpgHuntBar():'');
+  const rev=!!(rpgQ && rpgQ.isReview && !g.pendingAttack && g.hp>0);
   const petBar='';
 
   const head = '<div class="rpg-head">'
@@ -8026,9 +8146,9 @@ function rpgBattleHtml(me){
     }).join('') + '</div></div>';
 
   const fromPct = rpgAnim.prevPct >= 0 ? rpgAnim.prevPct : hpPct;
-  const stage = '<div class="rpg-stage" style="--mc:' + mon.color + '">'
+  const stage = '<div class="rpg-stage' + (rev ? ' revenge' : '') + '" style="--mc:' + mon.color + '">'
       + rpgArenaHtml(mon.icon, mon.color)
-      + '<div class="rpg-mon-title">' + escHtml(mon.name) + ' <span class="rpg-rank ' + rank.id + '">' + rank.label + '</span></div>'
+      + '<div class="rpg-mon-title">' + (rev ? '🔁 복수의 ' : '') + escHtml(mon.name) + ' <span class="rpg-rank ' + rank.id + '">' + rank.label + '</span></div>'
       + '<div class="rpg-hp"><i style="width:' + fromPct + '%" data-to="' + hpPct + '"></i></div>'
       + '<div class="rpg-hp-num">' + g.hp + ' / ' + mon.hp + '</div>'
       + (rpgFx ? '<div class="rpg-fx">' + escHtml(rpgFx) + '</div>' : '')
@@ -8081,14 +8201,16 @@ function rpgBattleHtml(me){
     + '<p>' + escHtml(q.explain || '') + '</p>'
     + '<button class="qz-next" onclick="rpgNext()">다음 문제 →</button></div>';
 
-  return learning + head + stage
-    + (q.isReview ? '<div class="qz-review">🔁 <b>다시 보는 문제예요.</b> 전에 틀렸던 유형이에요.</div>' : '')
+  // 무대는 문제보다 먼저 그려지므로, 이번 문제가 복수 몬스터면 여기서 모습을 바꾼다
+  const stageNow = q.isReview && !rev ? stage.replace('<div class="rpg-stage"', '<div class="rpg-stage revenge"').replace('<div class="rpg-mon-title">', '<div class="rpg-mon-title">🔁 복수의 ') : stage;
+  return learning + head + stageNow
+    + (q.isReview ? '<div class="qz-review">🔁 <b>복수 몬스터 등장!</b> 전에 틀렸던 유형이에요. 맞히면 공격권 2개 + 🔁 극복 조각!</div>' : '')
     + '<div class="qz-card"><div class="qz-unit">' + escHtml(q.unit) + ' · '+(q.questionStyle==='word'?'문장제 · ':'')+(q.responseMode==='short'?'직접 입력':'보기 선택')+'</div>'
     + '<div class="qz-q">' + escHtml(q.q).replace(/\n/g,'<br>') + '</div>'
     + (q.responseMode==='short'?rpgShortAnswerHtml(q,answered):'<div class="qz-opts">'+opts+'</div>')+'</div>'
     + fb
     + dex
-    + '<p class="rpg-hint">정답은 공격권 +1 · 틀리면 몬스터 반격으로 모험 체력 −12. 학습 경험치는 유지돼요.<br>여기서 모은 공격권은 모험 몬스터에게만 써요. 우리 반 보스는 🤝 공동 퀘스트에서 하루 한 번 따로 도전해요.</p>';
+    + '<p class="rpg-hint">정답은 공격권 +1 · 틀리면 몬스터 반격으로 모험 체력 −' + mySetFx().wrongDmg + '. 학습 경험치는 유지돼요.<br>여기서 모은 공격권은 모험 몬스터에게만 써요. 우리 반 보스는 🗿 보스 탭에서 하루 한 번 따로 도전해요.</p>';
 }
 
 /* QRATE 문항을 quiz-bank 문항 모양으로 맞춘다.
@@ -8145,6 +8267,7 @@ function qzMake(){
   // 시드에 '오늘 푼 문제 수'를 넣어, 답하기 전에는 새로고침해도 같은 문제가 나오게 함
   const seed = [roomId, myStudentNum, qzToday(), qzSubject, d.tried].join('|');
   if(!qzSubjects().some(x=>x.id===qzSubject))return null;
+  const allowReview = !window.PeskProgress || window.PeskProgress.reviewSlot(d.tried);
 
   /* 레이팅 모드 — 학생 실력에 맞춰 난이도를 정한다.
      예전에는 레벨 → tier(1~3) 로만 정해서 레벨 8 이상은 난이도가 더 오르지 않았다.
@@ -8154,13 +8277,25 @@ function qzMake(){
     const rng = R.makeRng(seed);
     // 오늘 다시 볼 오답이 있으면 그것부터. 같은 유형·난이도로 내되 숫자는 새로 만든다
     const codes=qzAllowedTypeCodes();
-    const due = R.reviewDue((s.review||[]).filter(x=>codes.includes(x.code)), qzToday());
+    const due = allowReview ? R.reviewDue((s.review||[]).filter(x=>codes.includes(x.code)), qzToday()) : null;
     const target = due ? due.d : R.pickTargetDifficulty(qzRating(), rng);
     const code = due ? due.code : R.pickTypeFor(target, codes, rng);
     const q = code ? R.generateQuestion(code, target, seed) : null;
     if(q){ const out = window.QUIZ.prepareQuestion(qzFromRate(q, c),seed); out.isReview = !!due; return out; }
   }
 
+  // 🔁 복수 몬스터 — 전에 틀린 단원·난이도(영단어는 같은 단어)를 새 문제로 다시 낸다
+  if(allowReview && window.PeskProgress){
+    const P = window.PeskProgress, units = (c.mathUnits || []).map(Number);
+    const due = P.revengeDue(s.revenge, qzToday(), k => k.subject === qzSubject && (k.subject === 'english'
+      || (k.grade === Number(c.grade) && k.term === Number(c.term) && (!units.length || units.includes(k.unitNo)))))[0];
+    if(due){
+      const k = P.parseKey(due.k);
+      const rq = window.QUIZ.makeQuestion({subject:k.subject, grade:c.grade, term:c.term, unitNos:k.unitNo ? [k.unitNo] : null,
+        tier:k.tier, word:k.word, level:qzQuestionLevel(), seed:seed + ':revenge'});
+      if(rq){ rq.isReview = true; rq.reviewKey = due.k; return rq; }
+    }
+  }
   return window.QUIZ.makeQuestion({
     subject: qzSubject, grade: c.grade, term: c.term,
     unitNos: qzSubject === 'math' ? c.mathUnits : null,
@@ -8246,11 +8381,29 @@ async function qzCommit(q, right, battleInput){
     prev.tried += 1; if(right) prev.correct += 1;
     prev.xp += gainXp;
 
+    // 🔁 복수 몬스터 · 🧩 조각 · 이번 주 집계 (주간 퀘스트)
+    const PGx = window.PeskProgress, grow = {};
+    let fragGain = 0, graduated = false;
+    if(PGx){
+      let list = prevRaw.revenge;
+      const rk = q.reviewKey || PGx.revengeKey(q);
+      if(rk){
+        if(right && q.isReview){ const rr = PGx.revengeOnRight(list, rk, today); list = rr.list; graduated = rr.graduated; }
+        else if(!right) list = PGx.revengeOnWrong(list, rk, today);
+      }else if(right && q.isReview && q.typeCode){
+        graduated = !prev.review.some(x => x.code === q.typeCode);   // 레이팅 유형: 목록에서 빠졌으면 졸업
+      }
+      if(right && q.isReview) fragGain = 1 + (graduated ? 2 : 0);
+      grow.revenge = PGx.revengeNormalize(list);
+      grow.wk = PGx.bumpWeek(prevRaw.wk, today, {correct:right, unitKey, revenge:!!q.isReview});
+      if(fragGain) grow.frags = PGx.addFrags(prevRaw.frags, {grit:fragGain});
+    }
+
     // 오래된 일별 기록 정리 (문서 비대화 방지 — 최근 60일만)
     const days = Object.keys(prev.daily).sort();
     if(days.length > 60) days.slice(0, days.length-60).forEach(k=>{ delete prev.daily[k]; });
 
-    all[myStudentNum] = Object.assign({}, prevRaw, prev, {
+    all[myStudentNum] = Object.assign({}, prevRaw, prev, grow, {
       rating: Math.max(0, Math.round(Number(prev.rating) || 0)),
       review: window.QRATE ? window.QRATE.reviewNormalize(prev.review) : [],
       game: window.RPG ? window.RPG.normalizeGame(combat ? combat.game : prevRaw.game) : undefined,
@@ -8271,7 +8424,7 @@ async function qzCommit(q, right, battleInput){
       }
     }
     txn.set(progRef, {value: all, updatedAt:new Date().toISOString()});
-    out = Object.assign(out||{}, {gainXp, gainCoin, before, after, all, unitKey,guarded:!!combat?.guarded});
+    out = Object.assign(out||{}, {gainXp, gainCoin, before, after, all, unitKey,guarded:!!combat?.guarded, fragGain, graduated});
   });
 
   if(!out) return;
@@ -8320,7 +8473,7 @@ function showTab(tab){
     return;
   }
   setBottomMore(false);
-  ['home','shop','myroom','writing','counsel','stock','checklist','challenge'].forEach(t=>{
+  ['home','adventure','boss','shop','myroom','writing','counsel','stock','checklist','challenge','literacy'].forEach(t=>{
     const panel = document.getElementById('panel-'+t);
     const btn = document.getElementById('tab-'+t);
     const bottomBtn = document.getElementById('bottom-tab-'+t);
@@ -8331,18 +8484,13 @@ function showTab(tab){
     if(moreBtn) moreBtn.classList.toggle('active', t===tab);
   });
   const bottomMore=document.getElementById('bottom-tab-more');
-  // 모험은 마이룸 안의 하위 화면이지만 탭바에서는 따로 보인다
-  const advOn = tab==='myroom' && (avRoomTab==='rpg' || avRoomTab==='boss');
-  ['tab-adventure','bottom-tab-adventure'].forEach(id=>document.getElementById(id)?.classList.toggle('active', advOn));
-  if(advOn){
-    document.getElementById('tab-myroom')?.classList.remove('active');
-    document.getElementById('more-tab-myroom')?.classList.remove('active');
-  }
-  if(bottomMore) bottomMore.classList.toggle('active', (tab==='myroom' && !advOn) || ['counsel','stock','checklist','challenge'].includes(tab));
+  if(bottomMore) bottomMore.classList.toggle('active', ['myroom','counsel','stock','checklist','challenge','literacy'].includes(tab));
   const topMore=document.getElementById('tab-more');
-  if(topMore) topMore.classList.toggle('active', ['stock','checklist','challenge'].includes(tab));
-  if(tab==='myroom') avRefresh();
+  if(topMore) topMore.classList.toggle('active', ['stock','checklist','challenge','literacy'].includes(tab));
+  if(tab==='myroom' && !['me','class','dex'].includes(avRoomTab)) avRoomTab = 'me';
+  if(tab==='myroom' || tab==='adventure' || tab==='boss') avRefresh();
   if(tab==='home') refreshTodayPanel(true);
+  if(tab==='literacy') renderLiteracyPanel();
   if(tab==='writing') markWritingFeedbackSeen();
   if(tab==='shop'||tab==='stock')renderEconomyPanels();
   petTick(tab === 'myroom');
@@ -8362,6 +8510,470 @@ function petTick(on){
     if(!avEquipped().pet) return;
     avRefresh();
   }, 60000);
+}
+
+/* ─────────────────────────────────────────
+   📖 오늘의 지문
+   · 선생님이 승인한 지문만, 공개일부터 '놓친 회차 기간'까지 풀 수 있다.
+   · 처음 채점한 정답 수를 먼저 저장한다 → 새로고침해도 첫 점수는 바뀌지 않는다.
+   · 4문항을 모두 맞히면 완료. 보상은 서버 문서의 설정과 첫 점수로 한 번만 계산한다.
+   · 기록: pesk-quiz-progress[내 번호].literacy[날짜] = {first, done, coin, essay, essayOk}
+───────────────────────────────────────── */
+let litDoc = {cfg: null, sheets: {}};
+let litView = null;   // {date, answers:{blanks, choice}, marks, msg}
+let litBusy = false;
+function _applyLiteracy(raw){
+  const v = (raw && typeof raw === 'object') ? raw : {};
+  const sheets = {};
+  Object.entries((v.sheets && typeof v.sheets === 'object') ? v.sheets : {}).forEach(([d, s]) => {
+    if(!s || s.status !== 'approved' || !s.sheet || !window.LiteracyCore) return;
+    const chk = LiteracyCore.validate(s.sheet);
+    if(chk.ok) sheets[d] = {date: d, subject: s.subject || '', topic: s.topic || '', sheet: chk.sheet,
+      essay: s.essay && s.essay.on && s.essay.question ? String(s.essay.question) : ''};
+  });
+  litDoc = {cfg: window.LiteracyCore ? LiteracyCore.normalizeCfg(v.cfg) : null, sheets};
+}
+function litRec(date){ return ((myQuiz && myQuiz.literacy) || {})[date] || null; }
+function litState(date){ return LiteracyCore.stateOn(date, todayISO(), litDoc.cfg ? litDoc.cfg.graceDays : 2); }
+function litOpenList(){ return Object.values(litDoc.sheets).filter(s => litState(s.date) === 'open').sort((a,b)=>a.date<b.date?1:-1); }
+function litLabel(d){ return Number(d.slice(5,7)) + '/' + Number(d.slice(8)) + '(' + LiteracyCore.dowName(d) + ')'; }
+
+/* 오늘 할 일 카드 — 풀 수 있는 지문마다 한 장 */
+function litTodayTasks(){
+  if(!window.LiteracyCore) return [];
+  const today = todayISO();
+  return litOpenList().map(s => {
+    const r = litRec(s.date);
+    const until = LiteracyCore.windowOf(s.date, litDoc.cfg.graceDays).until;
+    if(r && r.done) return s.date === today ? {icon:'📖', done:true, go:"openLiteracy('" + s.date + "')", title:'오늘의 지문 완료', desc:'「' + s.sheet.title + '」 · 🪙 ' + Number(r.coin||0) + ' 받았어요'} : null;
+    return {icon:'📖', hot: s.date === today, go:"openLiteracy('" + s.date + "')",
+      title: s.date === today ? '오늘의 지문' : '지난 지문 풀기',
+      desc: '「' + s.sheet.title + '」' + (s.date === today ? '' : ' · ' + litLabel(s.date)) + ' · ' + litLabel(until) + '까지'};
+  }).filter(Boolean);
+}
+
+/* 지문 화면 칸은 앱 시작 때 만들지만, 시작 순서가 달라도 열 수 있게 없으면 여기서 만든다 */
+function litEnsurePanel(){
+  let panel = document.getElementById('panel-literacy');
+  if(panel) return panel;
+  const anchor = document.getElementById('panel-checklist') || document.getElementById('panel-home') || document.querySelector('[id^="panel-"]');
+  if(!anchor) return null;
+  anchor.insertAdjacentHTML('afterend','<div id="panel-literacy" style="display:none"></div>');
+  return document.getElementById('panel-literacy');
+}
+function openLiteracy(date){
+  litView = date && litDoc.sheets[date] ? {date, answers:{blanks:['','',''], choice:-1}, marks:null, msg:''} : null;
+  litEnsurePanel();
+  showTab('literacy');
+  renderLiteracyPanel();
+}
+function renderLiteracyPanel(){
+  const panel = litEnsurePanel();
+  if(!panel) return;
+  if(!window.LiteracyCore){ panel.innerHTML = '<div class="lit-empty">지문 기능을 불러오지 못했어요. 새로고침해 주세요.</div>'; return; }
+  LiteracyCore.injectStyles();
+  if(litView && !litDoc.sheets[litView.date]) litView = null;
+  panel.innerHTML = litView ? litSheetHtml() : litListHtml();
+  if(litView) litBind(panel);
+}
+function litListHtml(){
+  const open = litOpenList();
+  const today = todayISO();
+  const done = Object.values(litDoc.sheets).filter(s => litRec(s.date)?.done && litState(s.date) !== 'open').sort((a,b)=>a.date<b.date?1:-1).slice(0,6);
+  const card = (s, sub, cls) => '<button type="button" class="lit-item' + (cls||'') + '" onclick="openLiteracy(\'' + s.date + '\')">'
+    + '<span class="lit-item-subj">' + escHtml(s.subject) + '</span>'
+    + '<span class="lit-item-body"><b>' + escHtml(s.sheet.title) + '</b><small>' + sub + '</small></span><span class="lit-item-go">›</span></button>';
+  let next = '';
+  if(!open.some(s => !litRec(s.date)?.done)){
+    const days = todoSchedule ? todoSchedule.weekly.literacy : [];
+    const nd = LiteracyCore.upcomingDates(days, LiteracyCore.addDays(today, 1), 1)[0];
+    next = '<div class="lit-empty">🌱 지금 풀 지문을 다 했어요.' + (nd ? '<br>다음 지문은 <b>' + litLabel(nd) + '</b>에 열려요.' : '') + '</div>';
+  }
+  return '<div class="lit-list">'
+    + '<div class="lit-list-head"><div class="lit-list-title">📖 오늘의 지문</div><div class="lit-list-sub">글을 읽고 한눈에 정리 빈칸을 채워 봐요. 처음 채점할 때 많이 맞힐수록 보너스!</div></div>'
+    + open.map(s => {
+        const r = litRec(s.date);
+        const until = LiteracyCore.windowOf(s.date, litDoc.cfg.graceDays).until;
+        return card(s, litLabel(s.date) + (r && r.done ? ' · ✅ 완료 · 🪙 ' + Number(r.coin||0) : ' · ' + litLabel(until) + '까지'), r && r.done ? ' done' : (s.date === today ? ' hot' : ''));
+      }).join('')
+    + next
+    + (done.length ? '<div class="lit-list-sub" style="margin:16px 2px 6px;">지난 기록</div>' + done.map(s => card(s, litLabel(s.date) + ' · 처음 ' + litRec(s.date).first + '/4', ' done')).join('') : '')
+    + '</div>';
+}
+function litSheetHtml(){
+  const s = litDoc.sheets[litView.date];
+  const r = litRec(litView.date);
+  const finished = !!(r && r.done);
+  const closed = litState(litView.date) !== 'open';
+  const fb = litView.marks && !litView.marks.allRight
+    ? '<div class="lit-fb">' + litView.marks.wrong.map(w => '<button type="button" data-lit-goto="' + w.evidence + '">✗ ' + w.n + '번' + (w.empty ? '을 아직 고르지 않았어' : '이 틀렸어') + '. 👉 ' + w.evidence + '문단을 다시 읽어 봐</button>').join('') + '</div>' : '';
+  let tail = '';
+  if(finished){
+    tail = '<div class="lit-card lit-sec lit-reward"><h3>🎉 완료했어요!</h3><div class="lit-note">처음 채점: 4문항 중 ' + r.first + '개 정답</div>'
+      + '<div class="lit-rw total"><span>받은 보상</span><b>🪙 ' + Number(r.coin||0) + '</b></div>'
+      + (Number(r.tickets) > 0 ? '<div class="lit-rw on"><span>모험 공격권</span><b>⚔️ +' + Number(r.tickets) + '</b></div>' : '')
+      + ((typeof bossOn === 'function' && bossOn() && String(r.doneAt||'') && LiteracyCore.ymd(new Date(r.doneAt)) === todayISO()) ? '<div class="lit-note" style="margin-top:8px;">오늘 보스 도전 조건도 채웠어요! 🤝</div>' : '')
+      + (Number(r.first) < litDoc.cfg.bonusMin ? '<div class="lit-note" style="margin-top:8px;">처음에 ' + litDoc.cfg.bonusMin + '개 이상 맞히면 보너스 🪙' + litDoc.cfg.coinBonus + '! 다음엔 천천히 읽어 봐요.</div>' : '')
+      + '</div>'
+      + (s.essay ? litEssayHtml(s, r, closed) : '');
+  }else if(closed){
+    tail = '<div class="lit-empty">이 지문은 풀 수 있는 기간이 지났어요.</div>';
+  }else{
+    tail = fb + (litView.msg ? '<div class="lit-note" style="margin-bottom:8px;">' + escHtml(litView.msg) + '</div>' : '')
+      + '<button type="button" class="lit-btn" id="lit-check"' + (litBusy ? ' disabled' : '') + '>' + (litBusy ? '저장하는 중…' : '채점하기') + '</button>'
+      + '<div class="lit-note" data-learning-save style="text-align:center;margin-top:6px;"></div>';
+  }
+  const ans = finished ? {blanks: LiteracyCore.blanksOf(s.sheet).map(b=>b.answer), choice: s.sheet.final_quiz.answer} : litView.answers;
+  return '<div class="lit-top"><button type="button" class="lit-back" onclick="openLiteracy()">‹ 목록</button></div>'
+    + LiteracyCore.renderSheet(s.sheet, {dateLabel: litLabel(s.date), subject: s.subject, answers: ans,
+        marks: finished ? LiteracyCore.grade(s.sheet, ans) : litView.marks, locked: finished || closed || litBusy})
+    + '<div class="lit">' + tail + '</div>';
+}
+function litEssayHtml(s, r, closed){
+  const locked = !!r.essayOk || closed;
+  return '<div class="lit-card lit-sec lit-essay"><div class="lit-sec-t"><span class="lit-tag">서술형</span>선생님이 낸 문제<span class="lit-q">선택</span></div>'
+    + '<div class="lit-quiz">' + escHtml(s.essay) + '</div>'
+    + '<textarea id="lit-essay-text" maxlength="600" placeholder="글에서 찾은 근거를 넣어 2~3문장으로 써 봐요."' + (locked ? ' disabled' : '') + '>' + escHtml(r.essay || '') + '</textarea>'
+    + (r.essayOk ? '<div class="lit-note" style="margin-top:6px;">👍 선생님이 확인했어요.</div>'
+        : locked ? '' : '<button type="button" class="lit-btn ghost" id="lit-essay-send" style="margin-top:8px;"' + (litBusy ? ' disabled' : '') + '>' + (r.essay ? '고쳐서 다시 내기' : '선생님께 내기') + '</button>')
+    + '</div>';
+}
+function litBind(panel){
+  panel.querySelectorAll('[data-lit-blank]').forEach(inp => inp.addEventListener('input', () => {
+    litView.answers.blanks[Number(inp.dataset.litBlank)] = inp.value;
+    inp.parentElement.classList.remove('no');
+  }));
+  panel.querySelectorAll('[data-lit-choice]').forEach(btn => btn.addEventListener('click', () => {
+    if(btn.disabled) return;
+    litView.answers.choice = Number(btn.dataset.litChoice);
+    panel.querySelectorAll('[data-lit-choice]').forEach(b => { b.classList.remove('ok','no','sel'); if(b === btn) b.classList.add('sel'); });
+  }));
+  panel.querySelectorAll('[data-lit-goto]').forEach(b => b.addEventListener('click', () => litHighlight(Number(b.dataset.litGoto))));
+  panel.querySelector('#lit-check')?.addEventListener('click', litCheck);
+  panel.querySelector('#lit-essay-send')?.addEventListener('click', litSendEssay);
+}
+function litHighlight(p){
+  const panel = document.getElementById('panel-literacy');
+  panel.querySelectorAll('[data-lit-p]').forEach(el => el.classList.toggle('lit-hl', Number(el.dataset.litP) === p));
+  panel.querySelector('[data-lit-p="' + p + '"]')?.scrollIntoView({behavior:'smooth', block:'center'});
+}
+async function litCheck(){
+  if(litBusy || !litView) return;
+  const date = litView.date, s = litDoc.sheets[date];
+  if(!s) return;
+  const g = LiteracyCore.grade(s.sheet, litView.answers);
+  litView.marks = g; litView.msg = '';
+  litBusy = true; renderLiteracyPanel();
+  try{
+    if(!litRec(date)){
+      const f = await litCommit(date, 'first', {score: g.score});
+      if(f && f.tickets > 0) showFeedbackNotice('⚔️ 처음에 ' + g.score + '개 맞혀서 모험 공격권 +' + f.tickets + '!');
+    }
+    if(g.allRight){
+      const out = await litCommit(date, 'done', {});
+      if(out && out.gain > 0){
+        addTxn('오늘의 지문 완료 보상', out.gain, 'earn');
+        void pushEconLog({type:'literacy_reward', detail:'오늘의 지문 (' + date + ')', delta: out.gain,
+          balanceBefore: out.before, balanceAfter: out.after, meta:{date, first: out.first}});
+        renderEconomyPanels(getMyStudent());
+        showFeedbackNotice('🎉 오늘의 지문 완료! 🪙 ' + out.gain);
+      }
+    }
+  }catch(e){
+    console.warn('오늘의 지문 저장 실패', e);
+    litView.msg = e.message === 'LIT_CLOSED' ? '이 지문은 지금 풀 수 없어요. 목록에서 다시 확인해 주세요.'
+      : '저장하지 못했어요. 인터넷 연결을 확인하고 다시 채점해 주세요.';
+  }finally{
+    litBusy = false;
+    renderLiteracyPanel();
+    refreshTodayPanel();
+    if(litView && litView.marks && !litView.marks.allRight) litHighlight(litView.marks.wrong[0].evidence);
+  }
+}
+async function litSendEssay(){
+  const date = litView && litView.date;
+  const text = String(document.getElementById('lit-essay-text')?.value || '').trim().slice(0, 600);
+  if(!date) return;
+  if(text.length < 5) return showFeedbackNotice('✍️ 조금 더 써 볼까요?');
+  litBusy = true; renderLiteracyPanel();
+  try{ await litCommit(date, 'essay', {text}); showFeedbackNotice('✍️ 선생님께 냈어요!'); }
+  catch(e){ console.warn('서술형 저장 실패', e); showFeedbackNotice('⚠️ 저장하지 못했어요. 다시 시도해 주세요.'); }
+  finally{ litBusy = false; renderLiteracyPanel(); }
+}
+/* 서버 트랜잭션: 지문이 승인·공개 중인지 서버 문서로 다시 확인하고 기록·보상을 한 번에 저장 */
+async function litCommit(date, kind, arg){
+  if(!window._fbReady || !window._db || !roomId || !window._fsRunTxn) throw new Error('CONNECTION_REQUIRED');
+  const db = window._db;
+  const progRef = window._fsDoc(db,'classrooms',roomId,'data','pesk-quiz-progress');
+  const studRef = window._fsDoc(db,'classrooms',roomId,'data','tesk-students');
+  const litRef  = window._fsDoc(db,'classrooms',roomId,'data','pesk-literacy');
+  let out = null;
+  await runLearningTransaction(db, async (txn) => {
+    const [progSnap, studSnap, litSnap] = await Promise.all([txn.get(progRef), txn.get(studRef), txn.get(litRef)]);
+    const lv = litSnap.exists() ? (litSnap.data().value || {}) : {};
+    const cfg = LiteracyCore.normalizeCfg(lv.cfg);
+    const sheet = lv.sheets && lv.sheets[date];
+    const today = todayISO();
+    if(!sheet || sheet.status !== 'approved' || LiteracyCore.stateOn(date, today, cfg.graceDays) !== 'open') throw new Error('LIT_CLOSED');
+    const all = progSnap.exists() ? (progSnap.data().value || {}) : {};
+    const key = all[myStudentNum] ? myStudentNum : String(myStudentNum);
+    const me = Object.assign({}, all[key] || {});
+    const lit = Object.assign({}, me.literacy || {});
+    const rec = Object.assign({}, lit[date] || {});
+    const now = new Date().toISOString();
+    let gain = 0, before = null, after = null, ticketsOut = 0;
+    if(kind === 'first'){
+      if(rec.firstAt) { out = {gain:0}; return; }
+      rec.first = Math.max(0, Math.min(4, Number(arg.score) || 0)); rec.firstAt = now; rec.done = false;
+      // 처음 채점에서 맞힌 문항마다 모험 공격권 2개 (사냥 준비 문제 수는 차지하지 않는다, 최대 30개까지 쌓임)
+      if(window.RPG){
+        const g = window.RPG.normalizeGame(me.game);
+        const room = Math.max(0, 30 - g.huntEnergy.length);
+        const n = Math.min(room, rec.first * 2);
+        for(let i = 0; i < n; i++) g.huntEnergy.push(window.RPG.BASE_DMG);
+        me.game = g; rec.tickets = n; ticketsOut = n;
+      }
+    }else if(kind === 'done'){
+      if(rec.done || !rec.firstAt){ out = {gain:0}; return; }
+      gain = LiteracyCore.reward(cfg, rec.first).total;
+      rec.done = true; rec.doneAt = now; rec.coin = gain;
+      me.litDay = today;   // 오늘의 지문 완료 → 오늘 보스 도전 자격
+      if(gain > 0){
+        const list = studSnap.exists() ? (studSnap.data().value || []) : [];
+        const i = list.findIndex(x => Number(x.num) === Number(myStudentNum));
+        if(i < 0){ gain = 0; rec.coin = 0; }
+        else{
+          before = Number(list[i].points || 0); after = before + gain; list[i].points = after;
+          txn.set(studRef, {value: list, updatedAt: now});
+          out = {students: list};
+        }
+      }
+    }else if(kind === 'essay'){
+      if(!rec.done || rec.essayOk || !sheet.essay || !sheet.essay.on){ out = {gain:0}; return; }
+      rec.essay = String(arg.text || '').slice(0, 600); rec.essayAt = now;
+    }
+    lit[date] = rec;
+    // 오래된 지문 기록 정리 (문서 비대화 방지 — 150일)
+    const keep = LiteracyCore.addDays(today, -150);
+    Object.keys(lit).forEach(d => { if(d < keep) delete lit[d]; });
+    all[key] = Object.assign(me, {literacy: lit, studentName: myStudentName || '', accountUid: myAccountUid || '', updatedAt: now});
+    txn.set(progRef, {value: all, updatedAt: now});
+    out = Object.assign(out || {}, {all, gain, before, after, first: rec.first, tickets: ticketsOut});
+  });
+  if(out && out.all){ _applyQuizProgress(out.all); }
+  if(out && out.students) students = out.students;
+  return out;
+}
+
+/* ─────────────────────────────────────────
+   🧩 성장 — 주간 퀘스트 · 조각 · 제작 · 도감 · 세트 (규칙: shared/pesk-progression.js)
+   · 퀘스트는 학생마다 무작위 3개 (선생님이 켠 종류 · 고정한 퀘스트 우선). 월요일마다 바뀐다.
+   · 조각은 제작에만 쓴다. 제작 아이템은 상점에서 팔지 않는다.
+───────────────────────────────────────── */
+let questCfg = null;
+let _questBusy = false;
+function _applyQuestCfg(raw){ questCfg = (raw && typeof raw === 'object') ? raw : null; }
+const PG = () => window.PeskProgress;
+function myFrags(){ return PG() ? PG().normFrags((qzState() || {}).frags) : {know:0, grit:0, brave:0}; }
+function mySetFx(eq){
+  return (window.PeskCombat && window.PeskCombat.setEffects) ? window.PeskCombat.setEffects(eq || avEquipped())
+    : {wrongDmg:12, petCharge:0, power:0, expPct:0, campHeal:0, royal:0, fragBonus:0, active:[]};
+}
+function questCtx(){
+  return {literacy: !!(todoSchedule && (todoSchedule.weekly.literacy || []).length), boss: typeof bossOn === 'function' && bossOn()};
+}
+function myQuests(){
+  if(!PG()) return [];
+  const week = PG().weekKey(todayISO()), rec = qzState(), claimed = PG().questClaimed(rec, week);
+  return PG().pickQuests(questCfg, week, String(myStudentNum), questCtx()).map(q => ({...q, week,
+    progress: Math.min(q.target, PG().questProgress(q.id, rec, week, questCfg)), claimed: claimed.includes(q.id)}));
+}
+function fragChipsHtml(){
+  if(!PG()) return '';
+  const f = myFrags();
+  return '<span class="frag-chips">' + PG().FRAG_IDS.map(k => '<span class="frag-chip" title="' + escHtml(PG().FRAGS[k].name + ' · ' + PG().FRAGS[k].from) + '">'
+    + PG().FRAGS[k].icon + ' <b>' + f[k] + '</b></span>').join('') + '</span>';
+}
+function questCardHtml(){
+  if(!PG()) return '';
+  const qs = myQuests();
+  if(!qs.length) return '';
+  const fx = mySetFx();
+  return '<div class="quest-card"><div class="quest-head"><b>🧩 이번 주 퀘스트</b>' + fragChipsHtml() + '</div>'
+    + qs.map(q => {
+        const done = q.progress >= q.target;
+        return '<div class="quest-row' + (q.claimed ? ' claimed' : done ? ' done' : '') + '">'
+          + '<span class="quest-ic">' + q.icon + '</span>'
+          + '<span class="quest-body"><span class="quest-name">' + escHtml(q.name) + (q.pinned ? ' <small>📌 선생님</small>' : '') + '</span>'
+          + '<span class="quest-bar"><i style="width:' + Math.round(q.progress / q.target * 100) + '%"></i></span>'
+          + '<small>' + q.progress + ' / ' + q.target + (q.unit || '') + ' · 보상 ' + PG().fragText(q.reward) + (fx.fragBonus ? ' (+' + fx.fragBonus + ' 노력 세트)' : '') + '</small></span>'
+          + (q.claimed ? '<span class="quest-ok">✅</span>' : done ? '<button type="button" class="quest-claim" onclick="claimQuest(\'' + q.id + '\')">받기</button>' : '')
+          + '</div>';
+      }).join('')
+    + '<div class="quest-foot">월요일마다 새 퀘스트가 나와요 · 조각은 <a href="#" onclick="openDex();return false;">📚 도감 → 제작</a>에 써요</div></div>';
+}
+function questClaimableCount(){ return myQuests().filter(q => !q.claimed && q.progress >= q.target).length; }
+function openDex(){ showTab('myroom'); avShowRoomTab('dex'); }
+async function claimQuest(id){
+  if(_questBusy || !PG()) return;
+  const q = myQuests().find(x => x.id === id);
+  if(!q || q.claimed || q.progress < q.target) return;
+  const bonus = mySetFx().fragBonus;
+  _questBusy = true;
+  try{
+    await rpgMutateProgress(current => {
+      const claimed = PG().questClaimed(current, q.week);
+      if(claimed.includes(id)) return current;
+      if(PG().questProgress(id, current, q.week, questCfg) < q.target) throw new Error('NOT_DONE');
+      const gain = {...q.reward};
+      if(bonus) PG().FRAG_IDS.forEach(k => { if(gain[k]) gain[k] += bonus; });
+      return {...current, frags: PG().addFrags(current.frags, gain), qw: {week: q.week, claimed: claimed.concat([id])}};
+    });
+    showFeedbackNotice('🧩 퀘스트 완료! ' + PG().fragText(q.reward) + (bonus ? ' (+' + bonus + ')' : ''));
+  }catch(e){ console.warn('퀘스트 보상 실패', e); showFeedbackNotice('⚠️ 보상을 받지 못했어요. 다시 눌러 주세요.'); }
+  finally{ _questBusy = false; avRefresh(); refreshTodayPanel(); }
+}
+
+/* 🔁 오늘 기다리는 복수 몬스터 수 (레이팅 유형 복습 + 일반 문제 복습) */
+function revengeDueCount(){
+  const s = qzState(), today = qzToday();
+  let n = 0;
+  if(window.QRATE) n += window.QRATE.reviewCount(s.review || [], today);
+  if(PG()) n += PG().revengeDue(s.revenge, today).length;
+  return n;
+}
+function revengeNudgeHtml(){
+  const n = revengeDueCount();
+  return n ? '<div class="revenge-nudge">🔁 <b>복수 몬스터 ' + n + '마리</b>가 기다려요. 전에 틀린 유형이 문제 사이사이에 나타나요. 맞히면 공격권 2개 + 🔁 극복 조각!</div>' : '';
+}
+
+/* ── 📚 도감 ── */
+const DEX_CATS = ['weapon','hat','top','bottom','shoes','pet','room','hair'];
+function dexStats(){
+  const all = [];
+  DEX_CATS.forEach(c => (avCatalog()[c] || []).forEach(i => all.push({cat:c, item:i})));
+  const owned = all.filter(x => avOwns(x.cat, x.item)).length;
+  return {all, owned, total: all.length, pct: all.length ? Math.floor(owned / all.length * 100) : 0};
+}
+function dexThumb(cat, item){
+  if(cat === 'pet') return '<img class="dex-thumb pet" src="' + petImgURL(item.id, 1) + '" alt="">';
+  if(cat === 'room') return '<span class="dex-thumb room" style="' + (window.AV_ROOM_STYLE ? window.AV_ROOM_STYLE(item.id) : '') + '"></span>';
+  return '<img class="dex-thumb" src="' + avCharDataURL(Object.assign({}, avEquipped(), {[cat]: item.id})) + '" alt="">';
+}
+function buildDexPanel(){
+  if(!PG() || !window.PeskCombat) return '<div class="empty-state">도감 파일을 불러오지 못했어요.</div>';
+  const st = dexStats(), f = myFrags(), eq = avEquipped();
+  const steps = PG().DEX_STEPS.map(s => {
+    const reached = st.pct >= s.pct;
+    const item = s.item ? avFind('room', s.item) : null;
+    const got = item && avOwns('room', item);
+    return '<div class="dex-step' + (reached ? ' on' : '') + '"><b>' + s.pct + '%</b><small>' + escHtml(s.reward) + '</small>'
+      + (item && reached && !got ? '<button type="button" onclick="claimDexItem(\'' + s.item + '\')">받기</button>' : got ? '<small>✅ 받음</small>' : '') + '</div>';
+  }).join('');
+  const title = PG().dexTitle(st.pct);
+  const craft = PG().RECIPES.map(r => {
+    const item = avFind(r.slot, r.id);
+    if(!item) return '';
+    const have = avOwns(r.slot, item), can = PG().canCraft(f, r), pw = avPowerOfItem(r.slot, r.id);
+    return '<div class="craft-item' + (have ? ' have' : '') + '">' + dexThumb(r.slot, item)
+      + '<span class="craft-name">' + escHtml(r.name) + (pw ? ' <small class="av-item-atk static">💪+' + pw + '</small>' : '') + '</span>'
+      + '<small>' + PG().fragText(r.cost) + '</small>'
+      + (have ? '<span class="craft-have">✅ 가지고 있음</span>'
+          : '<button type="button" class="craft-btn"' + (can ? '' : ' disabled') + ' onclick="avCraft(\'' + r.id + '\')">' + (can ? '🔨 만들기' : '조각 부족') + '</button>')
+      + '</div>';
+  }).join('');
+  const sets = window.PeskCombat.setsOf(eq).map(s => {
+    const pieces = s.pieces.map(p => {
+      const cat = ({a:'hat',t:'top',l:'bottom',e:'shoes',w:'weapon'})[p[0]];
+      const item = avFind(cat, p);
+      const owned = (avCatalog()[cat] || []).some(i => (s.craft ? i.id === p : window.PeskCombat.pieceMatches(p, i.id)) && avOwns(cat, i));
+      const worn = s.craft ? eq[cat] === p : window.PeskCombat.pieceMatches(p, eq[cat]);
+      return '<span class="set-piece' + (worn ? ' worn' : owned ? ' owned' : '') + '">' + escHtml(item ? item.name : p) + '</span>';
+    }).join('');
+    return '<div class="set-card' + (s.level ? ' on' : '') + '"><div class="set-head">' + s.icon + ' <b>' + escHtml(s.name) + ' 세트</b><small>입은 부위 ' + s.count + ' / ' + s.total + '</small></div>'
+      + '<div class="set-pieces">' + pieces + '</div>'
+      + '<div class="set-fx"><span class="' + (s.level >= 1 ? 'on' : '') + '">3개: ' + escHtml(s.fx[0].text) + '</span><span class="' + (s.level >= 2 ? 'on' : '') + '">' + (s.fullAt ? s.fullAt + '개' : '전부') + ': ' + escHtml(s.fx[1].text) + '</span></div></div>';
+  }).join('');
+  const grid = DEX_CATS.map(c => {
+    const list = avCatalog()[c] || [];
+    if(!list.length) return '';
+    const have = list.filter(i => avOwns(c, i)).length;
+    return '<div class="dex-cat"><div class="dex-cat-head">' + (AV_LABEL[c] || c) + ' <small>' + have + ' / ' + list.length + '</small></div><div class="dex-grid">'
+      + list.map(i => {
+          const own = avOwns(c, i), pw = avPowerOfItem(c, i.id);
+          const src = own ? '' : i.craft ? '🧩 제작' : avPriceOf(c, i).toLocaleString() + '🪙';
+          return '<div class="dex-cell' + (own ? '' : ' lock') + '" title="' + escHtml(i.name) + '">' + dexThumb(c, i)
+            + (pw ? '<span class="av-item-atk">💪+' + pw + '</span>' : '')
+            + '<span class="dex-name">' + escHtml(i.name) + '</span>' + (src ? '<span class="dex-src">' + src + '</span>' : '') + '</div>';
+        }).join('') + '</div></div>';
+  }).join('');
+  return '<div class="dex">'
+    + '<div class="dex-top"><div><div class="dex-title">📚 아이템 도감' + (title ? ' <span class="av-title">' + escHtml(title) + '</span>' : '') + '</div>'
+    + '<div class="dex-sub">' + st.owned + ' / ' + st.total + '개 모음</div></div><b class="dex-pct">' + st.pct + '%</b></div>'
+    + '<div class="dex-bar"><i style="width:' + st.pct + '%"></i></div>'
+    + '<div class="dex-steps">' + steps + '</div>'
+    + '<div class="section-title" style="margin:18px 0 8px;">🔨 제작 ' + fragChipsHtml() + '</div>'
+    + '<p class="av-hint">조각은 주간 퀘스트와 복수 몬스터에서 모아요. 제작 아이템은 상점에서 팔지 않아요.</p>'
+    + '<div class="craft-list">' + craft + '</div>'
+    + '<div class="section-title" style="margin:18px 0 8px;">🧷 세트 효과</div>'
+    + '<p class="av-hint">같은 세트를 3개 입으면 1단계, 전부 입으면 2단계 효과가 생겨요. 불꽃 검처럼 강화된 아이템도 같은 계열로 쳐요.</p>'
+    + '<div class="set-list">' + sets + '</div>'
+    + '<div class="section-title" style="margin:18px 0 8px;">🗂️ 모든 아이템</div>' + grid
+    + '</div>';
+}
+/* 제작: 조각(학습 기록)과 보유 목록(아바타 문서)을 한 트랜잭션으로 바꾼다 */
+async function avCraft(id){
+  const r = PG() && PG().RECIPES.find(x => x.id === id);
+  if(!r || _avBusy) return;
+  const item = avFind(r.slot, id);
+  if(!item || avOwns(r.slot, item)) return;
+  if(!PG().canCraft(myFrags(), r)) return showFeedbackNotice('조각이 부족해요: ' + PG().fragText(r.cost));
+  if(!confirm('「' + r.name + '」을(를) 만들까요?\n사용할 조각: ' + PG().fragText(r.cost))) return;
+  await avGrantItem(id, r.cost, '🔨 「' + r.name + '」을(를) 만들었어요! 옷장에서 입어 보세요.');
+}
+/* 도감 50% 보상: 수집가의 방 */
+async function claimDexItem(id){
+  const step = PG() && PG().DEX_STEPS.find(s => s.item === id);
+  if(!step || dexStats().pct < step.pct) return;
+  await avGrantItem(id, null, '🏛️ 「수집가의 방」을 받았어요! 옷장 → 방에서 바꿔 보세요.');
+}
+async function avGrantItem(id, cost, message){
+  if(_avBusy) return;
+  if(!window._fbReady || !window._db || !roomId || !window._fsRunTxn) return showFeedbackNotice('인터넷에 연결된 뒤 다시 시도해 주세요.');
+  const db = window._db, now = new Date().toISOString();
+  const progRef = window._fsDoc(db,'classrooms',roomId,'data','pesk-quiz-progress');
+  const avRef = window._fsDoc(db,'classrooms',roomId,'data','pesk-avatars');
+  _avBusy = true;
+  try{
+    let out = null;
+    await runLearningTransaction(db, async txn => {
+      const [ps, as] = await Promise.all([txn.get(progRef), txn.get(avRef)]);
+      const all = ps.exists() ? (ps.data().value || {}) : {}, allAv = as.exists() ? (as.data().value || {}) : {};
+      const prevAv = allAv[myStudentNum] || allAv[String(myStudentNum)] || {};
+      const owned = new Set(Array.isArray(prevAv.owned) ? prevAv.owned : []);
+      if(owned.has(id)){ out = {all, allAv}; return; }
+      if(cost){
+        const key = all[myStudentNum] ? myStudentNum : String(myStudentNum);
+        const me = {...(all[key] || {})};
+        me.frags = PG().spend(me.frags, cost);   // 부족하면 NOT_ENOUGH 로 멈춘다
+        all[key] = {...me, studentName: myStudentName || '', accountUid: myAccountUid || '', updatedAt: now};
+        txn.set(progRef, {value: all, updatedAt: now});
+      }
+      owned.add(id);
+      const a = avState();
+      allAv[myStudentNum] = {...prevAv, equipped: prevAv.equipped || Object.assign({}, a.equipped), owned: Array.from(owned),
+        spent: Number(prevAv.spent || 0), pets: _avMergePets(prevAv.pets, a.pets), pats: _avMergePats(a.pats || prevAv.pats),
+        studentName: myStudentName || '', accountUid: myAccountUid || '', updatedAt: now};
+      txn.set(avRef, {value: allAv, updatedAt: now});
+      out = {all, allAv};
+    });
+    _applyQuizProgress(out.all);
+    allAvatars = out.allAv; myAvatar = out.allAv[myStudentNum] || out.allAv[String(myStudentNum)] || myAvatar;
+    showFeedbackNotice(message);
+  }catch(e){
+    console.warn('아이템 받기 실패', e);
+    showFeedbackNotice(String(e.message) === 'NOT_ENOUGH' ? '조각이 부족해요.' : '⚠️ 저장하지 못했어요. 다시 시도해 주세요.');
+  }finally{ _avBusy = false; avRefresh(); }
 }
 
 /* (미션 기능 삭제됨) */
@@ -8644,8 +9256,37 @@ function subscribeToUpdates(){
     window._fsDoc(window._db,'classrooms',roomId,'data','pesk-class-boss'),
     (snap)=>{
       _applyBossCfg(snap.exists() ? snap.data().value : null);
-      const panel = document.getElementById('panel-myroom');
-      if(panel && panel.style.display !== 'none' && ['rpg','boss'].includes(avRoomTab)) scheduleAdventureRefresh();
+      if(advActive()) scheduleAdventureRefresh();
+    }
+  ));
+
+  // 🧒 오늘 할 일 요일표 실시간 — 선생님이 체크를 바꾸면 홈 목록과 글쓰기 미제출 계산이 바로 따라간다
+  _unsubs.push(window._fsOnSnapshot(
+    window._fsDoc(window._db,'classrooms',roomId,'data','pesk-todo-schedule'),
+    (snap)=>{
+      _applyTodoSchedule(snap.exists() ? snap.data().value : null);
+      const panel = document.getElementById('panel-writing');
+      const formOpen = (document.getElementById('writing-form-wrap')||{}).style?.display === 'block';
+      if(panel && panel.style.display !== 'none' && !formOpen) panel.innerHTML = buildWritingPanel();
+      renderEconomyPanels(getMyStudent());
+      refreshTodayPanel();
+    }
+  ));
+
+  // 🧩 주간 퀘스트 설정 — 선생님이 종류·목표를 바꾸면 바로 반영
+  _unsubs.push(window._fsOnSnapshot(
+    window._fsDoc(window._db,'classrooms',roomId,'data','pesk-quest-config'),
+    (snap)=>{ _applyQuestCfg(snap.exists() ? snap.data().value : null); if(avAnyVisible()) scheduleAdventureRefresh(); refreshTodayPanel(); }
+  ));
+
+  // 📖 오늘의 지문 — 선생님이 승인하거나 취소하면 바로 반영 (푸는 중인 화면은 건드리지 않는다)
+  _unsubs.push(window._fsOnSnapshot(
+    window._fsDoc(window._db,'classrooms',roomId,'data','pesk-literacy'),
+    (snap)=>{
+      _applyLiteracy(snap.exists() ? snap.data().value : null);
+      const panel = document.getElementById('panel-literacy');
+      if(panel && panel.style.display !== 'none' && (!litView || !litDoc.sheets[litView.date])) renderLiteracyPanel();
+      refreshTodayPanel();
     }
   ));
 
@@ -8720,8 +9361,7 @@ function subscribeToUpdates(){
     (snap)=>{
       if(_avBusy) return;   // 내가 저장하는 중이면 덮어쓰지 않음
       _applyAvatarDoc(snap.exists() ? (snap.data().value || {}) : {});
-      const panel = document.getElementById('panel-myroom');
-      if(panel && panel.style.display !== 'none') scheduleAdventureRefresh();
+      if(avAnyVisible()) scheduleAdventureRefresh();
       const mini = document.getElementById('av-mini');
       if(mini) mini.src = avCharDataURL(avEquipped());
     }
@@ -8731,8 +9371,7 @@ function subscribeToUpdates(){
     window._fsDoc(window._db,'classrooms',roomId,'data','pesk-avatar-prices'),
     (snap)=>{
       _applyAvatarPriceDoc(snap.exists() ? snap.data().value : null);
-      const panel = document.getElementById('panel-myroom');
-      if(panel && panel.style.display !== 'none') scheduleAdventureRefresh();
+      if(avAnyVisible()) scheduleAdventureRefresh();
     }
   ));
 
@@ -8742,8 +9381,7 @@ function subscribeToUpdates(){
     (snap)=>{
       _applyQuizConfig(snap.exists() ? snap.data().value : null);
       rpgQ = null; rpgPicked = null; rpgDiag = null; // 진단도 새 학년·단원 범위로 다시 시작
-      const panel = document.getElementById('panel-myroom');
-      if(panel && panel.style.display !== 'none') scheduleAdventureRefresh();
+      if(avAnyVisible()) scheduleAdventureRefresh();
     }
   ));
 
@@ -9086,6 +9724,109 @@ waitFirebase(async()=>{
 .av-item-name{font-size:10px;font-weight:700;line-height:1.25;text-align:center;min-height:24px;
   display:flex;align-items:center;}
 .av-item-price{font-size:9.5px;font-weight:800;color:var(--gold);}
+.av-item{position:relative;}
+.av-item-atk{position:absolute;top:4px;right:4px;font-size:9.5px;font-weight:900;color:#b4232a;background:#fff1f0;border:1px solid #fecaca;border-radius:99px;padding:1px 5px;line-height:1.3;}
+.av-power{background:var(--card);border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);padding:14px 16px;margin:12px 0;}
+.av-power-head{display:flex;align-items:baseline;gap:8px;}
+.av-power-head span{font-weight:800;font-size:14px;}
+.av-power-head b{font-size:26px;font-weight:900;color:#b4232a;margin-left:auto;}
+.av-power-head small{font-size:12px;font-weight:800;color:var(--sub);}
+.av-power-list{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;font-size:12.5px;}
+.av-power-list li{display:flex;justify-content:space-between;gap:6px;border-bottom:1px dashed var(--border);padding:3px 0;min-width:0;}
+.av-power-list li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--sub);}
+.av-power-list li b{color:var(--text);}
+.av-power-fx{margin-top:10px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;line-height:1.5;color:var(--text);}
+.av-power-note{margin-top:8px;font-size:11.5px;color:var(--hint);line-height:1.5;}
+.rpg-power{font-weight:900;color:#b4232a;}
+.quest-card{background:var(--card);border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);padding:12px 14px;margin:10px 0;}
+.quest-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;margin-bottom:6px;}
+.frag-chips{display:inline-flex;gap:5px;margin-left:auto;}
+.frag-chip{font-size:12px;font-weight:700;background:var(--bg);border-radius:99px;padding:2px 8px;}
+.quest-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px dashed var(--border);}
+.quest-ic{font-size:20px;flex:0 0 26px;text-align:center;}
+.quest-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+.quest-name{font-size:13.5px;font-weight:800;word-break:keep-all;}
+.quest-name small{font-size:10.5px;color:var(--gold);font-weight:800;}
+.quest-body small{font-size:11.5px;color:var(--sub);}
+.quest-bar{height:7px;border-radius:99px;background:var(--bg);overflow:hidden;}
+.quest-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#fbbf24,#f97316);}
+.quest-row.claimed{opacity:.55;}
+.quest-claim{font:inherit;font-size:13px;font-weight:800;border:none;border-radius:10px;padding:8px 12px;background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;cursor:pointer;}
+.quest-ok{font-size:18px;}
+.quest-foot{font-size:11.5px;color:var(--hint);margin-top:6px;}
+.quest-foot a{color:var(--pesk);font-weight:700;}
+.revenge-nudge{background:#f5f3ff;border:1.5px solid #c4b5fd;color:#5b21b6;border-radius:var(--radius-sm);padding:10px 12px;font-size:12.5px;line-height:1.5;margin:10px 0;}
+.rpg-stage.revenge .rpg-arena{filter:hue-rotate(250deg) saturate(1.3);}
+.rpg-stage.revenge .rpg-mon-title{color:#6d28d9;}
+.av-power-set{font-size:12.5px;color:#9a3412;}
+.av-item-atk.static{position:static;display:inline-block;margin-left:4px;}
+.av-friend.royal1{box-shadow:0 0 0 2px #fcd34d,0 0 14px rgba(252,211,77,.55);}
+.av-friend.royal2{box-shadow:0 0 0 3px #f59e0b,0 0 20px rgba(245,158,11,.7);}
+.av-tag.gold{background:linear-gradient(135deg,#fde68a,#f59e0b);color:#5b3a00;}
+.dex-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.dex-title{font-size:17px;font-weight:900;}
+.dex-sub{font-size:12px;color:var(--sub);}
+.dex-pct{font-size:26px;font-weight:900;color:var(--pesk);}
+.dex-bar{height:9px;border-radius:99px;background:var(--bg);overflow:hidden;margin:8px 0 10px;}
+.dex-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--pesk),var(--purple));}
+.dex-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.dex-step{border:1.5px solid var(--border);border-radius:12px;padding:7px 5px;text-align:center;display:flex;flex-direction:column;gap:3px;color:var(--hint);background:var(--card);}
+.dex-step b{font-size:14px;}
+.dex-step small{font-size:10.5px;font-weight:700;word-break:keep-all;}
+.dex-step.on{border-color:var(--pesk);color:var(--pesk-d);background:var(--pesk-l);}
+.dex-step button{font:inherit;font-size:11px;font-weight:800;border:none;border-radius:8px;background:var(--pesk);color:#fff;padding:4px;cursor:pointer;}
+.craft-list,.set-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
+.craft-item{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;}
+.craft-item.have{opacity:.65;}
+.craft-name{font-size:13px;font-weight:800;word-break:keep-all;}
+.craft-item small{font-size:11.5px;color:var(--sub);}
+.craft-btn{font:inherit;font-size:12.5px;font-weight:800;border:none;border-radius:10px;padding:7px 10px;background:linear-gradient(135deg,var(--pesk),var(--purple));color:#fff;cursor:pointer;width:100%;}
+.craft-btn:disabled{background:var(--bg);color:var(--hint);cursor:default;}
+.craft-have{font-size:11.5px;font-weight:800;color:var(--green);}
+.dex-thumb{width:56px;height:56px;image-rendering:pixelated;object-fit:contain;}
+.dex-thumb.room{display:block;border-radius:10px;background:linear-gradient(var(--wallA),var(--wallB) 60%,var(--floorA) 60%,var(--floorB));}
+.set-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:10px;}
+.set-card.on{border-color:#fb923c;background:#fff7ed;}
+.set-head{font-size:13px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;}
+.set-head small{margin-left:auto;font-size:11px;color:var(--sub);}
+.set-pieces{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0;}
+.set-piece{font-size:10.5px;border-radius:99px;padding:2px 7px;background:var(--bg);color:var(--hint);}
+.set-piece.owned{color:var(--text);}
+.set-piece.worn{background:#fed7aa;color:#9a3412;font-weight:800;}
+.set-fx{display:flex;flex-direction:column;gap:2px;font-size:11.5px;color:var(--hint);}
+.set-fx .on{color:#c2410c;font-weight:800;}
+.dex-cat{margin-top:12px;}
+.dex-cat-head{font-size:13px;font-weight:800;margin-bottom:6px;}
+.dex-cat-head small{color:var(--sub);font-weight:600;}
+.dex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;}
+.dex-cell{position:relative;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;}
+.dex-cell.lock .dex-thumb{filter:grayscale(1) brightness(.35) opacity(.6);}
+.dex-name{font-size:10.5px;font-weight:700;text-align:center;word-break:keep-all;line-height:1.25;}
+.dex-src{font-size:9.5px;color:var(--gold);font-weight:800;}
+@media (max-width:420px){.dex-steps{grid-template-columns:repeat(2,1fr);}}
+.boss-tier,.boss-rank{background:var(--card);border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);padding:14px 16px;margin:12px 0;}
+.boss-tier-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 10px;font-weight:800;font-size:14px;}
+.boss-tier-head>b{font-size:20px;color:#ea580c;}
+.boss-tier-head span{font-size:12.5px;font-weight:700;color:var(--sub);margin-left:auto;}
+.boss-tier-head span b{color:#ea580c;}
+.boss-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;}
+.boss-step{border:1.5px solid var(--border);border-radius:12px;padding:8px 6px;text-align:center;display:flex;flex-direction:column;gap:2px;color:var(--hint);}
+.boss-step b{font-size:14px;}
+.boss-step small{font-size:11px;font-weight:700;word-break:keep-all;}
+.boss-step.on{border-color:#fb923c;background:#fff7ed;color:#c2410c;}
+.boss-tier-note{margin-top:8px;font-size:11.5px;color:var(--hint);line-height:1.5;}
+.boss-rank-head{font-weight:800;font-size:14px;}
+.boss-rank-head small{font-size:11px;color:var(--hint);font-weight:600;margin-left:6px;}
+.boss-rank-tabs{display:flex;gap:6px;margin:10px 0 8px;flex-wrap:wrap;}
+.boss-rank-tabs button{font:inherit;font-size:12.5px;font-weight:700;border:1.5px solid var(--border);background:var(--card);color:var(--sub);border-radius:99px;padding:5px 12px;cursor:pointer;}
+.boss-rank-tabs button.on{border-color:var(--pesk);background:var(--pesk-l);color:var(--pesk-d);}
+.boss-rank-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;}
+.boss-rank-list li{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:10px;background:var(--bg);font-size:13.5px;}
+.boss-rank-list li.me{background:var(--pesk-l);font-weight:800;}
+.boss-rank-n{flex:0 0 34px;font-weight:800;}
+.boss-rank-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.boss-rank-me{margin-top:8px;font-size:12.5px;color:var(--sub);}
+@media (max-width:420px){.av-power-list{grid-template-columns:1fr;}}
 .av-item-price.have{color:var(--hint);}
 .av-item.on .av-item-price{color:var(--pesk);}
 .av-friends{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;}
@@ -9408,6 +10149,21 @@ waitFirebase(async()=>{
 .today-bar{display:block;height:6px;border-radius:99px;background:var(--pesk-l);overflow:hidden;margin-top:4px;}
 .today-bar i{display:block;height:100%;background:var(--pesk);border-radius:99px;}
 .today-go{flex:none;font-size:22px;color:var(--hint);font-weight:700;}
+.lit-top{margin-bottom:10px;}
+.lit-back{font:inherit;font-size:13px;font-weight:700;color:var(--sub);background:var(--card);border:1.5px solid var(--border);border-radius:99px;padding:6px 14px;cursor:pointer;}
+.lit-list{display:flex;flex-direction:column;gap:8px;}
+.lit-list-head{margin-bottom:6px;}
+.lit-list-title{font-size:20px;font-weight:900;}
+.lit-list-sub{font-size:12.5px;color:var(--sub);line-height:1.5;margin-top:2px;}
+.lit-item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;color:var(--text);background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px;cursor:pointer;box-shadow:var(--shadow-sm);}
+.lit-item.hot{border-color:var(--pesk);}
+.lit-item.done{opacity:.7;}
+.lit-item-subj{flex:0 0 auto;font-size:11px;font-weight:800;color:#0ea5a4;background:#e6faf8;border-radius:99px;padding:4px 9px;}
+.lit-item-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.lit-item-body b{font-size:15px;word-break:keep-all;}
+.lit-item-body small{font-size:12px;color:var(--sub);}
+.lit-item-go{color:var(--hint);font-size:20px;}
+.lit-empty{padding:20px;text-align:center;color:var(--sub);font-size:13.5px;line-height:1.7;background:var(--card);border-radius:var(--radius-sm);border:1.5px dashed var(--border);}
 .today-empty{padding:22px;text-align:center;color:var(--sub);font-size:13px;background:var(--card);border-radius:var(--radius-sm);border:1.5px dashed var(--border);}
 .today-quote{margin-top:14px;padding:16px 18px;border-radius:var(--radius-sm);background:var(--card);border:1.5px solid var(--border);}
 .today-quote-label{font-size:11.5px;font-weight:800;color:var(--sub);}

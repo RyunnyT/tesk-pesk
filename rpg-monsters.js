@@ -121,8 +121,9 @@ function normalizeGame(raw) {
     streakCount: Math.max(0, Math.min(99, Math.round(Number(g.streakCount) || 0))),
     defeated: Math.max(0, Math.round(Number(g.defeated) || 0)),
     combatStyle: ['sword','staff','axe','spear','crystal','bow','dagger','mace'].includes(g.combatStyle) ? g.combatStyle : '',
-    heroHp:Math.max(0,Math.min(100,Number.isFinite(Number(g.heroHp))?Math.round(Number(g.heroHp)):100)),
-    huntAttempts:Math.max(0,Math.min(30,Math.round(Number(g.huntAttempts)||g.huntEnergy?.length||0))),
+    // 농부 세트는 모닥불에서 최대 140까지 회복한다
+    heroHp:Math.max(0,Math.min(140,Number.isFinite(Number(g.heroHp))?Math.round(Number(g.heroHp)):100)),
+    huntAttempts:Math.max(0,Math.min(30,Math.round(Number.isFinite(Number(g.huntAttempts))&&g.huntAttempts!==null&&g.huntAttempts!==''?Number(g.huntAttempts):(g.huntEnergy?.length||0)))),
     carryDamage: Math.min(12,Math.max(0,Number(g.carryDamage)||0)),
     huntEnergy: (Array.isArray(g.huntEnergy)?g.huntEnergy:[]).slice(0,30).map(x=>Math.max(1,Math.min(40,Math.round(Number(x)||12)))),
     shooting: Object.fromEntries(['rounds','hits','dodges','best','combos'].map(k=>[k,Math.max(0,Math.min(999999,Math.floor(Number(g.shooting?.[k])||0)))])),
@@ -140,6 +141,7 @@ function normalizeAttack(raw){
     bossRound:String(raw.bossRound||'').slice(0,80),
     baseDamage:Math.max(1,Math.min(1200,Math.round(finite(raw.baseDamage,BASE_DMG)))),
     expMultiplier:Math.max(1,Math.min(3,finite(raw.expMultiplier,1))),
+    power:Math.max(10,Math.min(60,Math.round(finite(raw.power,10)))),
     weaponStyle:['sword','staff','axe','spear','crystal','bow','dagger','mace'].includes(raw.weaponStyle) ? raw.weaponStyle : 'sword',
     petSkill:['attack','guard','focus'].includes(raw.petSkill) ? raw.petSkill : '',
     ...(raw.mode==='shooter'?{mode:'shooter',ammo:Math.max(1,Math.min(30,Math.round(Number(raw.ammo)||1))),weaponId:String(raw.weaponId||'').slice(0,60),petId:String(raw.petId||'').slice(0,60),petTier:['common','rare','unique','legend'].includes(raw.petTier)?raw.petTier:'common'}:{})};
@@ -202,7 +204,8 @@ function nextTitle(gxp) {
    ───────────────────────────────────────────────────────── */
 function normalizeBoss(raw) {
   const b = (raw && typeof raw === 'object') ? raw : {};
-  const num = (v, d) => Number.isFinite(Number(v)) ? Number(v) : d;
+  const num = (v, d) => Number.isFinite(Number(v)) && v !== null && v !== '' ? Number(v) : d;
+  const tierMid = Math.max(1, Math.min(30, Math.round(num(b.tierMid, 3))));
   return {
     enabled: b.enabled === true,
     roundId: String(b.roundId || ''),
@@ -221,7 +224,12 @@ function normalizeBoss(raw) {
     rewardItemId: String(b.rewardItemId || '').slice(0, 120),
     rewardItemQty: Math.max(1, Math.min(20, Math.round(num(b.rewardItemQty, 1)))),
     note: String(b.note || '').slice(0, 60),
-    color: String(b.color || '#8f7ae0').slice(0, 20)
+    color: String(b.color || '#8f7ae0').slice(0, 20),
+    // 참여일 단계 보상 — 이 표시가 있는 판(업데이트 뒤 새로 낸 보스)부터 적용한다. 진행 중이던 판은 예전 규칙 그대로.
+    tiered: b.tiered === true,
+    tierMid: tierMid,
+    tierTop: Math.max(tierMid + 1, Math.min(31, Math.round(num(b.tierTop, 5)))),
+    rewardXpBonus: Math.max(0, Math.min(100000, Math.round(num(b.rewardXpBonus, Math.round(num(b.rewardXp, 0) / 2)))))
   };
 }
 /* 학생 한 명의 보스 기록 */
@@ -235,7 +243,63 @@ function normalizeBossRec(raw) {
     // 마지막으로 보스에 도전한 날 (하루 1회 제한)
     day: /^\d{4}-\d{2}-\d{2}$/.test(String(r.day || '')) ? String(r.day) : '',
     // 시작했지만 아직 결과를 저장하지 않은 보스전. 모험의 pendingAttack 과 따로 둔다
-    pending: pending && pending.monsterId === '__boss__' ? pending : null
+    pending: pending && pending.monsterId === '__boss__' ? pending : null,
+    // 이번 판에 실제로 피해를 준 날짜들 (참여일). 판이 바뀌면 지난 판 참여일 수를 prevDays 로 남긴다
+    days: [...new Set((Array.isArray(r.days) ? r.days : []).map(String).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort().slice(-60),
+    prevRoundId: String(r.prevRoundId || '').slice(0, 80),
+    prevDays: Math.max(0, Math.min(60, Math.round(Number(r.prevDays) || 0)))
+  };
+}
+/* 이번 판 참여일 수 */
+function bossDays(rawRec, cfg) {
+  const c = normalizeBoss(cfg), rec = normalizeBossRec(rawRec);
+  return c.roundId && rec.roundId === c.roundId ? rec.days.length : 0;
+}
+/* 보상 단계: 0 미참여 · 1 참여(칭호) · 2 기본 보상 · 3 기본+추가 보상.
+   tiered 가 아닌 예전 판은 데미지가 있으면 모두 2 (예전 규칙). */
+function bossTier(rawRec, cfg) {
+  const c = normalizeBoss(cfg), rec = normalizeBossRec(rawRec);
+  if (!c.roundId || rec.roundId !== c.roundId || rec.dmg <= 0) return 0;
+  if (!c.tiered) return 2;
+  const d = rec.days.length;
+  return d >= c.tierTop ? 3 : d >= c.tierMid ? 2 : 1;
+}
+/* 보스전 기록 이동: 시작 때 새 판이면 지난 판 참여일을 남기고 이번 판 기록을 비운다 */
+function bossRollRound(prev, roundId) {
+  const p = normalizeBossRec(prev);
+  if (p.roundId === roundId) return p;
+  return { ...p, roundId, dmg: 0, days: [],
+    prevRoundId: p.roundId || p.prevRoundId, prevDays: p.roundId ? p.days.length : p.prevDays };
+}
+/* 🏆 이번 판 순위 — 부문별 상위 top 명. 같은 값은 같은 등수.
+   · 꾸준상: 참여일 · 정확상: 참여한 날의 모험 정답률(10문제 이상) · 성장상: 지난 판보다 늘어난 참여일 */
+function bossRanking(cfg, progressMap, students, top = 5) {
+  const c = normalizeBoss(cfg);
+  const src = (progressMap && typeof progressMap === 'object') ? progressMap : {};
+  const rows = (Array.isArray(students) ? students : []).map(st => {
+    const r = src[st.num] || src[String(st.num)] || {};
+    const rec = normalizeBossRec(r.boss);
+    const inRound = !!c.roundId && rec.roundId === c.roundId;
+    const days = inRound ? rec.days.length : 0;
+    let tried = 0, correct = 0;
+    if (inRound) rec.days.forEach(d => { const x = r.daily && r.daily[d]; tried += Math.max(0, Number(x && x.tried) || 0); correct += Math.max(0, Number(x && x.correct) || 0); });
+    const prev = inRound && rec.prevRoundId ? rec.prevDays : 0;
+    return { num: Number(st.num), name: String(st.name || ''), days, dmg: inRound ? rec.dmg : 0,
+      tried, acc: tried >= 10 ? Math.round(Math.min(correct, tried) / tried * 100) : null,
+      growth: days - prev, tier: bossTier(r.boss, c) };
+  });
+  const rank = (key, ok) => {
+    const list = rows.filter(ok).sort((a, b) => b[key] - a[key] || a.num - b.num);
+    let last = null, place = 0;
+    return list.map((x, i) => { if (x[key] !== last) { place = i + 1; last = x[key]; } return { ...x, rank: place, value: x[key] }; })
+      .filter(x => x.rank <= top);
+  };
+  return {
+    steady: rank('days', x => x.days > 0),
+    accurate: rank('acc', x => x.days > 0 && x.acc !== null),
+    growth: rank('growth', x => x.days > 0 && x.growth > 0),
+    rows,
+    absent: rows.filter(x => x.days === 0)
   };
 }
 /* 오늘 이 학생이 보스에 도전할 수 있는가.
@@ -248,10 +312,11 @@ function bossChallenge(cfg, record, today) {
   const game = normalizeGame(r.game);
   const tried = Math.max(0, Number(r.daily && r.daily[today] && r.daily[today].tried) || 0);
   const killedToday = !!today && game.killDay === today;
+  const readToday = !!today && r.litDay === today;   // 📖 오늘의 지문을 끝냈다
   const pending = rec.pending && rec.pending.bossRound === c.roundId ? rec.pending : null;
   const usedToday = !!today && rec.day === today && rec.roundId === c.roundId;
-  const unlocked = killedToday || tried >= c.entryNeed;
-  return { need: c.entryNeed, tried, left: Math.max(0, c.entryNeed - tried), killedToday,
+  const unlocked = killedToday || readToday || tried >= c.entryNeed;
+  return { need: c.entryNeed, tried, left: Math.max(0, c.entryNeed - tried), killedToday, readToday,
            unlocked, usedToday, pending, ok: unlocked && !usedToday && !pending };
 }
 /* 전체 진행도에서 이번 판의 보스 상태를 계산한다.
@@ -274,7 +339,7 @@ function bossState(cfg, progressMap, students) {
   const contributors = roster
     .map(st => ({ num: st.num, name: st.name, dmg: byNum[st.num] || byNum[String(st.num)] || 0 }))
     .filter(x => x.dmg > 0)
-    .sort((a, b) => a.num - b.num);        // 등수를 매기지 않는다 (문서 6번) — 번호순
+    .sort((a, b) => a.num - b.num);        // 번호순 목록. 등수는 bossRanking 에서 부문별로만 매긴다 (데미지 순위는 두지 않는다)
   return {
     cfg: c, on: c.enabled && !!c.roundId,
     maxHp: c.maxHp, hp, total,
@@ -293,7 +358,7 @@ const API = {
   newGameState, normalizeGame, totalKills,
   regionUnlocked, unlockedRegions, nextRegionInfo,
   TITLES, titleOf, nextTitle,
-  normalizeBoss, normalizeBossRec, bossState
+  normalizeBoss, normalizeBossRec, bossState, bossDays, bossTier, bossRollRound, bossRanking
 };
 if (typeof module === 'object' && module.exports) module.exports = API;
 root.RPG = API;

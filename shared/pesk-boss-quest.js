@@ -19,7 +19,7 @@
   function plan(cfg, progress, items, purchases, at = new Date().toISOString()){
     const all = {...(progress || {})}, buys = (Array.isArray(purchases) ? purchases : []).slice();
     const state = RPG.bossState(cfg, all, []);
-    const result = {all, buys, changed:false, granted:0, participants:[]};
+    const result = {all, buys, changed:false, granted:0, participants:[], tiers:{}};
     if(!state.on || !state.cleared) return result;
     const round = state.cfg.roundId, ledger = all.__classBossQuest || {}, rounds = ledger.rounds || {};
     if(own(rounds, round)) return result;
@@ -41,14 +41,18 @@
     for(const [key,record] of Object.entries(all)){
       if(!/^\d+$/.test(key) || Number(key)<=0) continue;
       const boss=RPG.normalizeBossRec(record?.boss);
-      if(boss.roundId!==round || boss.dmg<=0) continue;
+      // 참여일 단계: 1 칭호만 · 2 칭호+XP+개인 상품 · 3 여기에 추가 XP (예전 판은 참여자 모두 2)
+      const tier=RPG.bossTier(record?.boss, state.cfg);
+      if(boss.roundId!==round || tier<=0) continue;
       result.participants.push(Number(key));
+      result.tiers[key]=tier;
       const tag=round+':'+state.cfg.rewardTitle;
       if(state.cfg.rewardTitle && !boss.titles.includes(tag)) boss.titles.push(tag);
       const xp=Number(record.xp);
-      if(state.cfg.rewardXp || state.cfg.rewardTitle) all[key]={...record, boss:{...(record.boss||{}),...boss},
-        xp:(Number.isFinite(xp)?Math.max(0,xp):0)+state.cfg.rewardXp};
-      if(personalItem){
+      const gainXp=(tier>=2?state.cfg.rewardXp:0)+(tier>=3?state.cfg.rewardXpBonus:0);
+      if(gainXp || state.cfg.rewardTitle) all[key]={...record, boss:{...(record.boss||{}),...boss},
+        xp:(Number.isFinite(xp)?Math.max(0,xp):0)+gainXp};
+      if(personalItem && tier>=2){
         const id='personal-boss:'+ [round,key,personalItem.id].map(x=>encodeURIComponent(String(x))).join(':');
         if(!buys.some(p=>p.id===id)){
           buys.push({id,scope:'student',studentNum:Number(key),studentName:String(record.studentName||key+'번'),accountUid:String(record.accountUid||''),
@@ -61,7 +65,7 @@
     }
     // Keep old ledgers final: this schema upgrade does not retroactively pay old rounds.
     all.__classBossQuest = {...ledger, rounds:{...rounds, [round]:{at, items:entries, bossName:state.cfg.name,
-      participants:result.participants,rewardXp:state.cfg.rewardXp,rewardTitle:state.cfg.rewardTitle,
+      participants:result.participants,tiers:result.tiers,tiered:state.cfg.tiered,rewardXp:state.cfg.rewardXp,rewardXpBonus:state.cfg.rewardXpBonus,rewardTitle:state.cfg.rewardTitle,
       personalItem:personalItem?{id:String(personalItem.id),name:String(personalItem.name),qty:state.cfg.rewardItemQty}:null}}};
     result.changed = true;
     return result;

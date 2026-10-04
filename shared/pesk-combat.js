@@ -20,11 +20,78 @@ const PETS={
   p_chick:{name:'병아리',icon:'🐤',ability:'charge',skill:'힘내요 응원',desc:'함께 공격하고 다음 스킬 에너지를 1칸 남겨요.',story:'처음에는 뒤따라오기 바빴지만 이제 지친 친구를 응원해요.'},
   p_cat_bk:{name:'검은 고양이',icon:'🐈‍⬛',ability:'ambush',skill:'그림자 기습',desc:'잠깐 숨어 준비한 뒤 강하게 기습해요.',story:'어둠 속 반짝이는 눈은 언제나 당신의 길을 살피고 있어요.'},
   p_slime_p:{name:'분홍 슬라임',icon:'🩷',ability:'support',skill:'분홍빛 응원',desc:'두 번에 걸쳐 지원 타격을 해요.',story:'함께 웃었던 순간들이 모여 따뜻한 분홍빛이 되었어요.'},
+  p_slime_r:{name:'무지개 슬라임',icon:'🌈',ability:'shield',skill:'무지개 방패',desc:'잠시 몬스터의 반격을 막아요.',story:'지식과 극복과 용기를 모은 날, 일곱 빛깔 친구가 태어났어요.'},
   p_chick_g:{name:'황금 병아리',icon:'🐥',ability:'carry',skill:'햇살 이어달리기',desc:'처치할 때 남은 공격력을 다음 몬스터에 전해요.',story:'작은 친절을 모아 온 날, 깃털마다 아침 햇살이 깃들었어요.'}
 };
+/* ── 공격력 ── 장착한 아이템 공격력의 합이 피해 배율이 된다 (1점당 +1%, 최대 +50%).
+   맨손·기본 옷만 입어도 기본 10. 표에 없는 새 아이템은 부위 기본값을 쓴다. */
+const BASE_POWER=10,MAX_POWER=60;
+const POWER_SLOTS=['weapon','top','bottom','shoes','hat','pet'];
+const SLOT_POWER={weapon:6,top:1,bottom:1,shoes:1,hat:1};
+const ITEM_POWER={
+  w_crystal_rose:9,w_spear_storm:10,w_sword_frost:11,w_sword_flame:12,w_staff_arcane:12,w_axe_gold:14,
+  t_tabard:2,t_leather:3,t_chain:4,t_plate:5,t_legion:5,t_blouse_white:2,t_blouse_pink:2,t_blouse_sky:2,t_blouse_lav:2,t_blouse_rose:2,
+  l_plate:3,l_legion:3,l_skirt_slit:2,l_skirt_over:2,l_skirt_belle:2,
+  e_boot:2,e_fold:2,e_rim:2,e_plate:3,
+  a_crown:2,a_tiara:2,a_kettle:2,a_barbuta:3,a_viking:3,a_horned:3,a_hood_emerald:3,a_crown_rose:4,a_tiara_ice:4,a_crown_gold:5,a_barbuta_dark:5,a_horned_flame:6,
+  // 🧩 제작 아이템 — 상점 최고 아이템을 넘지 않는다
+  a_hood_scholar:4,w_staff_wisdom:12,t_plate_rise:5,e_boot_grit:3,w_sword_brave:13,a_barbuta_brave:5
+};
+const PET_POWER={common:3,rare:5,unique:7,legend:10};
+function itemPower(slot,id,petTier){
+  if(!id||!POWER_SLOTS.includes(slot))return 0;
+  if(slot==='pet')return PET_POWER[petTier]||PET_POWER.common;
+  return Object.prototype.hasOwnProperty.call(ITEM_POWER,id)?ITEM_POWER[id]:SLOT_POWER[slot];
+}
+/* ── 세트 ── 부위 중 3개를 입으면 1단계, 전부 입으면 2단계. 강화형(불꽃 검 등)도 같은 계열로 인정한다.
+   효과는 공격력만이 아니라 체력·펫·경험치·회복·꾸미기처럼 여러 갈래로 둔다 (돈으로 세지는 구조를 키우지 않기 위해). */
+const SETS=[
+  {id:'knight',icon:'🛡️',name:'기사',pieces:['a_barbuta','t_plate','l_plate','e_plate','w_sword'],fx:[{wrongDmg:10,text:'오답 반격 피해 12 → 10'},{wrongDmg:8,text:'오답 반격 피해 12 → 8'}]},
+  {id:'mage',icon:'🔮',name:'마법사',pieces:['a_hood','t_tabard','l_skirt','e_boot','w_staff'],fx:[{petCharge:1,text:'펫 스킬 충전 1칸으로 사냥 시작'},{petCharge:2,text:'펫 스킬 충전 2칸으로 사냥 시작'}]},
+  {id:'legion',icon:'⚔️',name:'군단',pieces:['a_kettle','t_legion','l_legion','e_boot','w_spear'],fx:[{power:2,text:'공격력 +2'},{power:4,text:'공격력 +4'}]},
+  {id:'hunter',icon:'🗡️',name:'사냥꾼',pieces:['a_bandana','t_leather','l_legging','e_fold','w_dagger'],fx:[{expPct:10,text:'몬스터 경험치 +10%'},{expPct:20,text:'몬스터 경험치 +20%'}]},
+  {id:'farmer',icon:'🌾',name:'농부',pieces:['a_bandana','t_overall','l_pants','e_boot'],fx:[{campHeal:20,text:'모닥불 회복 +20'},{campHeal:40,text:'모닥불 회복 +40'}]},
+  {id:'royal',icon:'👑',name:'왕실',pieces:['a_crown','t_formal','l_formal','e_shoe'],fx:[{royal:1,text:'우리 반 갤러리에 반짝이는 테두리'},{royal:2,text:'반짝이는 테두리 + 금색 이름표'}]},
+  {id:'effort',icon:'✨',name:'노력',pieces:['a_hood_scholar','w_staff_wisdom','t_plate_rise','e_boot_grit','w_sword_brave','a_barbuta_brave'],fx:[{fragBonus:1,text:'퀘스트 조각 +1'},{fragBonus:2,text:'퀘스트 조각 +2'}],craft:true,fullAt:4}   // 모자·무기가 둘씩이라 동시에 입을 수 있는 최대 4개
+];
+const SLOT_OF_PREFIX={a:'hat',t:'top',l:'bottom',e:'shoes',w:'weapon'};
+function pieceMatches(piece,id){return !!id&&(id===piece||String(id).startsWith(piece+'_'));}
+function setsOf(equipped){
+  const eq=equipped||{},worn=['hat','top','bottom','shoes','weapon'].map(k=>eq[k]).filter(Boolean);
+  return SETS.map(set=>{
+    // 노력 세트는 제작 아이템 그 자체만 인정한다 (기본 아이템으로는 맞출 수 없게)
+    const have=set.pieces.filter(p=>worn.some(id=>set.craft?id===p:pieceMatches(p,id)));
+    const count=new Set(have.map(p=>SLOT_OF_PREFIX[p[0]]+':'+p)).size;
+    const full=set.fullAt||set.pieces.length;
+    const level=count>=full?2:count>=3?1:0;
+    return {...set,count,total:full,level,effect:level?set.fx[level-1]:null};
+  });
+}
+function setEffects(equipped){
+  const out={wrongDmg:12,petCharge:0,power:0,expPct:0,campHeal:0,royal:0,fragBonus:0,active:[]};
+  setsOf(equipped).forEach(s=>{
+    if(!s.effect)return;
+    out.active.push({id:s.id,icon:s.icon,name:s.name,level:s.level,text:s.effect.text});
+    if(s.effect.wrongDmg)out.wrongDmg=Math.min(out.wrongDmg,s.effect.wrongDmg);
+    ['petCharge','power','expPct','campHeal','royal','fragBonus'].forEach(k=>{if(s.effect[k])out[k]=Math.max(out[k],s.effect[k]);});
+  });
+  return out;
+}
+function powerOf(equipped,petTier){
+  const eq=equipped||{};
+  const parts=POWER_SLOTS.map(slot=>({slot,id:eq[slot]||'',power:itemPower(slot,eq[slot],petTier)})).filter(p=>p.power>0);
+  const setPower=setEffects(eq).power;
+  if(setPower)parts.push({slot:'set',id:'set',power:setPower});
+  const total=Math.min(MAX_POWER,BASE_POWER+parts.reduce((a,p)=>a+p.power,0));
+  return {base:BASE_POWER,total,parts,bonusPct:Math.round((powerMultiplier(total)-1)*100)};
+}
+function powerMultiplier(total){
+  const t=Math.min(MAX_POWER,Math.max(BASE_POWER,Math.round(Number(total)||BASE_POWER)));
+  return 1+(t-BASE_POWER)/100;
+}
 function petProfile(id,level=1,tier){
   if(!PETS[id])return null;
-  const ranks=Object.keys(TIERS),base=tier||({p_cat_bk:'rare',p_slime_p:'unique',p_chick_g:'legend'}[id]||'common');
+  const ranks=Object.keys(TIERS),base=tier||({p_cat_bk:'rare',p_slime_p:'unique',p_slime_r:'rare',p_chick_g:'legend'}[id]||'common');
   const grown=level>=30?3:level>=20?2:level>=10?1:0,rank=Math.max(0,ranks.indexOf(base),grown);
   return {...PETS[id],id,tier:ranks[rank],rank,...TIERS[ranks[rank]],name:PETS[id].name,tierName:TIERS[ranks[rank]].name};
 }
@@ -77,12 +144,14 @@ function prepare(raw, input, G){
   if(game.monsterId!==input.target) throw new Error('STALE_QUESTION');
   if(monster && game.hp<=0) game.hp=monster.hp;
   let guarded=false;
+  const wrongDmg=Math.max(4,Math.min(12,Math.round(Number(input.wrongDmg)||12)));
   if(input.ticket?.mode==='hunt'){
     if(game.heroHp<=0)throw new Error('REST_REQUIRED');
     game.huntAttempts++;
-    if(input.correct){game.huntEnergy.push(input.ticket.baseDamage);game.petCharge=Math.min(3,game.petCharge+1);}
-    else{game.heroHp=Math.max(0,game.heroHp-12);}
-    return {game,guarded,hpLost:input.correct?0:12};
+    // 복수 몬스터를 맞히면 공격권 2개 (extraEnergy)
+    if(input.correct){game.huntEnergy.push(input.ticket.baseDamage);if(input.extraEnergy&&game.huntEnergy.length<30)game.huntEnergy.push(input.ticket.baseDamage);game.petCharge=Math.min(3,game.petCharge+1);}
+    else{game.heroHp=Math.max(0,game.heroHp-wrongDmg);}
+    return {game,guarded,hpLost:input.correct?0:wrongDmg};
   }
   if(input.correct){
     game.petCharge=Math.min(3,game.petCharge+1);
@@ -107,7 +176,7 @@ function resolve(raw, input, G, R){
   const played=shooting && !input.skip;
   const hit=shooting ? {strong:played && Number(report.hits)>=6,multiplier:played ? 1+Math.min(.15,Math.max(0,Number(report.hits)||0)*.015) : 1} : timing(weapon,input.position,skill && skill.id==='focus',input.automatic);
   const usedFraction=report.rpg&&!input.skip?Math.min(1,Math.max(0,Number(report.attacksUsed)||0)/ticket.ammo):1;
-  const damage=Math.max(usedFraction?1:0,Math.round(ticket.baseDamage*usedFraction*hit.multiplier*(!shooting && skill && skill.id==='attack' ? 1.25 : 1)));
+  const damage=Math.max(usedFraction?1:0,Math.round(ticket.baseDamage*usedFraction*hit.multiplier*powerMultiplier(ticket.power)*(!shooting && skill && skill.id==='attack' ? 1.25 : 1)));
   if(!shooting && skill){game.petCharge=0;if(skill.id==='guard')game.petShield=true;}
   const used=(played||report.rpg===true) && report.skillUsed===true && game.petCharge>=3 && pet && (pet.tier!=='legend'||Number(report.hits)>=3);
   if(used){game.petCharge=pet.ability==='charge'?1:0;if(pet.ability==='shield')game.petShield=true;}
@@ -133,7 +202,7 @@ function resolve(raw, input, G, R){
   }
   return {game,damage,strong:hit.strong,skill:shooting ? (used?pet.skill:'') : (skill ? skill.name : ''),defeated,exp,ticket};
 }
-const API={WEAPONS,SKILLS,TIERS,PETS,petProfile,weaponProfile,weaponFor,skillFor,power,timing,prepare,resolve};
+const API={WEAPONS,SKILLS,TIERS,PETS,SETS,setsOf,setEffects,pieceMatches,BASE_POWER,MAX_POWER,POWER_SLOTS,ITEM_POWER,PET_POWER,itemPower,powerOf,powerMultiplier,petProfile,weaponProfile,weaponFor,skillFor,power,timing,prepare,resolve};
 if(typeof module==='object' && module.exports) module.exports=API;
 root.PeskCombat=API;
 })(typeof window!=='undefined' ? window : globalThis);

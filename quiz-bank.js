@@ -647,9 +647,10 @@ function wordsFor(grade){
   const list = WORDS.filter(w => w[3] <= grade);
   return list.length >= 12 ? list : WORDS;
 }
-function makeEnglish(r, grade, tier){
+function makeEnglish(r, grade, tier, word){
   const list = wordsFor(grade);
-  const w = pick(r, list);
+  // 복수 몬스터: 전에 틀린 단어를 다시 낸다 (학년 목록에 없으면 전체 목록에서 찾는다)
+  const w = (word && (list.find(x => x[0] === word) || WORDS.find(x => x[0] === word))) || pick(r, list);
   const same = list.filter(x => x[2]===w[2] && x[0]!==w[0]);
   const pool = same.length>=3 ? same : list.filter(x=>x[0]!==w[0]);
   const kind = tier>=3 ? pick(r,['e2k','k2e','spell']) : (tier===2 ? pick(r,['e2k','k2e']) : 'e2k');
@@ -738,12 +739,13 @@ function makeQuestion(opt){
   const grade = Number(opt.grade)||5;
   const term  = Number(opt.term)||1;
   const level = Number(opt.level)||1;
-  const tier  = tierForLevel(level);
+  // 복수 몬스터는 틀렸을 때의 난이도(tier)로 다시 낸다
+  const tier  = [1,2,3].includes(Number(opt.tier)) ? Number(opt.tier) : tierForLevel(level);
   const r     = makeRng(opt.seed==null ? Math.random() : opt.seed);
 
   if(opt.subject === 'english'){
     if(![3,4,5,6].includes(grade))return null;
-    return prepareQuestion(Object.assign({subject:'english', grade, unit:'영단어', tier}, makeEnglish(r, grade, tier)),opt.seed,opt);
+    return prepareQuestion(Object.assign({subject:'english', grade, unit:'영단어', tier}, makeEnglish(r, grade, tier, opt.word)),opt.seed,opt);
   }
   const nos = opt.unitNos != null ? opt.unitNos : (opt.unitNo != null ? [opt.unitNo] : null);
   const units = unitsOf(grade, term, nos);

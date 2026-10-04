@@ -30,11 +30,19 @@ function classBossRewardSummaryT(){
 }
 function bossPersonalRewardFormT(c){
   const items=shopItems.filter(x=>!x.bossReward && x.id);
-  return '<div class="form-editor-summary"><b>👤 보스 참여 학생 개인 보상</b><p class="insight-help">이번 판에 1 이상의 데미지를 준 학생에게만 처치 시 각 1회 자동 지급해요. 접속 중이지 않은 참여자도 받습니다.</p><div class="qz-row">'
+  const tierOn = c.tiered || !c.roundId || !c.enabled;
+  return '<div class="form-editor-summary"><b>👤 보스 참여 학생 개인 보상</b><p class="insight-help">보스를 쓰러뜨리면 이번 판에 <b>참여한 날 수</b>에 따라 자동 지급해요. 하루 한 번 도전해서 피해를 주면 1일이에요. 접속 중이지 않은 참여자도 받습니다.</p>'
+    + '<label class="qz-switch" style="margin:4px 0 8px;"><input type="checkbox" id="boss-tiered"'+(tierOn?' checked':'')+'> 🔥 참여일 단계 보상 사용 (무임승차 방지)</label>'
+    + '<div class="qz-row">'
+    + '<label class="qz-field"><span>기본 보상 기준 (참여일)</span><input class="form-input" id="boss-tier-mid" type="number" min="1" max="30" value="'+c.tierMid+'"><small>미만이면 칭호만</small></label>'
+    + '<label class="qz-field"><span>추가 보상 기준 (참여일)</span><input class="form-input" id="boss-tier-top" type="number" min="2" max="31" value="'+c.tierTop+'"></label>'
+    + '<label class="qz-field"><span>추가 보상 XP</span><input class="form-input" id="boss-reward-xp-bonus" type="number" min="0" max="100000" value="'+c.rewardXpBonus+'"></label></div>'
+    + (c.roundId && c.enabled && !c.tiered ? '<p class="insight-help" style="color:var(--gold);">지금 진행 중인 판은 예전 규칙(피해를 1이라도 주면 모두 같은 보상)이에요. 체크하고 저장하면 이번 판부터 단계 보상이 되지만, 참여일은 업데이트 이후 도전한 날부터 세요.</p>' : '')
+    + '<div class="qz-row">'
     + '<label class="qz-field"><span>참여자마다 학습 XP</span><input class="form-input" id="boss-reward-xp" type="number" min="0" max="100000" value="'+c.rewardXp+'"></label>'
     + '<label class="qz-field"><span>참여자마다 개인 상품</span><select class="form-input" id="boss-reward-item"><option value="">지급 안 함</option>'+items.map(x=>'<option value="'+escHtml(x.id)+'" '+(x.id===c.rewardItemId?'selected':'')+'>'+escHtml(x.name)+'</option>').join('')+'</select></label>'
     + '<label class="qz-field"><span>개인 상품 수량</span><input class="form-input" id="boss-reward-qty" type="number" min="1" max="20" value="'+c.rewardItemQty+'"></label></div>'
-    + '<p class="insight-help">개인 상품은 내 보관함에 지급되며 판매 재고나 학생 잔액은 차감하지 않아요. 아래 칭호도 참여자에게만 지급해요. 전체 활동 보상은 별도로 지정하세요.</p>'
+    + '<p class="insight-help">단계 보상을 쓰면: 참여 1일 이상 → 칭호 · 기본 기준 이상 → 칭호 + XP + 개인 상품 · 추가 기준 이상 → 여기에 추가 XP. 개인 상품은 내 보관함에 지급되며 판매 재고나 학생 잔액은 차감하지 않아요. 전체 활동 보상은 별도로 지정하세요.</p>'
     + (qzActiveGoalsT().some(g=>g.enabled&&g.rewardXp>0)?'<button type="button" class="btn btn-sm btn-secondary" onclick="importLegacyGoalXpT()">이전 목표의 XP 보상 가져오기</button>':'')+'</div>';
 }
 function importLegacyGoalXpT(){
