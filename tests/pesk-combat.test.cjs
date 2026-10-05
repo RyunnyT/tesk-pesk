@@ -278,8 +278,7 @@ test('old tickets without power keep their previous damage and power survives sa
   assert.equal(resolve(prepare()).damage,14);
 });
 
-/* ── 🗺️ 월드맵 · 단원 보스 ── */
-function withQuiz(f){const prev=globalThis.QUIZ;globalThis.QUIZ=f.c.QUIZ;return ()=>{if(prev===undefined)delete globalThis.QUIZ;else globalThis.QUIZ=prev;};}
+/* ── 🗺️ 월드맵 · 단원 보스 (지도 화면은 보류 — 규칙만 rpg-monsters.js 에 남겨 둔다) ── */
 test('world map: teacher-opened units only, stages open in order, boss clears the unit',()=>{
   const prev=globalThis.QUIZ,box={};vm.createContext(box);box.window=box;vm.runInContext(fs.readFileSync(path.join(__dirname,'../quiz-bank.js'),'utf8'),box);globalThis.QUIZ=box.QUIZ;
   try{
@@ -302,36 +301,11 @@ test('world map: teacher-opened units only, stages open in order, boss clears th
     assert.equal(n.monsterId,ids[1]);assert.equal(n.hp,20);assert.deepEqual(n.kills,{[ids[0]]:2});assert.deepEqual(n.stageHp,{[ids[0]]:40});
   }finally{if(prev===undefined)delete globalThis.QUIZ;else globalThis.QUIZ=prev;}
 });
-test('actual map flow: enter a stage, questions stay in that unit, kills advance, locked stages refuse',async()=>{
-  const f=fixture();const restore=withQuiz(f);
-  try{
-    f.run('quizConfig={grade:5,term:1,mathUnits:[2,4],dailyQuestionLimit:50,huntQuestionLimit:8}');
-    await f.c.rpgEnterStage('st|m|5-1|2|0');let game=f.docs['pesk-quiz-progress'][1].game;
-    assert.equal(game.monsterId,'st|m|5-1|2|0');assert.equal(game.hp,40);
-    for(let i=0;i<5;i++){f.run('rpgQ=null;rpgPicked=null');const q=f.run('rpgEnsureQuestion()');assert.equal(Number(q.unitNo),2,'only unit 2: '+q.unit);}
-    await f.c.rpgEnterStage('st|m|5-1|2|3');assert.equal(f.docs['pesk-quiz-progress'][1].game.monsterId,'st|m|5-1|2|0','boss is locked');
-    await f.c.rpgEnterStage('st|m|5-1|3|0');assert.equal(f.docs['pesk-quiz-progress'][1].game.monsterId,'st|m|5-1|2|0','closed unit');
-    // 반쯤 싸운 체력은 다른 단원에 다녀와도 남는다
-    f.docs['pesk-quiz-progress'][1].game.hp=17;await f.c.rpgReloadProgress();
-    await f.c.rpgEnterStage('st|m|5-1|4|0');game=f.docs['pesk-quiz-progress'][1].game;assert.equal(game.stageHp['st|m|5-1|2|0'],17);
-    await f.c.rpgEnterStage('st|m|5-1|2|0');game=f.docs['pesk-quiz-progress'][1].game;assert.equal(game.hp,17);assert.equal(game.stageHp['st|m|5-1|2|0'],undefined);
-    // 쓰러뜨리면 같은 단원의 다음 스테이지
-    game.hp=0;game.kills={'st|m|5-1|2|0':1};await f.c.rpgReloadProgress();await f.c.rpgNext();
-    game=f.docs['pesk-quiz-progress'][1].game;assert.equal(game.monsterId,'st|m|5-1|2|1');assert.equal(game.hp,55);
-    // 단원 보스 다음에는 아직 못 깬 열린 단원으로
-    game.monsterId='st|m|5-1|2|3';game.hp=0;Object.assign(game.kills,{'st|m|5-1|2|1':1,'st|m|5-1|2|2':1,'st|m|5-1|2|3':1});await f.c.rpgReloadProgress();await f.c.rpgNext();
-    assert.equal(f.docs['pesk-quiz-progress'][1].game.monsterId,'st|m|5-1|4|0');
-    // 선생님이 단원을 닫으면 문제를 내지 않고 지도를 보여준다
-    f.run('quizConfig={grade:5,term:1,mathUnits:[2]}');assert.equal(f.run("rpgStageOk(RPG.parseStage('st|m|5-1|4|0'))"),false);
-    assert.match(f.run('rpgMapHtml()'),/출제 범위를 바꿨어요/);
-  }finally{restore();}
-});
-test('actual english island questions use that island words only',async()=>{
-  const f=fixture();const restore=withQuiz(f);
-  try{
-    f.run("quizConfig={grade:4,term:1,mathUnits:[],dailyQuestionLimit:50};qzSubject='english'");
-    await f.c.rpgEnterStage('st|e|4|4|0');assert.equal(f.docs['pesk-quiz-progress'][1].game.monsterId,'st|e|4|4|0');
-    const cats=G.WORD_ISLANDS.find(w=>w.no===4).cats,W=f.c.QUIZ._internal.WORDS;
-    for(let i=0;i<8;i++){f.run('rpgQ=null;rpgPicked=null');const q=f.run('rpgEnsureQuestion()');assert.equal(q.subject,'english');const w=W.find(x=>x[0]===q.word);assert.ok(cats.includes(w[2]),q.word);}
-  }finally{restore();}
+test('students left on a stage monster from the map release return to random monsters',async()=>{
+  const f=fixture();const p=f.docs['pesk-quiz-progress'][1];
+  p.game.monsterId='st|m|5-1|2|1';p.game.hp=30;p.game.stageHp={'st|m|5-1|2|0':12};await f.c.rpgReloadProgress();
+  assert.equal(f.run('rpgMonster().id'),'st|m|5-1|2|1');assert.equal(f.run('rpgGame().hp'),30);
+  f.run('quizConfig={grade:5,term:1,mathUnits:[1,3]}');const q=f.run('rpgQ=null;rpgEnsureQuestion()');assert.ok([1,3].includes(Number(q.unitNo)),'teacher units, not the stage unit');
+  p.game.hp=0;await f.c.rpgReloadProgress();await f.c.rpgNext();
+  assert.match(f.docs['pesk-quiz-progress'][1].game.monsterId,/^m_/);
 });

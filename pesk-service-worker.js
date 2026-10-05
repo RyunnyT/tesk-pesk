@@ -1,4 +1,4 @@
-const PESK_CACHE = 'pesk-shell-v53-student-app';
+const PESK_CACHE = 'pesk-shell-v54-student-app';
 const PESK_ASSETS = [
   './landing.html',
   './pesk.html',
