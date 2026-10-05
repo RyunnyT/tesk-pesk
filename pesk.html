@@ -32,7 +32,7 @@
 <script src="shared/pesk-shooter.js?v=20261004atk1"></script>
 <script src="shared/pesk-subjects.js"></script>
 <script src="shared/todo-schedule.js?v=20261004todo2"></script>
-<script src="shared/literacy-core.js?v=20261004lit1"></script>
+<script src="shared/literacy-core.js?v=20261005bank1"></script>
 <script src="shared/pesk-progression.js?v=20261004grow1"></script>
 <script src="shared/economy-ownership.js?v=20260930bank1"></script>
 <script src="shared/pesk-boss-catalog.js?v=20260910rpg2"></script>
@@ -2021,12 +2021,6 @@ function renderDashboard(){
     checklistPanel.insertAdjacentHTML('afterend','<div id="panel-challenge" style="display:none">' + challengeHtml + '</div>');
   }
   const moreMenu = document.getElementById('bottom-more-menu');
-  if(checklistPanel && !document.getElementById('panel-literacy')){
-    checklistPanel.insertAdjacentHTML('afterend','<div id="panel-literacy" style="display:none"></div>');
-  }
-  if(moreMenu && !document.getElementById('more-tab-literacy')){
-    moreMenu.insertAdjacentHTML('afterbegin',"<button class=\"bottom-more-item\" id=\"more-tab-literacy\" onclick=\"openLiteracy()\"><span class=\"mi\">📖</span><span>오늘의 지문</span></button>");
-  }
   if(moreMenu && !document.getElementById('more-tab-challenge')){
     moreMenu.insertAdjacentHTML('afterbegin',"<button class=\"bottom-more-item\" id=\"more-tab-challenge\" onclick=\"showTab('challenge')\"><span class=\"mi\">🏁</span><span>챌린지</span></button>");
   }
@@ -2145,8 +2139,12 @@ function markWritingFeedbackSeen(){
 }
 
 /* 모험·보스 탭 — 마이룸과 분리된 독립 탭을 연다 */
+let advMode = 'rpg';          // 모험 탭 안의 화면: 'rpg'(모험) | 'lit'(오늘의 지문)
+let _litOpening = false;
 function openAdventure(sub){
-  showTab(sub === 'boss' ? 'boss' : 'adventure');
+  if(sub === 'boss') return showTab('boss');
+  advMode = 'rpg';
+  showTab('adventure');
 }
 /* 지금 보이는 게임 화면: 'rpg'(모험 탭) · 'boss'(보스 탭) · ''(둘 다 아님) */
 function advActive(){
@@ -5350,7 +5348,7 @@ const AV_PRESETS = [
 const AV_CATS = ['face','hair','top','bottom','shoes','hat','weapon','room','pet'];
 const AV_DRAWN = ['face','hair','top','bottom','shoes','hat','weapon'];   // 캐릭터에 그려지는 부위
 let avCat = 'hair';
-let avRoomTab = 'me';       // 'me' | 'class' | 'dex'
+let avRoomTab = 'me';       // 'me'(옷장) | 'store'(아이템 상점) | 'class' | 'dex'
 const AV_IMG = {};          // key → HTMLImageElement
 const AV_CACHE = {};        // 합성 결과 dataURL 캐시
 const AV_BLANK = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
@@ -5515,12 +5513,13 @@ function buildMyRoomPanel(me){
   const lv = qzLevel();
   const subTabs = '<div class="av-subtabs">'
     + '<button class="av-subtab' + (avRoomTab==='me'?' active':'') + '" onclick="avShowRoomTab(\'me\')">🧍 내 방</button>'
+    + '<button class="av-subtab' + (avRoomTab==='store'?' active':'') + '" onclick="avShowRoomTab(\'store\')">🛍️ 아이템 상점</button>'
     + '<button class="av-subtab' + (avRoomTab==='class'?' active':'') + '" onclick="avShowRoomTab(\'class\')">👥 우리 반</button>'
     + '<button class="av-subtab' + (avRoomTab==='dex'?' active':'') + '" onclick="avShowRoomTab(\'dex\')">📚 도감</button>'
     + '</div>';
 
   // 모험·보스는 마이룸 밖의 독립 탭이다 (panel-adventure / panel-boss)
-  if(!['me','class','dex'].includes(avRoomTab)) avRoomTab = 'me';
+  if(!['me','store','class','dex'].includes(avRoomTab)) avRoomTab = 'me';
   if(avRoomTab === 'class') return stage + subTabs + buildAvClassGallery() + avCreditHtml();
   if(avRoomTab === 'dex') return stage + subTabs + buildDexPanel();
 
@@ -5539,14 +5538,19 @@ function buildMyRoomPanel(me){
         + AV_LABEL[c] + (locked ? ' 🔒' + need : '') + '</button>';
     }).join('') + '</div>';
 
+  const inStore = avRoomTab === 'store';
+  const gridList = avList(avCat).filter(i => inStore ? (!avOwns(avCat, i) && !i.craft) : avOwns(avCat, i));
   const catLocked = !qzUnlocked(avCat);
-  const lockNote = catLocked
+  const lockNote = inStore && catLocked
     ? '<div class="av-lock-note">🔒 이 부위는 <b>학습 레벨 ' + qzRequiredLevel(avCat) + '</b>부터 살 수 있어요. '
       + '지금은 Lv.' + lv + ' — 🎓 모험 학습를 풀면 레벨이 올라요.'
       + '<button class="av-lock-go" onclick="avShowRoomTab(\'quiz\')">문제 풀러 가기 →</button></div>'
     : '';
 
-  const items = '<div class="av-grid">' + avList(avCat).map(item => {
+  const items = !gridList.length
+    ? '<div class="av-empty">' + (inStore ? '이 부위는 모두 가지고 있어요! 🎉<br><small>제작 아이템은 📚 도감에서 만들 수 있어요.</small>'
+        : '아직 가진 ' + escHtml(String(AV_LABEL[avCat] || '').replace(/^\S+\s/, '')) + ' 아이템이 없어요.<br><button type="button" class="av-lock-go" onclick="avShowRoomTab(\'store\')">🛍️ 아이템 상점 가기 →</button>') + '</div>' + lockNote
+    : '<div class="av-grid">' + gridList.map(item => {
       const price = avPriceOf(avCat, item);
       const have = avOwns(avCat, item);
       const on = eq[avCat] === item.id;
@@ -5607,12 +5611,21 @@ function buildMyRoomPanel(me){
     : '';
 
   const _swatches = swatches;
-  return stage + subTabs + genderPick + (window.PeskCombat ? avPowerCardHtml() : '') + buildPetCard(me) + presets
-    + '<div class="av-shop-head"><div class="section-title" style="margin:0;">👕 옷장</div>'
-    + '<div style="font-size:13px;font-weight:700;color:var(--gold);">보유 ' + coins.toLocaleString() + ' 🪙'
-    + '<span style="color:var(--hint);font-weight:600;margin-left:6px;">· 꾸미기에 쓴 코인 ' + Number(a.spent||0).toLocaleString() + '</span></div></div>'
-    + chips + _swatches + items + blocked
-    + '<p class="av-hint">' + hint + ' 한 번 산 아이템은 계속 내 것이고, 환불은 안 돼요.</p>'
+  const coinLine = '<div style="font-size:13px;font-weight:700;color:var(--gold);">보유 ' + coins.toLocaleString() + ' 🪙'
+    + '<span style="color:var(--hint);font-weight:600;margin-left:6px;">· 꾸미기에 쓴 코인 ' + Number(a.spent||0).toLocaleString() + '</span></div>';
+  // 🛍️ 아이템 상점 — 아직 없는 아이템과 코디 세트. 사면 바로 입어 보고 옷장으로 들어간다
+  if(inStore) return stage + subTabs
+    + '<div class="av-shop-head"><div class="section-title" style="margin:0;">🛍️ 코디 세트</div></div>' + presets.replace('<button class="av-preset" onclick="avRandomOutfit()"><div class="av-dice">🎲</div><span>랜덤</span></button>', '')
+    + '<div class="av-shop-head"><div class="section-title" style="margin:0;">🛍️ 아이템 상점</div>' + coinLine + '</div>'
+    + chips + items + blocked
+    + '<p class="av-hint">누르면 사서 바로 입어 보고, 👕 옷장에 들어가요. 한 번 산 아이템은 계속 내 것이고 환불은 안 돼요. 제작 아이템은 📚 도감에서 만들어요.</p>'
+    + avCreditHtml();
+  // 👕 옷장 — 내가 가진 아이템만
+  return stage + subTabs + genderPick + (window.PeskCombat ? avPowerCardHtml() : '') + buildPetCard(me)
+    + '<div class="av-shop-head"><div class="section-title" style="margin:0;">👕 옷장 <small style="font-size:12px;color:var(--sub);font-weight:600;">내가 가진 아이템</small></div>'
+    + '<button type="button" class="av-random-btn" onclick="avRandomOutfit()">🎲 랜덤 코디</button></div>'
+    + chips + _swatches + items
+    + '<p class="av-hint">' + hint + ' 새 아이템은 🛍️ 아이템 상점에서 살 수 있어요.</p>'
     + avCreditHtml();
 }
 
@@ -6654,7 +6667,10 @@ function avRefresh(){
   // 모험·보스는 보고 있을 때만 그린다
   const view = advActive();
   const advPanel = document.getElementById(view === 'boss' ? 'panel-boss' : 'panel-adventure');
-  if(view && advPanel){
+  if(view === 'rpg' && advMode === 'lit'){
+    // 📖 오늘의 지문 — 답을 입력하는 중(포커스)이면 친구 기록 갱신으로 화면을 바꾸지 않는다 (한글 입력 보호)
+    if(!(advPanel && advPanel.contains(document.activeElement) && document.activeElement.matches('input,textarea'))) renderLiteracyPanel();
+  }else if(view && advPanel){
     advPanel.innerHTML = view === 'boss' ? buildBossPanel(me) : buildRpgPanel(me);
     if(typeof rpgAfterRender === 'function') rpgAfterRender();
   }
@@ -6977,6 +6993,7 @@ async function avPick(cat, id){
     if(needBuy){
       a.owned.push(id);
       await avBuy([id], price, '"' + item.name + '"');
+      showFeedbackNotice('👕 「' + item.name + '」을(를) 샀어요! 옷장에 넣고 바로 입혔어요.');
     } else {
       await avSaveEquip();
     }
@@ -8115,7 +8132,7 @@ function rpgBattleHtml(me){
   const hpPct = Math.round(g.hp / mon.hp * 100);
   const total = G.totalKills(g);
 
-  const learning=rpgLearnHeadHtml()+(!g.pendingAttack?revengeNudgeHtml()+questCardHtml()+rpgHuntBar():'');
+  const learning=rpgLearnHeadHtml()+(!g.pendingAttack?litAdvCardHtml()+revengeNudgeHtml()+questCardHtml()+rpgHuntBar():'');
   const rev=!!(rpgQ && rpgQ.isReview && !g.pendingAttack && g.hp>0);
   const petBar='';
 
@@ -8473,7 +8490,9 @@ function showTab(tab){
     return;
   }
   setBottomMore(false);
-  ['home','adventure','boss','shop','myroom','writing','counsel','stock','checklist','challenge','literacy'].forEach(t=>{
+  if(tab==='literacy'){ advMode = 'lit'; tab = 'adventure'; }   // 예전 링크 호환
+  if(tab==='adventure' && !_litOpening) advMode = 'rpg';
+  ['home','adventure','boss','shop','myroom','writing','counsel','stock','checklist','challenge'].forEach(t=>{
     const panel = document.getElementById('panel-'+t);
     const btn = document.getElementById('tab-'+t);
     const bottomBtn = document.getElementById('bottom-tab-'+t);
@@ -8484,13 +8503,12 @@ function showTab(tab){
     if(moreBtn) moreBtn.classList.toggle('active', t===tab);
   });
   const bottomMore=document.getElementById('bottom-tab-more');
-  if(bottomMore) bottomMore.classList.toggle('active', ['myroom','counsel','stock','checklist','challenge','literacy'].includes(tab));
+  if(bottomMore) bottomMore.classList.toggle('active', ['myroom','counsel','stock','checklist','challenge'].includes(tab));
   const topMore=document.getElementById('tab-more');
-  if(topMore) topMore.classList.toggle('active', ['stock','checklist','challenge','literacy'].includes(tab));
-  if(tab==='myroom' && !['me','class','dex'].includes(avRoomTab)) avRoomTab = 'me';
+  if(topMore) topMore.classList.toggle('active', ['stock','checklist','challenge'].includes(tab));
+  if(tab==='myroom' && !['me','store','class','dex'].includes(avRoomTab)) avRoomTab = 'me';
   if(tab==='myroom' || tab==='adventure' || tab==='boss') avRefresh();
   if(tab==='home') refreshTodayPanel(true);
-  if(tab==='literacy') renderLiteracyPanel();
   if(tab==='writing') markWritingFeedbackSeen();
   if(tab==='shop'||tab==='stock')renderEconomyPanels();
   petTick(tab === 'myroom');
@@ -8535,6 +8553,24 @@ function _applyLiteracy(raw){
 }
 function litRec(date){ return ((myQuiz && myQuiz.literacy) || {})[date] || null; }
 function litState(date){ return LiteracyCore.stateOn(date, todayISO(), litDoc.cfg ? litDoc.cfg.graceDays : 2); }
+/* 🗡️ 모험 탭 위쪽의 📖 오늘의 지문 카드 */
+function litAdvCardHtml(){
+  if(!window.LiteracyCore || !litDoc.cfg) return '';
+  const open = litOpenList(), today = todayISO();
+  const todo = open.filter(s => !litRec(s.date)?.done);
+  const days = todoSchedule ? (todoSchedule.weekly.literacy || []) : [];
+  if(!open.length && !days.length && !Object.keys(litDoc.sheets).length) return '';
+  if(todo.length){
+    const s = todo.find(x => x.date === today) || todo[0];
+    const until = LiteracyCore.windowOf(s.date, litDoc.cfg.graceDays).until;
+    return '<button type="button" class="lit-adv hot" onclick="openLiteracy(\'' + s.date + '\')">'
+      + '<span class="lit-adv-ic">📖</span><span class="lit-adv-body"><b>' + (s.date === today ? '오늘의 지문' : '지난 지문') + ' · 「' + escHtml(s.sheet.title) + '」</b>'
+      + '<small>' + escHtml(s.subject) + ' · ' + litLabel(until) + '까지' + (todo.length > 1 ? ' · 풀 지문 ' + todo.length + '편' : '') + ' · 처음에 맞힌 문항마다 공격권 2개!</small></span><span class="lit-adv-go">풀기 ›</span></button>';
+  }
+  const nd = LiteracyCore.upcomingDates(days, LiteracyCore.addDays(today, 1), 1)[0];
+  return '<button type="button" class="lit-adv" onclick="openLiteracy()"><span class="lit-adv-ic">📖</span><span class="lit-adv-body"><b>'
+    + (open.length ? '오늘의 지문 완료 ✅' : '오늘의 지문') + '</b><small>' + (nd ? '다음 지문은 ' + litLabel(nd) + '에 열려요' : '지난 기록 보기') + '</small></span><span class="lit-adv-go">›</span></button>';
+}
 function litOpenList(){ return Object.values(litDoc.sheets).filter(s => litState(s.date) === 'open').sort((a,b)=>a.date<b.date?1:-1); }
 function litLabel(d){ return Number(d.slice(5,7)) + '/' + Number(d.slice(8)) + '(' + LiteracyCore.dowName(d) + ')'; }
 
@@ -8552,24 +8588,19 @@ function litTodayTasks(){
   }).filter(Boolean);
 }
 
-/* 지문 화면 칸은 앱 시작 때 만들지만, 시작 순서가 달라도 열 수 있게 없으면 여기서 만든다 */
-function litEnsurePanel(){
-  let panel = document.getElementById('panel-literacy');
-  if(panel) return panel;
-  const anchor = document.getElementById('panel-checklist') || document.getElementById('panel-home') || document.querySelector('[id^="panel-"]');
-  if(!anchor) return null;
-  anchor.insertAdjacentHTML('afterend','<div id="panel-literacy" style="display:none"></div>');
-  return document.getElementById('panel-literacy');
-}
+/* 📖 오늘의 지문은 모험 탭 안에서 연다 (advMode 'lit') */
+function litEnsurePanel(){ return document.getElementById('panel-adventure'); }
 function openLiteracy(date){
   litView = date && litDoc.sheets[date] ? {date, answers:{blanks:['','',''], choice:-1}, marks:null, msg:''} : null;
-  litEnsurePanel();
-  showTab('literacy');
-  renderLiteracyPanel();
+  advMode = 'lit';
+  _litOpening = true;
+  try{ showTab('adventure'); } finally{ _litOpening = false; }
 }
+function closeLiteracy(){ litView = null; advMode = 'rpg'; avRefresh(); window.scrollTo({top:0,behavior:'smooth'}); }
 function renderLiteracyPanel(){
+  if(advMode !== 'lit') return;
   const panel = litEnsurePanel();
-  if(!panel) return;
+  if(!panel || panel.style.display === 'none') return;
   if(!window.LiteracyCore){ panel.innerHTML = '<div class="lit-empty">지문 기능을 불러오지 못했어요. 새로고침해 주세요.</div>'; return; }
   LiteracyCore.injectStyles();
   if(litView && !litDoc.sheets[litView.date]) litView = null;
@@ -8590,6 +8621,7 @@ function litListHtml(){
     next = '<div class="lit-empty">🌱 지금 풀 지문을 다 했어요.' + (nd ? '<br>다음 지문은 <b>' + litLabel(nd) + '</b>에 열려요.' : '') + '</div>';
   }
   return '<div class="lit-list">'
+    + '<div class="lit-top"><button type="button" class="lit-back" onclick="closeLiteracy()">‹ 모험으로</button></div>'
     + '<div class="lit-list-head"><div class="lit-list-title">📖 오늘의 지문</div><div class="lit-list-sub">글을 읽고 한눈에 정리 빈칸을 채워 봐요. 처음 채점할 때 많이 맞힐수록 보너스!</div></div>'
     + open.map(s => {
         const r = litRec(s.date);
@@ -8624,7 +8656,7 @@ function litSheetHtml(){
       + '<div class="lit-note" data-learning-save style="text-align:center;margin-top:6px;"></div>';
   }
   const ans = finished ? {blanks: LiteracyCore.blanksOf(s.sheet).map(b=>b.answer), choice: s.sheet.final_quiz.answer} : litView.answers;
-  return '<div class="lit-top"><button type="button" class="lit-back" onclick="openLiteracy()">‹ 목록</button></div>'
+  return '<div class="lit-top"><button type="button" class="lit-back" onclick="closeLiteracy()">‹ 모험으로</button> <button type="button" class="lit-back" onclick="openLiteracy()">지문 목록</button></div>'
     + LiteracyCore.renderSheet(s.sheet, {dateLabel: litLabel(s.date), subject: s.subject, answers: ans,
         marks: finished ? LiteracyCore.grade(s.sheet, ans) : litView.marks, locked: finished || closed || litBusy})
     + '<div class="lit">' + tail + '</div>';
@@ -8653,7 +8685,8 @@ function litBind(panel){
   panel.querySelector('#lit-essay-send')?.addEventListener('click', litSendEssay);
 }
 function litHighlight(p){
-  const panel = document.getElementById('panel-literacy');
+  const panel = litEnsurePanel();
+  if(!panel) return;
   panel.querySelectorAll('[data-lit-p]').forEach(el => el.classList.toggle('lit-hl', Number(el.dataset.litP) === p));
   panel.querySelector('[data-lit-p="' + p + '"]')?.scrollIntoView({behavior:'smooth', block:'center'});
 }
@@ -8794,12 +8827,23 @@ function fragChipsHtml(){
   return '<span class="frag-chips">' + PG().FRAG_IDS.map(k => '<span class="frag-chip" title="' + escHtml(PG().FRAGS[k].name + ' · ' + PG().FRAGS[k].from) + '">'
     + PG().FRAGS[k].icon + ' <b>' + f[k] + '</b></span>').join('') + '</span>';
 }
+/* 접어 둔 상태는 이 기기에만 기억한다 (학생별) */
+function questFolded(){ try{ return localStorage.getItem('pesk-quest-fold:' + STUDENT_SCOPE_KEY()) === '1'; }catch(_e){ return false; } }
+function toggleQuestFold(){
+  try{ localStorage.setItem('pesk-quest-fold:' + STUDENT_SCOPE_KEY(), questFolded() ? '0' : '1'); }catch(_e){}
+  avRefresh();
+}
 function questCardHtml(){
   if(!PG()) return '';
   const qs = myQuests();
   if(!qs.length) return '';
-  const fx = mySetFx();
-  return '<div class="quest-card"><div class="quest-head"><b>🧩 이번 주 퀘스트</b>' + fragChipsHtml() + '</div>'
+  const fx = mySetFx(), folded = questFolded();
+  const doneN = qs.filter(q => q.claimed || q.progress >= q.target).length, claimN = qs.filter(q => !q.claimed && q.progress >= q.target).length;
+  const head = '<div class="quest-head"><button type="button" class="quest-fold" onclick="toggleQuestFold()" aria-expanded="' + !folded + '">'
+    + '<span class="quest-caret">' + (folded ? '▸' : '▾') + '</span><b>🧩 이번 주 퀘스트</b>'
+    + '<small>완료 ' + doneN + '/' + qs.length + (claimN ? ' · <span class="quest-claim-n">받을 보상 ' + claimN + '개</span>' : '') + '</small></button>' + fragChipsHtml() + '</div>';
+  if(folded) return '<div class="quest-card folded">' + head + '</div>';
+  return '<div class="quest-card">' + head
     + qs.map(q => {
         const done = q.progress >= q.target;
         return '<div class="quest-row' + (q.claimed ? ' claimed' : done ? ' done' : '') + '">'
@@ -9284,8 +9328,10 @@ function subscribeToUpdates(){
     window._fsDoc(window._db,'classrooms',roomId,'data','pesk-literacy'),
     (snap)=>{
       _applyLiteracy(snap.exists() ? snap.data().value : null);
-      const panel = document.getElementById('panel-literacy');
-      if(panel && panel.style.display !== 'none' && (!litView || !litDoc.sheets[litView.date])) renderLiteracyPanel();
+      if(advActive() === 'rpg'){
+        if(advMode !== 'lit') scheduleAdventureRefresh();
+        else if(!litView || !litDoc.sheets[litView.date]) renderLiteracyPanel();
+      }
       refreshTodayPanel();
     }
   ));
@@ -9738,8 +9784,23 @@ waitFirebase(async()=>{
 .av-power-fx{margin-top:10px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;line-height:1.5;color:var(--text);}
 .av-power-note{margin-top:8px;font-size:11.5px;color:var(--hint);line-height:1.5;}
 .rpg-power{font-weight:900;color:#b4232a;}
+.av-empty{padding:22px 14px;text-align:center;color:var(--sub);font-size:13px;line-height:1.7;background:var(--card);border-radius:var(--radius-sm);border:1.5px dashed var(--border);}
+.av-empty small{color:var(--hint);}
+.av-random-btn{font:inherit;font-size:12.5px;font-weight:800;border:1.5px solid var(--border);background:var(--card);color:var(--text);border-radius:99px;padding:6px 12px;cursor:pointer;}
 .quest-card{background:var(--card);border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);padding:12px 14px;margin:10px 0;}
 .quest-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;margin-bottom:6px;}
+.quest-card.folded .quest-head{margin-bottom:0;}
+.quest-fold{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;background:none;border:none;padding:2px 0;font:inherit;color:var(--text);cursor:pointer;text-align:left;}
+.quest-fold small{font-size:12px;color:var(--sub);font-weight:600;}
+.quest-caret{font-size:12px;color:var(--sub);width:12px;}
+.quest-claim-n{color:#ea580c;font-weight:800;}
+.lit-adv{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;color:var(--text);background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin:10px 0;cursor:pointer;box-shadow:var(--shadow-sm);}
+.lit-adv.hot{border-color:#0ea5a4;background:linear-gradient(135deg,#ecfeff,#f0fdfa);}
+.lit-adv-ic{font-size:24px;}
+.lit-adv-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.lit-adv-body b{font-size:14px;word-break:keep-all;}
+.lit-adv-body small{font-size:12px;color:var(--sub);word-break:keep-all;}
+.lit-adv-go{font-size:13px;font-weight:800;color:#0e7490;white-space:nowrap;}
 .frag-chips{display:inline-flex;gap:5px;margin-left:auto;}
 .frag-chip{font-size:12px;font-weight:700;background:var(--bg);border-radius:99px;padding:2px 8px;}
 .quest-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px dashed var(--border);}

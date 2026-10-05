@@ -14,10 +14,26 @@ const BLANK_RE=/\{\{([^{}]+?)\}\}/g;
 const clampInt=(v,min,max,d)=>{const n=Math.round(Number(v));return Number.isFinite(n)?Math.min(max,Math.max(min,n)):d;};
 const str=(v,max)=>String(v==null?'':v).replace(/\*\*/g,'').replace(/\s+/g,' ').trim().slice(0,max);
 
+/* ── 수준 ── 3~4학년 · 5~6학년 · 심화(5~6학년 중 읽기를 잘하는 학생) */
+const LEVELS={
+  low:{id:'low',label:'3~4학년',who:'초등학교 3~4학년',chars:'400~550자',paras:'4문단, 문단마다 2~3문장',sentence:'한 문장은 35자 안팎',range:[350,650]},
+  high:{id:'high',label:'5~6학년',who:'초등학교 5~6학년',chars:'550~750자',paras:'4~5문단, 문단마다 3~4문장',sentence:'한 문장은 40자 안팎',range:[480,850]},
+  adv:{id:'adv',label:'심화',who:'읽기를 잘하는 초등학교 5~6학년(심화)',chars:'750~950자',paras:'5문단, 문단마다 3~4문장',sentence:'한 문장은 45자 안팎. 개념 두 가지를 비교하거나 원인과 결과를 여러 단계로 설명한다',range:[650,1100]}
+};
+const LEVEL_IDS=Object.keys(LEVELS);
+/* 예전 설정(학년 숫자)도 수준으로 바꿔 읽는다 */
+function levelOf(x){
+  if(x&&typeof x==='object'){if(LEVELS[x.level])return x.level;x=x.grade;}
+  if(LEVELS[x])return x;
+  const g=Number(x);return Number.isFinite(g)&&g<=4?'low':'high';
+}
 function normalizeCfg(raw){
   const c=(raw&&typeof raw==='object')?raw:{};
+  const level=levelOf(c);
   return {
-    grade:clampInt(c.grade,3,6,5),
+    level,
+    grade:level==='low'?4:6,
+    sheetUrl:String(c.sheetUrl||'').trim().slice(0,300),
     coinBase:clampInt(c.coinBase,0,500,30),
     coinBonus:clampInt(c.coinBonus,0,500,20),
     bonusMin:clampInt(c.bonusMin,1,4,3),
@@ -129,9 +145,9 @@ function validate(raw,opts={}){
   if(sheet.final_quiz.answer<0)errors.push('4번 정답 번호가 없어요.');
   if(!pOk(sheet.final_quiz.evidence))errors.push('4번의 근거 문단 번호가 올바르지 않아요.');
   const len=paragraphs.join(' ').length;   // 프롬프트와 같은 기준: 띄어쓰기 포함
-  const grade=clampInt(opts.grade,3,6,5);
-  const [lo,hi]=grade<=4?[350,600]:[480,820];
-  if(paragraphs.length&&(len<lo||len>hi))warnings.push('지문 길이가 '+len+'자예요. '+grade+'학년은 '+lo+'~'+hi+'자 정도가 알맞아요.');
+  const L=LEVELS[levelOf(opts.level?opts.level:opts.grade)];
+  const [lo,hi]=L.range;
+  if(paragraphs.length&&(len<lo||len>hi))warnings.push('지문 길이가 '+len+'자예요. '+L.label+' 수준은 '+lo+'~'+hi+'자 정도가 알맞아요.');
   if(paragraphs.some(p=>/\*\*|<[a-z]/i.test(p)))warnings.push('지문에 강조 표시가 남아 있어요.');
   return {ok:!errors.length,errors,warnings,sheet};
 }
@@ -159,15 +175,11 @@ function grade(sheet,answers){
 }
 
 /* ── 프롬프트 ── */
-function gradeGuide(grade){
-  return grade<=4
-    ? {chars:'400~550자',paras:'4문단, 문단마다 2~3문장',sentence:'한 문장은 35자 안팎'}
-    : {chars:'550~750자',paras:'4~5문단, 문단마다 3~4문장',sentence:'한 문장은 40자 안팎'};
-}
-function buildTopicPrompt({grade,slots,used}){
-  const g=clampInt(grade,3,6,5);
+function gradeGuide(x){return LEVELS[levelOf(x)];}
+function buildTopicPrompt({grade,level,slots,used}){
+  const L=LEVELS[levelOf(level||grade)];
   return `# 역할
-너는 한국 초등학교 ${g}학년 담임 교사를 돕는 비문학 독서 교육 전문가다.
+너는 한국 ${L.who} 담임 교사를 돕는 비문학 독서 교육 전문가다.
 우리 반은 정해진 날짜에 '오늘의 지문'(비문학 지문 한 편 + 구조도 빈칸 문제)을 읽는다.
 아래 회차마다 지문 주제를 하나씩 정해 줘.
 
@@ -176,9 +188,9 @@ ${slots.map(s=>`- ${s.date} (${s.dow}) · ${s.subject}`).join('\n')}
 
 # 주제 고르는 기준
 1. 분야를 반드시 지킨다. (사회·역사·생활·과학·환경)
-2. ${g}학년 학생이 사회·과학 시간에 배우거나 생활에서 궁금해할 만한 내용을 고른다.
+2. ${L.who} 학생이 사회·과학 시간에 배우거나 생활에서 궁금해할 만한 내용을 고른다.
 3. 날짜와 가까운 기념일·계절·학교 행사가 있으면 연결한다. (예: 10월 9일 한글날 앞 회차 → 한글의 원리)
-4. 한 편(${gradeGuide(g).chars})으로 설명할 수 있을 만큼 좁고 구체적인 주제로 쓴다. ('환경' X → '플라스틱이 바다에서 사라지지 않는 까닭' O)
+4. 한 편(${L.chars})으로 설명할 수 있을 만큼 좁고 구체적인 주제로 쓴다. ('환경' X → '플라스틱이 바다에서 사라지지 않는 까닭' O)
 5. 교과서 수준에서 사실이 확실한 주제만 고른다. 논쟁이 크거나 정치적으로 치우친 주제, 무섭거나 자극적인 주제는 피한다.
 6. 회차끼리 주제가 겹치지 않게 한다.
 ${used&&used.length?`7. 이미 다룬 주제와 겹치지 않게 한다: ${used.slice(-60).join(', ')}`:''}
@@ -186,14 +198,14 @@ ${used&&used.length?`7. 이미 다룬 주제와 겹치지 않게 한다: ${used.
 # 출력 (JSON만, 설명 없이)
 {"topics":[{"date":"YYYY-MM-DD","topic":"주제 (25자 이내, 질문형이나 명사형)"}]}`;
 }
-function buildSheetPrompt({grade,subject,topic,date,usedWords}){
-  const g=clampInt(grade,3,6,5),gg=gradeGuide(g);
+function buildSheetPrompt({grade,level,subject,topic,date,usedWords}){
+  const gg=LEVELS[levelOf(level||grade)];
   return `# 역할
 너는 한국 초등학교 국어 교육 전문가이자 비문학 지문 집필자다.
-${g}학년 학생이 하루 한 편 읽고 구조도 빈칸을 채우는 '오늘의 지문'을 만든다.
+${gg.who} 학생이 하루 한 편 읽고 구조도 빈칸을 채우는 '오늘의 지문'을 만든다.
 
 # 입력
-- 학년: ${g}학년
+- 수준: ${gg.label} (${gg.who})
 - 분야: ${subject}
 - 주제: ${topic}
 - 날짜: ${date}
@@ -207,7 +219,7 @@ ${g}학년 학생이 하루 한 편 읽고 구조도 빈칸을 채우는 '오늘
 6. 학생 본인의 아픈 경험이나 개인 정보를 묻는 내용, 특정 인물·집단을 비하하는 내용, 정치적으로 치우친 내용은 쓰지 않는다.
 
 # 용어 풀이 (glossary)
-- 지문에 나온 낱말 중 ${g}학년에게 조금 어려운 낱말 2개와 그 뜻(30자 안팎).
+- 지문에 나온 낱말 중 이 수준 학생에게 조금 어려운 낱말 2개와 그 뜻(30자 안팎).
 
 # 한눈에 정리 (map) — 이것이 1~3번 문제가 된다
 - center: 글 전체의 핵심 개념 (10자 이내).
@@ -246,14 +258,83 @@ ${usedWords&&usedWords.length?`  · 최근에 정답으로 쓴 낱말은 피한�
  "essay_suggestion":"서술형 문항 예시"}`;
 }
 /* AI 응답 → 검증 가능한 형태 (정답 번호 1~4 → 0~3, 보기 위치 섞기) */
-function fromAi(raw,{grade,seed}={}){
+function fromAi(raw,{grade,level,seed}={}){
   const r=(raw&&typeof raw==='object')?raw:{};
   const q=(r.final_quiz&&typeof r.final_quiz==='object')?r.final_quiz:{};
   const ans=Number(q.answer);
   const fixed={...r,final_quiz:{...q,answer:Number.isInteger(ans)?ans-1:-1}};
-  const v=validate(fixed,{grade});
+  const v=validate(fixed,{level:level||levelOf(grade)});
   return {...v,sheet:v.ok?placeAnswer(v.sheet,seed||''):v.sheet,essaySuggestion:str(r.essay_suggestion,200)};
 }
+
+/* ── 📚 지문 은행 (구글 시트) ──
+   한 줄 = 지문 한 편. 시트를 "링크가 있는 모든 사용자 보기"로 공유하면 CSV 로 읽는다 (명언과 같은 방식).
+   지문 칸은 문단마다 줄바꿈. 구조도 내용 안의 빈칸 정답은 {{낱말}}. 정답은 보기 번호 1~4. */
+/* 공용 지문 은행 — 선생님이 반 시트 주소를 넣지 않으면 이 시트를 쓴다 */
+const DEFAULT_BANK_SHEET_ID='1dm445lkfbUPcke_zagQ8Wmwk0v5-gHNS2pwL1Jbn6JA';
+const BANK_COLUMNS=['번호','수준','분야','주제','제목','지문','용어1','뜻1','용어2','뜻2','가운데']
+  .concat([1,2,3,4].flatMap(n=>['가지'+n+' 이름','가지'+n+' 내용','가지'+n+' 덧붙임','가지'+n+' 근거']))
+  .concat(['4번 문제','보기1','보기2','보기3','보기4','정답','4번 근거','해설','서술형']);
+const LEVEL_BY_LABEL={'3~4학년':'low','5~6학년':'high','심화':'adv','low':'low','high':'high','adv':'adv'};
+function parseCsv(text){
+  const rows=[];let row=[],cur='',q=false;
+  const t=String(text||'').replace(/^﻿/,'');
+  for(let i=0;i<t.length;i++){
+    const c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}
+    else if(c==='"')q=true;
+    else if(c===','){row.push(cur);cur='';}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(cur);rows.push(row);row=[];cur='';}
+    else cur+=c;
+  }
+  if(cur!==''||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(r=>r.some(x=>String(x).trim()));
+}
+function sheetIdFrom(urlOrId){
+  const s=String(urlOrId||'').trim();
+  const m=s.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]{20,})/);
+  return m?m[1]:(/^[a-zA-Z0-9_-]{20,}$/.test(s)?s:'');
+}
+function bankCsvUrl(id){return 'https://docs.google.com/spreadsheets/d/'+encodeURIComponent(id)+'/gviz/tq?tqx=out:csv';}
+/* 시트 한 줄 → 검사된 지문 (보기 위치는 배정할 때 날짜로 섞는다) */
+function bankRow(get){
+  const level=LEVEL_BY_LABEL[String(get('수준')).trim()]||'';
+  const branches=[1,2,3,4].map(n=>({label:get('가지'+n+' 이름'),text:get('가지'+n+' 내용'),sub:get('가지'+n+' 덧붙임'),evidence:Number(get('가지'+n+' 근거'))})).filter(b=>String(b.label).trim()||String(b.text).trim());
+  const raw={title:get('제목'),paragraphs:String(get('지문')).split(/\r?\n/).map(x=>x.trim()).filter(Boolean),
+    glossary:[{term:get('용어1'),meaning:get('뜻1')},{term:get('용어2'),meaning:get('뜻2')}],
+    map:{center:get('가운데'),branches},
+    final_quiz:{text:get('4번 문제'),choices:[1,2,3,4].map(n=>get('보기'+n)),answer:Number(get('정답')),evidence:Number(get('4번 근거')),explain:get('해설')},
+    essay_suggestion:get('서술형')};
+  const v=fromAi(raw,{level:level||'high',seed:''});
+  const errors=v.errors.slice();
+  if(!level)errors.unshift('수준은 3~4학년 · 5~6학년 · 심화 중 하나여야 해요.');
+  const subject=String(get('분야')).trim();
+  if(!SUBJECTS.includes(subject))errors.unshift('분야는 '+SUBJECTS.join('·')+' 중 하나여야 해요.');
+  return {id:String(get('번호')).trim(),level,subject,topic:String(get('주제')).trim()||v.sheet.title,title:v.sheet.title,
+    ok:!errors.length,errors,warnings:v.warnings,raw,essay:v.essaySuggestion};
+}
+function parseBank(csvText){
+  const rows=parseCsv(csvText);
+  if(!rows.length)return {rows:[],missing:BANK_COLUMNS.slice()};
+  const head=rows[0].map(h=>String(h).trim());
+  const missing=BANK_COLUMNS.filter(c=>!head.includes(c));
+  const idx=Object.fromEntries(head.map((h,i)=>[h,i]));
+  const out=rows.slice(1).map((r,i)=>{const b=bankRow(c=>idx[c]===undefined?'':String(r[idx[c]]||''));b.line=i+2;if(!b.id)b.id='줄'+(i+2);return b;});
+  return {rows:out,missing};
+}
+/* 은행 지문을 회차에 넣을 때: 날짜로 보기 위치를 섞은 검사된 지문 */
+function bankSheetFor(row,date){return fromAi(row.raw,{level:row.level||'high',seed:date});}
+/* 지문 → 시트 한 줄 (지문 은행 만들기·내보내기) */
+function toBankRow(meta,raw){
+  const b=(raw.map&&raw.map.branches)||[],q=raw.final_quiz||{},g=raw.glossary||[];
+  const cell={'번호':meta.id,'수준':LEVELS[meta.level]?LEVELS[meta.level].label:meta.level,'분야':meta.subject,'주제':meta.topic||raw.title,'제목':raw.title,
+    '지문':(raw.paragraphs||[]).join('\n'),'용어1':g[0]?.term||'','뜻1':g[0]?.meaning||'','용어2':g[1]?.term||'','뜻2':g[1]?.meaning||'','가운데':raw.map?.center||'',
+    '4번 문제':q.text||'','보기1':q.choices?.[0]||'','보기2':q.choices?.[1]||'','보기3':q.choices?.[2]||'','보기4':q.choices?.[3]||'',
+    '정답':q.answer,'4번 근거':q.evidence,'해설':q.explain||'','서술형':raw.essay_suggestion||''};
+  [1,2,3,4].forEach(n=>{const x=b[n-1]||{};cell['가지'+n+' 이름']=x.label||'';cell['가지'+n+' 내용']=x.text||'';cell['가지'+n+' 덧붙임']=x.sub||'';cell['가지'+n+' 근거']=x.evidence||'';});
+  return BANK_COLUMNS.map(c=>cell[c]===undefined||cell[c]===null?'':String(cell[c]));
+}
+function toCsv(rows){return rows.map(r=>r.map(x=>/[",\n\r]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x).join(',')).join('\r\n');}
 
 /* ── 화면 ── 학생 앱과 교사 미리보기가 같은 모양을 쓴다 */
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -376,7 +457,7 @@ function renderSheet(sheet,opts={}){
     +'</div></div>';
 }
 
-const API={SUBJECTS,DOW,normalizeCfg,choseong,same,squash,ymd,addDays,dowName,windowOf,stateOn,upcomingDates,suggestSubjects,reward,
+const API={SUBJECTS,DOW,DEFAULT_BANK_SHEET_ID,LEVELS,LEVEL_IDS,levelOf,BANK_COLUMNS,parseCsv,sheetIdFrom,bankCsvUrl,parseBank,bankSheetFor,toBankRow,toCsv,normalizeCfg,choseong,same,squash,ymd,addDays,dowName,windowOf,stateOn,upcomingDates,suggestSubjects,reward,
   blanksOf,validate,placeAnswer,grade,buildTopicPrompt,buildSheetPrompt,fromAi,injectStyles,renderSheet,esc};
 if(typeof module==='object'&&module.exports)module.exports=API;
 root.LiteracyCore=API;

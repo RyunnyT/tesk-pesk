@@ -3,7 +3,7 @@
 <head>
 <script src="shared/teaching-core.js?v=20261001counsel3"></script>
 <script src="shared/todo-schedule.js?v=20261004todo2"></script>
-<script src="shared/literacy-core.js?v=20261004lit1"></script>
+<script src="shared/literacy-core.js?v=20261005bank1"></script>
 <script src="shared/pesk-progression.js?v=20261004grow1"></script>
 <link rel="stylesheet" href="shared/tesk-teaching.css?v=20261001counsel3">
 <script src="shared/peer-survey.js?v=20260929class1"></script>
@@ -4261,7 +4261,7 @@ let litProgress = null;     // 열린 회차의 학생 기록 (서버에서 읽�
 function litData(){
   const raw = load('pesk-literacy', null);
   const v = (raw && typeof raw === 'object') ? raw : {};
-  return {cfg: LiteracyCore.normalizeCfg(v.cfg || {grade: Number(load('pesk-quiz-config',{})?.grade) || undefined}),
+  return {cfg: LiteracyCore.normalizeCfg(v.cfg || {grade: Number(load('pesk-quiz-config',{})?.grade) || 5}),
           sheets: (v.sheets && typeof v.sheets === 'object') ? v.sheets : {}};
 }
 /* 다른 창의 변경을 덮어쓰지 않도록 서버 문서를 트랜잭션으로 고친다 (연결이 없으면 로컬만) */
@@ -4334,13 +4334,14 @@ async function renderLiteracy(){
     + '<div style="font-size:12px;color:var(--sub);">공개 요일: <b style="color:var(--tesk);">' + TodoSchedule.dowLabel(days) + '</b> '
     + '<a href="#" onclick="openTodoWeekModal();return false;" style="color:var(--tesk);font-weight:700;">요일 바꾸기 ›</a></div></div>'
     + '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">'
-    + '<label class="qz-field" style="flex:0 0 auto;"><span>학년</span><select class="form-input" id="lit-grade" style="width:96px;">'
-    + [3,4,5,6].map(g=>'<option value="'+g+'"'+(g===cfg.grade?' selected':'')+'>'+g+'학년</option>').join('') + '</select></label>'
+    + '<label class="qz-field" style="flex:0 0 auto;"><span>수준</span><select class="form-input" id="lit-level" style="width:110px;">'
+    + LiteracyCore.LEVEL_IDS.map(l=>'<option value="'+l+'"'+(l===cfg.level?' selected':'')+'>'+LiteracyCore.LEVELS[l].label+'</option>').join('') + '</select></label>'
     + num('lit-base','기본 보상 🪙',cfg.coinBase,0,500,'다 풀면')
     + num('lit-bonus','정확도 보너스 🪙',cfg.coinBonus,0,500,'')
     + num('lit-bonusmin','보너스 기준',cfg.bonusMin,1,4,'처음 채점 n개 이상')
     + num('lit-grace','놓친 회차 기간',cfg.graceDays,0,6,'공개일 뒤 며칠까지')
     + num('lit-essay','서술형 확인 보상 🪙',cfg.coinEssay,0,500,'선생님 확인 시')
+    + '<label class="qz-field" style="flex:1 1 260px;"><span>우리 반 지문 시트 주소 (선택)</span><input class="form-input" id="lit-sheet" value="' + escHtml(cfg.sheetUrl) + '" placeholder="비워 두면 공용 지문 은행을 써요"><small>시트를 \'링크가 있는 모든 사용자 보기\'로 공유해 주세요</small></label>'
     + '<button class="btn btn-sm btn-primary" id="lit-save-cfg">설정 저장</button></div>'
     + '<div class="insight-help" style="margin-top:10px;">승인한 지문만 공개일에 학생 홈 <b>오늘 할 일</b>에 뜨고, 놓친 학생도 기간 안에 풀면 같은 보상을 받아요. 보너스는 <b>처음 채점했을 때</b>의 정답 수로 정해져서, 답을 바꿔 가며 맞혀도 받을 수 없어요.</div></div>';
 
@@ -4366,13 +4367,20 @@ async function renderLiteracy(){
     + '<thead><tr style="color:var(--sub);font-size:11.5px;text-align:left;"><th style="padding:0 6px;">날짜</th><th>분야</th><th>주제</th><th>상태</th><th></th></tr></thead>'
     + '<tbody>' + rowHtml + '</tbody></table></div></div>';
 
-  el.innerHTML = cfgCard + listCard + '<div id="lit-editor"></div>';
+  el.innerHTML = cfgCard + litBankCardHtml() + listCard + '<div id="lit-editor"></div>';
   bindLiteracyPage(el);
   if(litOpenDate) renderLitEditor();
 }
 function bindLiteracyPage(el){
   el.querySelector('#lit-save-cfg')?.addEventListener('click', saveLitCfg);
   el.querySelector('#lit-fill-topics')?.addEventListener('click', fillLitTopics);
+  el.querySelector('#lit-bank-load')?.addEventListener('click', () => loadLitBank(true));
+  el.querySelector('#lit-bank-fill')?.addEventListener('click', fillFromLitBank);
+  el.querySelector('#lit-bank-approve')?.addEventListener('click', approveAllLitDrafts);
+  el.querySelectorAll('[data-bank-put]').forEach(b => b.addEventListener('click', () => {
+    const date = el.querySelector('[data-bank-date="' + b.dataset.bankPut + '"]')?.value;
+    if(date) putBankRow(b.dataset.bankPut, date);
+  }));
   el.querySelectorAll('[data-lit-row]').forEach(tr => {
     const date = tr.dataset.litRow;
     const patch = () => litMutate(v => {
@@ -4391,7 +4399,10 @@ function bindLiteracyPage(el){
 async function saveLitCfg(){
   const v = id => document.getElementById(id)?.value;
   try{
-    await litMutate(d => ({...d, cfg: LiteracyCore.normalizeCfg({grade:v('lit-grade'), coinBase:v('lit-base'), coinBonus:v('lit-bonus'),
+    const sheetUrl = String(v('lit-sheet') || '').trim();
+    if(sheetUrl && !LiteracyCore.sheetIdFrom(sheetUrl)) return showToast('⚠️ 구글 시트 주소를 확인해 주세요');
+    if(sheetUrl !== litData().cfg.sheetUrl) litBank = null;
+    await litMutate(d => ({...d, cfg: LiteracyCore.normalizeCfg({level:v('lit-level'), sheetUrl, coinBase:v('lit-base'), coinBonus:v('lit-bonus'),
       bonusMin:v('lit-bonusmin'), graceDays:v('lit-grace'), coinEssay:v('lit-essay')})}));
     showToast('📖 오늘의 지문 설정을 저장했어요');
     addActivity('📖 오늘의 지문 설정 저장');
@@ -4407,9 +4418,9 @@ async function fillLitTopics(){
   showToast('✨ AI가 주제를 고르는 중… (' + rows.length + '회차)');
   try{
     const used = Object.values(sheets).map(s => s.topic).filter(Boolean);
-    const out = await callTeachAIJson(LiteracyCore.buildTopicPrompt({grade: cfg.grade,
+    const out = await callTeachAIJson(LiteracyCore.buildTopicPrompt({level: cfg.level,
       slots: rows.map(r => ({date: r.date, dow: LiteracyCore.dowName(r.date), subject: r.subject})), used}),
-      {temperature: 0.6, maxTokens: 3000}, '{"topics":[{"date":"YYYY-MM-DD","topic":"주제"}]}');
+      {temperature: 0.6, maxTokens: 16384, thinkingBudget: 1024, json: true}, '{"topics":[{"date":"YYYY-MM-DD","topic":"주제"}]}');
     const list = Array.isArray(out?.topics) ? out.topics : [];
     let n = 0;
     await litMutate(v => {
@@ -4427,6 +4438,115 @@ async function fillLitTopics(){
   }catch(e){ showToast('⚠️ 주제 만들기 실패: ' + e.message); }
   finally{ litBusy = false; renderLiteracy(); }
 }
+/* ── 📚 지문 은행 (구글 시트) ── 공용 은행이 기본, 반마다 자기 시트를 쓸 수도 있다.
+   은행 지문은 회차에 넣는 순간 앱 안에 복사한다 → 나중에 시트를 고쳐도 공개한 지문은 바뀌지 않는다. */
+let litBank = null;   // {source, rows, missing, error}
+async function loadLitBank(force){
+  const cfg = litData().cfg;
+  const own = LiteracyCore.sheetIdFrom(cfg.sheetUrl);
+  const id = own || LiteracyCore.DEFAULT_BANK_SHEET_ID;
+  if(!id){ litBank = {source:'', rows:[], missing:[], error:'연결된 지문 은행이 없어요. 우리 반 시트 주소를 넣어 주세요.'}; renderLiteracy(); return; }
+  if(litBank && !force && litBank.id === id) return;
+  litBank = {id, source: own ? '우리 반 시트' : '공용 지문 은행', rows:[], missing:[], loading:true};
+  renderLiteracy();
+  try{
+    const res = await fetch(LiteracyCore.bankCsvUrl(id), {cache:'no-store'});
+    const text = await res.text();
+    if(!res.ok || /^\s*</.test(text)) throw new Error('공유 설정');
+    const b = LiteracyCore.parseBank(text);
+    litBank = {id, source: litBank.source, rows: b.rows, missing: b.missing, loadedAt: new Date()};
+    if(force) showToast('📚 지문 ' + b.rows.length + '편을 불러왔어요');
+  }catch(e){
+    litBank = {id, source: own ? '우리 반 시트' : '공용 지문 은행', rows:[], missing:[], error:'시트를 읽지 못했어요. 시트 공유를 \'링크가 있는 모든 사용자 보기\'로 바꿨는지 확인해 주세요.'};
+  }
+  if(document.getElementById('page-literacy')?.classList.contains('active')) renderLiteracy();
+}
+function litBankUsed(){ return new Set(Object.values(litData().sheets).map(s => s && s.bankId).filter(Boolean)); }
+function litBankCardHtml(){
+  if(!litBank){ setTimeout(() => loadLitBank(false), 0); return '<div class="card" style="margin-bottom:16px;"><div class="card-title">📚 지문 은행</div><div class="insight-help">불러오는 중…</div></div>'; }
+  const cfg = litData().cfg, used = litBankUsed();
+  const mine = litBank.rows.filter(r => r.level === cfg.level);
+  const okMine = mine.filter(r => r.ok), freeMine = okMine.filter(r => !used.has(r.id));
+  const bad = litBank.rows.filter(r => !r.ok);
+  const openDates = litRows().filter(r => !r.past && r.status !== 'approved');
+  const dateOpts = openDates.map(r => '<option value="' + r.date + '">' + litDateLabel(r.date) + (r.hasSheet ? ' (바꾸기)' : '') + '</option>').join('');
+  const subjOrder = LiteracyCore.SUBJECTS;
+  const list = mine.slice().sort((a,b) => subjOrder.indexOf(a.subject) - subjOrder.indexOf(b.subject)).map(r => {
+    const u = used.has(r.id);
+    return '<tr style="' + (u ? 'opacity:.55;' : '') + '"><td style="white-space:nowrap;padding:3px 6px;color:var(--sub);">' + escHtml(r.id) + '</td>'
+      + '<td style="white-space:nowrap;">' + escHtml(r.subject) + '</td><td style="width:100%;">' + escHtml(r.title)
+      + (r.ok ? '' : '<div style="color:var(--coral);font-size:11px;">✗ ' + escHtml(r.errors[0] || '') + '</div>') + '</td>'
+      + '<td style="white-space:nowrap;font-size:11px;">' + (u ? '사용함' : r.ok ? '✅' : '❌') + '</td>'
+      + '<td style="white-space:nowrap;">' + (r.ok && dateOpts ? '<select class="form-input" data-bank-date="' + escHtml(r.id) + '" style="padding:3px 6px;font-size:11.5px;width:auto;">' + dateOpts + '</select> <button class="btn btn-sm btn-secondary" data-bank-put="' + escHtml(r.id) + '">넣기</button>' : '') + '</td></tr>';
+  }).join('');
+  return '<div class="card" style="margin-bottom:16px;">'
+    + '<div class="card-header"><div class="card-title">📚 지문 은행 <span style="font-size:12px;color:var(--sub);font-weight:600;">' + escHtml(litBank.source || '') + '</span></div>'
+    + '<button class="btn btn-sm btn-secondary" id="lit-bank-load">🔄 다시 불러오기</button></div>'
+    + (litBank.loading ? '<div class="insight-help">불러오는 중…</div>'
+      : litBank.error ? '<div style="color:var(--coral);font-size:12.5px;">' + escHtml(litBank.error) + '</div>'
+      : '<div style="font-size:12.5px;margin-bottom:8px;">' + LiteracyCore.LEVELS[cfg.level].label + ' 지문 <b>' + mine.length + '편</b> · 쓸 수 있는 지문 <b>' + freeMine.length + '편</b>'
+        + (bad.length ? ' · <span style="color:var(--coral);">고칠 줄 ' + bad.length + '개</span>' : '') + (litBank.missing.length ? ' · <span style="color:var(--coral);">빠진 열: ' + escHtml(litBank.missing.slice(0,4).join(', ')) + '</span>' : '') + '</div>'
+        + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"><button class="btn btn-sm btn-primary" id="lit-bank-fill"' + (freeMine.length ? '' : ' disabled') + '>📥 빈 회차 자동 채우기</button>'
+        + '<button class="btn btn-sm btn-secondary" id="lit-bank-approve">✅ 검사 통과한 초안 모두 승인</button></div>'
+        + '<div class="insight-help" style="margin-bottom:6px;">빈 회차에 이 수준의 아직 안 쓴 지문을 시트 순서대로 넣어요. 분야는 회차 계획의 분야를 먼저 맞춰요. 넣은 지문은 \'검토 중\'이 되고, 승인해야 학생에게 열려요.</div>'
+        + '<details><summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--tesk);">지문 목록 보기 (' + mine.length + ')</summary>'
+        + '<div style="overflow-x:auto;max-height:360px;overflow-y:auto;margin-top:6px;"><table style="width:100%;font-size:12px;border-collapse:collapse;">' + list + '</table></div></details>')
+    + '</div>';
+}
+async function assignBankRows(pairs){
+  // pairs: [{row, date}] — 승인된 회차는 건드리지 않는다
+  await litMutate(v => {
+    pairs.forEach(({row, date}) => {
+      const cur = v.sheets[date] || {};
+      if(cur.status === 'approved') return;
+      const r = LiteracyCore.bankSheetFor(row, date);
+      if(!r.ok) return;
+      v.sheets[date] = {date, subject: row.subject, topic: row.title, status: 'draft', sheet: r.sheet,
+        essay: {on: false, question: row.essay || ''}, bankId: row.id, updatedAt: new Date().toISOString()};
+    });
+    return v;
+  });
+}
+async function fillFromLitBank(){
+  if(!litBank || !litBank.rows.length) return;
+  const cfg = litData().cfg, used = litBankUsed();
+  const free = litBank.rows.filter(r => r.ok && r.level === cfg.level && !used.has(r.id));
+  const empty = litRows().filter(r => !r.past && !r.hasSheet && r.status !== 'approved');
+  if(!empty.length) return showToast('채울 빈 회차가 없어요');
+  const pairs = [];
+  empty.forEach(slot => {
+    let i = free.findIndex(r => r.subject === slot.subject);
+    if(i < 0) i = 0;
+    if(!free[i]) return;
+    pairs.push({row: free[i], date: slot.date});
+    free.splice(i, 1);
+  });
+  if(!pairs.length) return showToast('⚠️ 넣을 수 있는 지문이 없어요');
+  try{
+    await assignBankRows(pairs);
+    showToast('📥 ' + pairs.length + '회차에 지문을 넣었어요. 읽어 보고 승인해 주세요.');
+    addActivity('📚 지문 은행에서 ' + pairs.length + '회차 채움');
+    renderLiteracy();
+  }catch(e){ showToast('⚠️ 저장 실패: ' + e.message); }
+}
+async function putBankRow(id, date){
+  const row = litBank && litBank.rows.find(r => r.id === id);
+  if(!row || !row.ok) return;
+  try{ await assignBankRows([{row, date}]); litOpenDate = date; litProgress = null; showToast('📥 ' + litDateLabel(date) + '에 「' + row.title + '」을 넣었어요'); renderLiteracy(); }
+  catch(e){ showToast('⚠️ 저장 실패: ' + e.message); }
+}
+async function approveAllLitDrafts(){
+  const cfg = litData().cfg, today = LiteracyCore.ymd(new Date());
+  const ids = Object.values(litData().sheets).filter(s => s && s.status === 'draft' && s.sheet && s.date >= today && LiteracyCore.validate(s.sheet, {level: cfg.level}).ok).map(s => s.date);
+  if(!ids.length) return showToast('승인할 초안이 없어요');
+  if(!confirm(ids.length + '개 회차를 승인할까요? 승인한 지문은 정한 날짜에 학생에게 열려요. 사실이 맞는지 미리 읽어 보셨는지 확인해 주세요.')) return;
+  try{
+    await litMutate(v => { ids.forEach(d => { const x = v.sheets[d]; if(x && x.status === 'draft') v.sheets[d] = {...x, status: 'approved', approvedAt: new Date().toISOString()}; }); return v; });
+    showToast('✅ ' + ids.length + '개 회차를 승인했어요');
+    addActivity('📖 오늘의 지문 ' + ids.length + '개 승인');
+    renderLiteracy();
+  }catch(e){ showToast('⚠️ 저장 실패: ' + e.message); }
+}
 async function generateLitSheet(date){
   if(litBusy) return;
   const {cfg, sheets} = litData();
@@ -4441,13 +4561,14 @@ async function generateLitSheet(date){
   litBusy = true; litOpenDate = date; renderLiteracy();
   showToast('✨ 지문을 만드는 중이에요… (30초 정도)');
   try{
-    const base = LiteracyCore.buildSheetPrompt({grade: cfg.grade, subject, topic, date, usedWords});
+    const base = LiteracyCore.buildSheetPrompt({level: cfg.level, subject, topic, date, usedWords});
     let r = null;
     for(let attempt = 0; attempt < 2; attempt++){
       const prompt = attempt === 0 ? base
         : base + '\n\n# 이전 응답에서 고쳐야 할 점 (반드시 고쳐서 다시 출력)\n- ' + r.errors.join('\n- ');
-      const out = await callTeachAIJson(prompt, {temperature: 0.5, maxTokens: 6000}, '{"title":"","paragraphs":[],"glossary":[],"map":{},"final_quiz":{},"essay_suggestion":""}');
-      r = LiteracyCore.fromAi(out, {grade: cfg.grade, seed: date});
+      // Gemini 2.5 는 생각에도 출력 한도를 쓴다 — 다른 AI 기능처럼 넉넉히 주고 생각 분량을 제한한다
+      const out = await callTeachAIJson(prompt, {temperature: 0.5, maxTokens: 16384, thinkingBudget: 1024, json: true}, '{"title":"","paragraphs":[],"glossary":[],"map":{},"final_quiz":{},"essay_suggestion":""}');
+      r = LiteracyCore.fromAi(out, {level: cfg.level, seed: date});
       if(r.ok) break;
     }
     await litMutate(v => {
@@ -4468,7 +4589,7 @@ function renderLitEditor(){
   const {sheets, cfg} = litData();
   const s = sheets[litOpenDate];
   if(!s || !s.sheet){ box.innerHTML = ''; return; }
-  const v = LiteracyCore.validate(s.sheet, {grade: cfg.grade});
+  const v = LiteracyCore.validate(s.sheet, {level: cfg.level});
   const approved = s.status === 'approved';
   const msgs = v.errors.map(e=>'<div style="color:var(--coral);">✗ ' + escHtml(e) + '</div>').join('')
     + v.warnings.map(e=>'<div style="color:var(--gold);">⚠ ' + escHtml(e) + '</div>').join('');
@@ -4537,7 +4658,7 @@ function readLitForm(){
 }
 async function applyLitEdit(){
   const date = litOpenDate;
-  const v = LiteracyCore.validate(readLitForm(), {grade: litData().cfg.grade});
+  const v = LiteracyCore.validate(readLitForm(), {level: litData().cfg.level});
   const wasApproved = litData().sheets[date]?.status === 'approved';
   if(wasApproved && !v.ok) return showToast('⚠️ 승인된 지문은 고칠 점이 없어야 저장돼요: ' + v.errors[0]);
   try{
@@ -4550,7 +4671,7 @@ async function setLitApproved(on){
   const date = litOpenDate;
   const s = litData().sheets[date];
   if(on){
-    const v = LiteracyCore.validate(s?.sheet, {grade: litData().cfg.grade});
+    const v = LiteracyCore.validate(s?.sheet, {level: litData().cfg.level});
     if(!v.ok) return showToast('⚠️ ' + v.errors[0]);
   }else if(!confirm('승인을 취소하면 학생 화면에서 이 지문이 사라져요. 이미 푼 학생의 기록과 보상은 그대로 남아요. 취소할까요?')) return;
   try{
