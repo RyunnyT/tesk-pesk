@@ -647,8 +647,10 @@ function wordsFor(grade){
   const list = WORDS.filter(w => w[3] <= grade);
   return list.length >= 12 ? list : WORDS;
 }
-function makeEnglish(r, grade, tier, word){
-  const list = wordsFor(grade);
+function makeEnglish(r, grade, tier, word, cats){
+  // 단어 섬: 그 섬 분류의 단어만 낸다 (4개 미만이면 학년 전체)
+  const all = wordsFor(grade), inIsland = Array.isArray(cats) && cats.length ? all.filter(w => cats.includes(w[2])) : [];
+  const list = inIsland.length >= 4 ? inIsland : all;
   // 복수 몬스터: 전에 틀린 단어를 다시 낸다 (학년 목록에 없으면 전체 목록에서 찾는다)
   const w = (word && (list.find(x => x[0] === word) || WORDS.find(x => x[0] === word))) || pick(r, list);
   const same = list.filter(x => x[2]===w[2] && x[0]!==w[0]);
@@ -745,7 +747,7 @@ function makeQuestion(opt){
 
   if(opt.subject === 'english'){
     if(![3,4,5,6].includes(grade))return null;
-    return prepareQuestion(Object.assign({subject:'english', grade, unit:'영단어', tier}, makeEnglish(r, grade, tier, opt.word)),opt.seed,opt);
+    return prepareQuestion(Object.assign({subject:'english', grade, unit:'영단어', tier}, makeEnglish(r, grade, tier, opt.word, opt.wordCats)),opt.seed,opt);
   }
   const nos = opt.unitNos != null ? opt.unitNos : (opt.unitNo != null ? [opt.unitNo] : null);
   const units = unitsOf(grade, term, nos);

@@ -150,7 +150,18 @@ test('defeated monsters are replaced at random; living monsters cannot be swappe
   const seen=new Set();
   for(let i=0;i<40;i++){f.docs['pesk-quiz-progress'][1].game.hp=0;await f.c.rpgReloadProgress();const before=f.docs['pesk-quiz-progress'][1].game.monsterId;
     await f.c.rpgNext();const g=f.docs['pesk-quiz-progress'][1].game;assert.notEqual(g.monsterId,before);assert.equal(g.hp,G.monsterById(g.monsterId).hp);seen.add(g.monsterId);}
-  assert.ok(seen.size>=4);assert.ok([...seen].some(id=>G.monsterById(id).hp>144));
+  // 처치 0마리 — 들판 몬스터만 나온다
+  assert.equal(seen.size,4);assert.ok([...seen].every(id=>G.monsterById(id).region==='field'));
+  // 20마리 이상 처치하면 동굴·탑 몬스터도 나온다
+  const vet=new Set();
+  for(let i=0;i<60;i++){const p=f.docs['pesk-quiz-progress'][1];p.game.hp=0;p.game.kills={m_mush:20};await f.c.rpgReloadProgress();await f.c.rpgNext();vet.add(p.game.monsterId);}
+  assert.ok([...vet].some(id=>G.monsterById(id).region==='tower'));assert.ok([...vet].some(id=>G.monsterById(id).region==='cave'));
+});
+test('regions open by total kills and the picker only uses open regions',()=>{
+  const g=G.newGameState();assert.deepEqual(G.unlockedRegions(g).map(r=>r.id),['field']);
+  for(let i=0;i<50;i++)assert.equal(G.randomMonster('m_mush',Math.random,g).region,'field');
+  g.kills={m_mush:8};assert.deepEqual(G.unlockedRegions(g).map(r=>r.id),['field','cave']);assert.deepEqual(G.nextRegionInfo(g).remain,12);
+  assert.ok(G.MONSTERS.every(m=>m.pattern));
 });
 test('legacy boss-targeted adventure records return to a real monster',()=>{
   const g=G.normalizeGame({monsterId:'__boss__',hp:0,pendingAttack:{id:'old',monsterId:'__boss__',bossRound:'round1',baseDamage:12}});
@@ -265,4 +276,62 @@ test('old tickets without power keep their previous damage and power survives sa
   assert.equal(G.normalizeGame({...g,pendingAttack:{...g.pendingAttack,power:33}}).pendingAttack.power,33);
   assert.equal(G.normalizeGame({...g,pendingAttack:{...g.pendingAttack,power:500}}).pendingAttack.power,60);
   assert.equal(resolve(prepare()).damage,14);
+});
+
+/* ── 🗺️ 월드맵 · 단원 보스 ── */
+function withQuiz(f){const prev=globalThis.QUIZ;globalThis.QUIZ=f.c.QUIZ;return ()=>{if(prev===undefined)delete globalThis.QUIZ;else globalThis.QUIZ=prev;};}
+test('world map: teacher-opened units only, stages open in order, boss clears the unit',()=>{
+  const prev=globalThis.QUIZ,box={};vm.createContext(box);box.window=box;vm.runInContext(fs.readFileSync(path.join(__dirname,'../quiz-bank.js'),'utf8'),box);globalThis.QUIZ=box.QUIZ;
+  try{
+    const g=G.newGameState();
+    let map=G.worldMap({subject:'math',grade:5,term:1,openUnits:[2,3],game:g});
+    // 문제은행 샌드박스에서 만든 배열이라 일반 배열로 옮겨서 비교한다
+    assert.equal(map.islands.length,6);assert.deepEqual([...map.islands.filter(i=>i.open).map(i=>i.no)],[2,3]);
+    assert.equal(G.mapFrontier(map),'st|m|5-1|2|0');
+    const ids=[...map.islands[1].stages.map(s=>s.id)];assert.deepEqual([...map.islands[1].stages.map(s=>s.unlocked)],[true,false,false,false]);
+    assert.deepEqual(ids.map(id=>G.monsterById(id).hp),G.STAGE_HP);assert.equal(G.monsterById(ids[3]).unitBoss,true);assert.match(G.monsterById(ids[3]).name,/약수와 배수 수호자/);
+    g.kills={[ids[0]]:1,[ids[1]]:1,[ids[2]]:1};map=G.worldMap({subject:'math',grade:5,term:1,openUnits:[2,3],game:g});
+    assert.equal(G.stageCanEnter(map,ids[3]),true);assert.equal(map.islands[1].cleared,false);
+    g.kills[ids[3]]=1;map=G.worldMap({subject:'math',grade:5,term:1,openUnits:[2,3],game:g});assert.equal(map.islands[1].cleared,true);assert.equal(map.clearedCount,1);
+    assert.equal(G.mapFrontier(map),'st|m|5-1|3|0');assert.equal(G.nextStageId(ids[2]),ids[3]);assert.equal(G.nextStageId(ids[3]),null);
+    assert.equal(G.stageCanEnter(map,'st|m|5-1|4|0'),false,'closed unit');
+    const all=G.worldMap({subject:'math',grade:5,term:1,openUnits:[],game:g});assert.ok(all.islands.every(i=>i.open),'no selection opens every unit');
+    const eng=G.worldMap({subject:'english',grade:3,game:g});assert.ok(eng.islands.length>=4&&eng.islands.every(i=>i.open));
+    assert.equal(G.parseStage('st|m|5|1|0'),null);assert.equal(G.parseStage('st|e|5-1|1|0'),null);assert.equal(G.parseStage('st|m|5-1|1|4'),null);
+    const n=G.normalizeGame({monsterId:ids[1],hp:20,kills:{[ids[0]]:2,bogus:1},stageHp:{[ids[0]]:999,nope:3}});
+    assert.equal(n.monsterId,ids[1]);assert.equal(n.hp,20);assert.deepEqual(n.kills,{[ids[0]]:2});assert.deepEqual(n.stageHp,{[ids[0]]:40});
+  }finally{if(prev===undefined)delete globalThis.QUIZ;else globalThis.QUIZ=prev;}
+});
+test('actual map flow: enter a stage, questions stay in that unit, kills advance, locked stages refuse',async()=>{
+  const f=fixture();const restore=withQuiz(f);
+  try{
+    f.run('quizConfig={grade:5,term:1,mathUnits:[2,4],dailyQuestionLimit:50,huntQuestionLimit:8}');
+    await f.c.rpgEnterStage('st|m|5-1|2|0');let game=f.docs['pesk-quiz-progress'][1].game;
+    assert.equal(game.monsterId,'st|m|5-1|2|0');assert.equal(game.hp,40);
+    for(let i=0;i<5;i++){f.run('rpgQ=null;rpgPicked=null');const q=f.run('rpgEnsureQuestion()');assert.equal(Number(q.unitNo),2,'only unit 2: '+q.unit);}
+    await f.c.rpgEnterStage('st|m|5-1|2|3');assert.equal(f.docs['pesk-quiz-progress'][1].game.monsterId,'st|m|5-1|2|0','boss is locked');
+    await f.c.rpgEnterStage('st|m|5-1|3|0');assert.equal(f.docs['pesk-quiz-progress'][1].game.monsterId,'st|m|5-1|2|0','closed unit');
+    // 반쯤 싸운 체력은 다른 단원에 다녀와도 남는다
+    f.docs['pesk-quiz-progress'][1].game.hp=17;await f.c.rpgReloadProgress();
+    await f.c.rpgEnterStage('st|m|5-1|4|0');game=f.docs['pesk-quiz-progress'][1].game;assert.equal(game.stageHp['st|m|5-1|2|0'],17);
+    await f.c.rpgEnterStage('st|m|5-1|2|0');game=f.docs['pesk-quiz-progress'][1].game;assert.equal(game.hp,17);assert.equal(game.stageHp['st|m|5-1|2|0'],undefined);
+    // 쓰러뜨리면 같은 단원의 다음 스테이지
+    game.hp=0;game.kills={'st|m|5-1|2|0':1};await f.c.rpgReloadProgress();await f.c.rpgNext();
+    game=f.docs['pesk-quiz-progress'][1].game;assert.equal(game.monsterId,'st|m|5-1|2|1');assert.equal(game.hp,55);
+    // 단원 보스 다음에는 아직 못 깬 열린 단원으로
+    game.monsterId='st|m|5-1|2|3';game.hp=0;Object.assign(game.kills,{'st|m|5-1|2|1':1,'st|m|5-1|2|2':1,'st|m|5-1|2|3':1});await f.c.rpgReloadProgress();await f.c.rpgNext();
+    assert.equal(f.docs['pesk-quiz-progress'][1].game.monsterId,'st|m|5-1|4|0');
+    // 선생님이 단원을 닫으면 문제를 내지 않고 지도를 보여준다
+    f.run('quizConfig={grade:5,term:1,mathUnits:[2]}');assert.equal(f.run("rpgStageOk(RPG.parseStage('st|m|5-1|4|0'))"),false);
+    assert.match(f.run('rpgMapHtml()'),/출제 범위를 바꿨어요/);
+  }finally{restore();}
+});
+test('actual english island questions use that island words only',async()=>{
+  const f=fixture();const restore=withQuiz(f);
+  try{
+    f.run("quizConfig={grade:4,term:1,mathUnits:[],dailyQuestionLimit:50};qzSubject='english'");
+    await f.c.rpgEnterStage('st|e|4|4|0');assert.equal(f.docs['pesk-quiz-progress'][1].game.monsterId,'st|e|4|4|0');
+    const cats=G.WORD_ISLANDS.find(w=>w.no===4).cats,W=f.c.QUIZ._internal.WORDS;
+    for(let i=0;i<8;i++){f.run('rpgQ=null;rpgPicked=null');const q=f.run('rpgEnsureQuestion()');assert.equal(q.subject,'english');const w=W.find(x=>x[0]===q.word);assert.ok(cats.includes(w[2]),q.word);}
+  }finally{restore();}
 });

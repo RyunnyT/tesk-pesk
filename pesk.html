@@ -19,17 +19,17 @@
 <!-- 펫 도감 (벡터 픽셀 · 3단계 진화) -->
 <script src="pet-sprites.js"></script>
 <!-- 모험 학습 문제 생성기 (초등 3~6학년 교육과정) -->
-<script src="quiz-bank.js?v=20261004grow1"></script>
+<script src="quiz-bank.js?v=20261005map1"></script>
 <!-- 학습 RPG: 실력 레이팅·유형별 생성기 / 몬스터·경험치 -->
 <script src="quiz-rating.js?v=20260912mixed1"></script>
-<script src="rpg-monsters.js?v=20261004grow1"></script>
+<script src="rpg-monsters.js?v=20261005map1"></script>
 <script src="boss-sprites.js"></script>
 <script src="shared/pesk-writing-store.js?v=20260920teach1"></script>
 <script src="shared/writing-proofread.js?v=20260928wr1"></script>
 <script src="shared/pesk-learning-sync.js?v=20260918"></script>
 <script src="shared/peer-survey.js?v=20260920"></script>
-<script src="shared/pesk-combat.js?v=20261004grow1"></script>
-<script src="shared/pesk-shooter.js?v=20261004atk1"></script>
+<script src="shared/pesk-combat.js?v=20261005arena1"></script>
+<script src="shared/pesk-shooter.js?v=20261005map1"></script>
 <script src="shared/pesk-subjects.js"></script>
 <script src="shared/todo-schedule.js?v=20261004todo2"></script>
 <script src="shared/literacy-core.js?v=20261005lit2"></script>
@@ -6318,7 +6318,7 @@ function bossActionHtml(t){
       + '<button class="rpg-go" onclick="bossFinishFight({report:bossShooterReport})">결과 저장 다시 시도</button>'
       + '<button class="combat-basic" onclick="bossSkipFight()">기본 공격으로 마치기</button></section>';
   return '<section class="combat-action" aria-label="보스전"><div id="boss-battle-choice"><div class="combat-ready">우리 반 보스가 나타났어요!</div>'
-    + '<h3>'+t.ammo+'번 공격할 수 있어요</h3><p>보스에게 다가가 직접 공격해요.<br>태블릿: 왼쪽 조이스틱 이동 · 오른쪽 공격 버튼<br>키보드: 방향키 · A/S/D/F</p>'
+    + '<h3>'+t.ammo+'번 공격할 수 있어요</h3><p>보스에게 다가가 직접 공격해요.<br>⚡ 붉은 원을 피하거나 막으면 다음 공격이 강타!<br>✨ 무기 스킬은 공격권 2개 — 몬스터 반격을 끊어요.<br>태블릿: 왼쪽 조이스틱 이동 · 오른쪽 공격 버튼<br>키보드: 방향키 · A/S/D/F</p>'
     + '<button class="rpg-go shooter-start" onclick="bossOpenArena()">⚔️ 보스전 시작</button>'
     + '<button class="combat-basic" onclick="bossSkipFight()">전투 건너뛰고 기본 공격</button></div>'
     + rpgShooterDialogHtml('boss-shooter-host', t.ammo, '우리 반 보스전', 'bossSkipFight()', '지금 건너뛰고 기본 공격 →') + '</section>';
@@ -6357,8 +6357,9 @@ function bossOpenArena(){
   document.activeElement?.blur?.();
   host.hidden = false; host.showModal();
   const choice = document.getElementById('boss-battle-choice'); if(choice) choice.hidden = true;
-  const eq = avEquipped();
+  const eq = avEquipped(), b = bossNow();
   rpgShooter = window.PeskShooter.mount(host, {...t, petCharge:rpgGame().petCharge, heroHp:100, grade:qzCfg().grade, boss:true,
+    monsterHp:b?.on ? b.hp : null, monsterMax:b?.maxHp, monsterName:bossCfg?.name || '우리 반 보스',
     monsterIcon:bossCfg?.icon||'🗿', monsterImage:window.PeskBosses ? window.PeskBosses.url(bossCfg?.character) : '',
     hero:avCharDataURL(eq), petImage:t.petId ? petImgURL(t.petId, petStageOfCare(petNow(t.petId).care, t.petId)) : ''}, async report=>{
       rpgShooter = null; bossShooterReport = {id:t.id, ...report}; await bossFinishFight({report});
@@ -6399,7 +6400,7 @@ async function bossFinishFight(options={}){
     else{
       rpgAnim = {kind:'hit', dmg:outcome.damage, prevPct:beforePct, weapon:t.weaponStyle};
       bossFx = (options.skip ? '📚 기본 공격 · ' : '⚔️ 보스에게 ') + outcome.damage.toLocaleString() + ' 피해!'
-        + (options.report && !options.skip ? ' · 명중 ' + options.report.hits + ' / 회피 ' + options.report.dodges : '')
+        + (options.report && !options.skip ? (options.report.perfect ? ' · 🌟 완벽한 전투' : '') + (options.report.boosts ? ' · 강타 ' + options.report.boosts + '회' : '') : '')
         + ' · 오늘 도전 완료';
     }
   }catch(e){
@@ -7532,12 +7533,22 @@ function qzHasRating(){ return qzRating() > 0; }
 function qzRatingMode(){
   return !!(window.QRATE && Number(qzCfg().grade) === 5 && qzSubject === 'math' && !Number(qzCfg().difficulty) && qzHasRating() && qzAllowedTypeCodes().length);
 }
+/* 지금 서 있는 스테이지의 단원만 낸다. 지도 밖(예전 몬스터)이면 선생님이 고른 단원 전체 */
+function qzActiveUnits(){
+  const st=window.RPG?.parseStage?.(rpgGame().monsterId);
+  return st && st.subject==='math' && qzSubject==='math' ? [st.no] : (qzCfg().mathUnits||[]).map(Number);
+}
+function qzWordCats(){
+  const st=window.RPG?.parseStage?.(rpgGame().monsterId);
+  if(!st || st.subject!=='english' || qzSubject!=='english') return null;
+  return (window.RPG.WORD_ISLANDS.find(w=>w.no===st.no)||{}).cats || null;
+}
 function qzAllowedTypeCodes(){
-  const c=qzCfg(),marks=['①','②','③','④','⑤','⑥','⑦','⑧','⑨'];
+  const c=qzCfg(),marks=['①','②','③','④','⑤','⑥','⑦','⑧','⑨'],units=qzActiveUnits();
   return Object.keys(window.QRATE?.TYPES||{}).filter(code=>{
     const m=String(window.QRATE.TYPES[code].unit).match(/^(\d)-(\d)\s*(.)/);
     return m && Number(m[1])===Number(c.grade) && Number(m[2])===Number(c.term)
-      && (!c.mathUnits.length || c.mathUnits.map(Number).includes(marks.indexOf(m[3])+1));
+      && (!units.length || units.includes(marks.indexOf(m[3])+1));
   });
 }
 function qzToday(){ return todayISO(); }
@@ -7671,6 +7682,7 @@ async function rpgAnswerDiag(idx){
 
 /* ── 전투 ── */
 function rpgEnsureQuestion(){
+  if(rpgQ && rpgQ._camp){ rpgQ = null; rpgPicked = null; }   // 모닥불 문제는 일반 문제로 쓰지 않는다
   if(rpgQ) return rpgQ;
   // 출제 규칙은 qzMake 하나만 쓴다. 여기서 따로 만들면 학년·과목·복습 처리가
   // 두 벌이 되어 한쪽만 고치는 실수가 난다.
@@ -7691,6 +7703,7 @@ function rpgSubmitShort(){
   return rpgAnswer(null,value);
 }
 async function rpgAnswer(idx,typed){
+  if(rpgQ && rpgQ._camp) return rpgCampAnswer(idx,typed);
   if(rpgBusy || rpgPicked !== null || !rpgQ || rpgGame().pendingAttack || rpgGame().heroHp<=0) return;
   const q = rpgQ, chosen = typed===undefined?q.options[idx]:typed;
   if(typed!==undefined&&q.responseMode!=='short')return;
@@ -7781,12 +7794,57 @@ async function rpgBeginHunt(skip=false){
   rpgBusy=true;qzBusy=true;
   try{await rpgMutateProgress((current,all,cfg)=>{const game=window.RPG.normalizeGame(current.game);if(game.pendingAttack)throw new Error('ATTACK_PENDING');if(!game.huntEnergy.length)throw new Error('NO_ENERGY');if(game.heroHp<=0)throw new Error('REST_REQUIRED');
     // 이미 쓰러진 몬스터에게 출발하지 않는다 — 새 몬스터가 무작위로 나타난다
-    if(game.hp<=0){const m=window.RPG.randomMonster(game.monsterId);game.monsterId=m.id;game.hp=m.hp;}
+    if(game.hp<=0){const id=rpgNextTarget(game),m=window.RPG.monsterById(id);game.monsterId=id;game.hp=game.stageHp[id]||m.hp;delete game.stageHp[id];}
     if(setFx.petCharge)game.petCharge=Math.max(game.petCharge,setFx.petCharge);   // 🔮 마법사 세트
     game.pendingAttack={...ticket,monsterId:game.monsterId,bossRound:'',ammo:game.huntEnergy.length,baseDamage:game.huntEnergy.reduce((a,b)=>a+b,0)};game.huntEnergy=[];game.huntAttempts=0;return {...current,game};});}
   catch(e){showFeedbackNotice('사냥 준비를 저장하지 못했어요. 에너지를 확인하고 다시 시도해주세요.');await rpgReloadProgress();}
   finally{rpgBusy=false;qzBusy=false;avRefresh();}
   if(rpgGame().pendingAttack){if(skip)await rpgSkipBattle();else rpgStartShooter();}
+}
+/* 🔥 모닥불 — 체력이 바닥나면 문제 1개(전에 틀린 유형이 있으면 그것)를 맞혀야 회복한다.
+   회복용 연습이라 학습 기록·하루 문제 수·코인·공격권에는 넣지 않는다. 틀리면 다른 문제가 나온다. */
+let rpgCampN = Math.floor(Math.random()*1e6);
+function rpgCampQuestion(){
+  if(rpgQ && rpgQ._camp) return rpgQ;
+  const q = qzMake({seedSuffix:'|camp' + rpgCampN, forceReview:true});
+  if(!q) return null;
+  q._camp = true; rpgQ = q; rpgPicked = null;
+  return q;
+}
+async function rpgCampAnswer(idx,typed){
+  const q = rpgQ;
+  if(rpgBusy || rpgPicked !== null || !q) return;
+  if(typed!==undefined && q.responseMode!=='short') return;
+  const chosen = typed===undefined ? q.options[idx] : typed;
+  if(chosen === undefined) return;
+  rpgPicked = chosen;
+  if(!window.QUIZ.sameAnswer(q,chosen)) return avRefresh();
+  await rpgRest();
+  if(rpgGame().heroHp<=0){ rpgPicked = null; return avRefresh(); }   // 저장 실패 — 같은 문제로 다시 시도
+  rpgFx = '🔥 모닥불 문제 정답! 체력이 모두 회복됐어요.'; avRefresh();
+}
+function rpgCampNext(){ if(rpgBusy) return; rpgCampN++; rpgQ = null; rpgPicked = null; avRefresh(); }
+function rpgCampHtml(){
+  const head = '<div class="rpg-camp"><h3>🔥 모닥불에서 쉬어가요</h3><p>모험 체력이 바닥났어요. <b>모닥불 문제 1개</b>를 맞히면 체력이 모두 회복돼요.<br><small>틀려도 괜찮아요. 다른 문제가 나와요. 코인·공격권은 없는 연습 문제예요.</small></p>';
+  // 방금 틀려서 체력이 바닥났다면, 그 문제의 정답과 풀이부터 보여준다
+  if(rpgQ && !rpgQ._camp && rpgPicked !== null)
+    return head + '</div><div class="qz-feedback no"><b>몬스터의 반격으로 체력이 바닥났어요</b><span class="qz-ans">정답: '+escHtml(String(rpgQ.answer))+'</span><p>'+escHtml(rpgQ.explain||'')+'</p>'
+      + '<button class="qz-next" onclick="rpgCampNext()">🔥 모닥불로 가기 →</button></div>';
+  const q = rpgCampQuestion();
+  if(!q) return head + '<button class="rpg-go" onclick="rpgRest()">🔥 쉬고 체력 회복</button></div>';
+  const answered = rpgPicked !== null, right = answered && window.QUIZ.sameAnswer(q,rpgPicked);
+  const opts = q.options.map((o,i)=>{
+    let cls = 'qz-opt';
+    if(answered) cls += String(o)===String(q.answer) ? ' right' : String(o)===String(rpgPicked) ? ' wrong' : ' dim';
+    return '<button class="'+cls+'"'+(answered?' disabled':'')+' onclick="rpgAnswer('+i+')"><span class="qz-opt-no">'+'①②③④'[i]+'</span><span class="qz-opt-txt">'+escHtml(String(o))+'</span></button>';
+  }).join('');
+  const fb = !answered || right ? '' : '<div class="qz-feedback no"><b>아쉬워요, 다른 문제로 다시 해봐요</b><span class="qz-ans">정답: '+escHtml(String(q.answer))+'</span><p>'+escHtml(q.explain||'')+'</p>'
+    + '<button class="qz-next" onclick="rpgCampNext()">다른 모닥불 문제 →</button></div>';
+  return head + '</div>'
+    + (q.isReview ? '<div class="qz-review">🔁 전에 틀렸던 유형이에요. 이번엔 맞혀봐요!</div>' : '')
+    + '<div class="qz-card"><div class="qz-unit">🔥 모닥불 문제 · ' + escHtml(q.unit) + '</div>'
+    + '<div class="qz-q">' + escHtml(q.q).replace(/\n/g,'<br>') + '</div>'
+    + (q.responseMode==='short' ? rpgShortAnswerHtml(q,answered) : '<div class="qz-opts">'+opts+'</div>') + '</div>' + fb;
 }
 async function rpgRest(){
  if(rpgBusy||rpgGame().pendingAttack)return;rpgBusy=true;
@@ -7800,9 +7858,11 @@ function rpgStartShooter(){
   const host=document.getElementById('rpg-shooter-host');if(!host)return;
   document.activeElement?.blur?.();
   host.hidden=false;host.showModal();document.getElementById('rpg-battle-choice').hidden=true;
-  const eq=avEquipped(),mon=window.RPG.monsterById(t.monsterId);
-  rpgShooter=window.PeskShooter.mount(host,{...t,petCharge:rpgGame().petCharge,heroHp:rpgGame().heroHp,grade:qzCfg().grade,boss:t.monsterId==='__boss__',
-    monsterIcon:mon?.icon||bossCfg?.icon||'🗿',monsterImage:t.monsterId==='__boss__'?window.PeskBosses.url(bossCfg?.character):'',hero:avCharDataURL(eq),petImage:t.petId?petImgURL(t.petId,petStageOfCare(petNow(t.petId).care,t.petId)):''},async report=>{
+  const eq=avEquipped(),mon=window.RPG.monsterById(t.monsterId),g=rpgGame();
+  // 전투 화면에서 몬스터 체력이 실제로 줄어드는 것을 보여준다 (펫이 넘겨둔 피해도 미리 뺀다)
+  rpgShooter=window.PeskShooter.mount(host,{...t,petCharge:g.petCharge,heroHp:g.heroHp,grade:qzCfg().grade,boss:t.monsterId==='__boss__',
+    monsterHp:mon?Math.max(0,g.hp-(g.carryDamage||0)):null,monsterMax:mon?.hp,monsterName:mon?.name||'',pattern:mon?.pattern||'circle',region:mon?.region||'field',
+    monsterIcon:mon?.icon||bossCfg?.icon||'🗿',monsterImage:t.monsterId==='__boss__'?window.PeskBosses.url(bossCfg?.character):mon?.unitBoss&&window.PeskBosses?window.PeskBosses.url(mon.art):'',unitBoss:!!mon?.unitBoss,hero:avCharDataURL(eq),petImage:t.petId?petImgURL(t.petId,petStageOfCare(petNow(t.petId).care,t.petId)):''},async report=>{
       rpgShooter=null;rpgShooterReport={id:t.id,...report};await rpgReleaseAttack(false,0,{report});
     });
 
@@ -7885,7 +7945,10 @@ async function rpgReleaseAttack(automatic=false,position=0,options={}){
       rpgAnim={kind:'hit',dmg:outcome.damage,prevPct:beforePct,weapon:ticket.weaponStyle,defeated:outcome.defeated};
       rpgFx=(options.skip?'📚 기본 공격 반영 · ':outcome.strong?'✨ 강타! ':'⚔️ 공격! ')+outcome.damage+' 피해'
         +(outcome.skill?' · '+outcome.skill:'')+(outcome.defeated?' · 처치! 경험치 +'+outcome.exp:'');
-      if(options.report)rpgFx+=' · 명중 '+options.report.hits+' / 회피 '+options.report.dodges+(options.report.hpLost?' · 체력 −'+options.report.hpLost:'');
+      const beaten=outcome.defeated&&window.RPG.monsterById(ticket.monsterId);
+      if(beaten&&beaten.unitBoss){rpgFx+=' · 👑 단원 클리어!';showFeedbackNotice('👑 「'+beaten.name.replace(/ 수호자$/,'')+'」 단원 보스를 물리쳤어요! 단원 클리어!');}
+      if(options.report&&!options.skip)rpgFx+=(options.report.perfect?' · 🌟 완벽한 사냥':'')+(options.report.boosts?' · 강타 '+options.report.boosts+'회':'')+(options.report.hpLost?' · 체력 −'+options.report.hpLost:'');
+      if(outcome.refund)rpgFx+=' · 남은 공격권 '+outcome.refund+'회는 다음 몬스터에게!';
     }
   }catch(e){
     rpgFx='공격을 저장하지 못했어요. 공격 기회는 그대로예요. 다시 시도해주세요.';
@@ -7968,12 +8031,13 @@ async function rpgNextMonster(){
       const G=window.RPG,game=G.normalizeGame(current.game);
       if(game.pendingAttack)throw new Error('ATTACK_PENDING');
       if(game.hp>0)return current;
-      const m=G.randomMonster(game.monsterId);
-      game.monsterId=m.id;game.hp=m.hp;met=m;
+      const id=rpgNextTarget(game),m=G.monsterById(id);
+      game.monsterId=id;game.hp=game.stageHp[id]||m.hp;delete game.stageHp[id];met=m;
       return {...current,game};
     });
     rpgQ=null;rpgPicked=null;rpgPetArmed=false;rpgClearAnim();
-    rpgFx=met?'🎲 '+met.name+' 등장! ('+window.RPG.monsterRank(met).label+')':'';
+    {const st=met&&window.RPG.parseStage(met.id);if(st)qzSubject=st.subject;
+    rpgFx=!met?'':st?'🗺️ '+met.name+(st.boss?' 앞에 섰어요! 단원 보스예요.':' 등장!'):'🎲 '+met.name+' 등장! ('+window.RPG.monsterRank(met).label+')';}
   }catch(e){showFeedbackNotice('새 몬스터를 불러오지 못했어요. 연결을 확인하고 다시 눌러주세요.');}
   finally{rpgBusy=false;qzBusy=false;avRefresh();}
 }
@@ -7996,6 +8060,7 @@ function buildRpgPanel(me){
   const subjects=qzSubjects();
   if(!subjects.length)return '<div class="empty-state">선생님이 아직 과목을 열지 않았어요.</div>';
   if(!subjects.some(x=>x.id===qzSubject))qzSubject=subjects[0].id;
+  {const st=window.RPG.parseStage(rpgGame().monsterId); if(st && subjects.some(x=>x.id===st.subject)) qzSubject=st.subject;}
   if(!Number(c.difficulty) && !qzHasRating() && qzSubject==='math' && qzAllowedTypeCodes().length) return rpgLearnHeadHtml()+rpgDiagHtml();
   return rpgBattleHtml(me);
 }
@@ -8062,8 +8127,83 @@ function rpgLearnHeadHtml(){
 }
 function rpgPickSubject(sub){
   if(rpgBusy || rpgGame().pendingAttack)return showFeedbackNotice('준비된 공격을 먼저 사용해주세요.');
+  const st = window.RPG.parseStage(rpgGame().monsterId);
   qzSubject = sub; rpgQ = null; rpgPicked = null; rpgFx = ''; rpgClearAnim();
+  // 과목을 바꾸면 그 과목 지도에서 갈 곳으로 옮긴다 (지금 싸우던 체력은 기억해 둔다)
+  if(st && st.subject !== sub){ const to = window.RPG.mapFrontier(rpgMapFor(sub)) || rpgMapFor(sub).islands.find(i=>i.open)?.stages[0].id; if(to) return rpgEnterStage(to); }
   avRefresh();
+}
+
+/* ── 🗺️ 월드맵 ──
+   수학은 학기 하나, 영단어는 학년 하나가 지도 한 장이다. 선생님이 고른 단원만 열리고,
+   단원마다 들판 → 동굴 → 탑 → 👑 단원 보스 순서로 연다. 몬스터를 쓰러뜨리면 다음 스테이지가 열린다. */
+let rpgMapOpen = false;
+function rpgMapFor(sub, game){
+  const c = qzCfg();
+  return window.RPG.worldMap({subject:sub, grade:c.grade, term:c.term, openUnits:c.mathUnits, game:game || rpgGame()});
+}
+/* 지금 스테이지가 선생님의 현재 범위 안인가 (학년·학기·단원을 바꾸면 지도에서 다시 고른다) */
+function rpgStageOk(st){
+  if(!st) return true;
+  return window.RPG.stageCanEnter(rpgMapFor(st.subject), st.id);
+}
+function rpgMapToggle(){ rpgMapOpen = !rpgMapOpen; avRefresh(); }
+async function rpgEnterStage(id){
+  if(rpgBusy) return;
+  if(rpgGame().pendingAttack) return showFeedbackNotice('준비된 공격을 먼저 사용해주세요.');
+  const G = window.RPG, st = G.parseStage(id);
+  if(!st) return;
+  rpgCancelCharge(); rpgBusy = true; qzBusy = true;
+  try{
+    await rpgMutateProgress(current => {
+      const game = G.normalizeGame(current.game);
+      if(game.pendingAttack) throw new Error('ATTACK_PENDING');
+      if(game.monsterId === id) return current;
+      if(!G.stageCanEnter(rpgMapFor(st.subject, game), id)) throw new Error('STAGE_LOCKED');
+      const prev = G.monsterById(game.monsterId);
+      if(G.parseStage(game.monsterId) && game.hp > 0 && game.hp < prev.hp) game.stageHp[game.monsterId] = game.hp;
+      const m = G.monsterById(id);
+      game.monsterId = id; game.hp = game.stageHp[id] || m.hp; delete game.stageHp[id];
+      return {...current, game};
+    });
+    qzSubject = st.subject; rpgQ = null; rpgPicked = null; rpgPetArmed = false; rpgClearAnim(); rpgMapOpen = false;
+    rpgFx = '🗺️ ' + G.monsterById(id).name + (st.boss ? ' 앞에 섰어요! 단원 보스예요.' : ' 등장!');
+  }catch(e){
+    showFeedbackNotice(e.message === 'STAGE_LOCKED' ? '🔒 아직 열리지 않은 스테이지예요. 앞 스테이지를 먼저 깨요.' : '이동하지 못했어요. 연결을 확인하고 다시 눌러주세요.');
+    await rpgReloadProgress();
+  }finally{ rpgBusy = false; qzBusy = false; avRefresh(); }
+}
+/* 쓰러뜨린 뒤 갈 곳 — 같은 단원의 다음 스테이지, 단원 보스 다음엔 지도에서 아직 못 깬 곳 */
+function rpgNextTarget(game){
+  const G = window.RPG, st = G.parseStage(game.monsterId), sub = st ? st.subject : qzSubject;
+  const map = rpgMapFor(sub, game), nx = st && G.nextStageId(game.monsterId);
+  if(nx && G.stageCanEnter(map, nx)) return nx;
+  return G.mapFrontier(map) || (st && G.stageCanEnter(map, game.monsterId) ? game.monsterId : G.randomMonster(game.monsterId, undefined, game).id);
+}
+function rpgMapHtml(){
+  if(!window.RPG || !window.RPG.worldMap) return '';
+  const G = window.RPG, g = rpgGame(), c = qzCfg(), st = G.parseStage(g.monsterId), ok = rpgStageOk(st);
+  const map = rpgMapFor(qzSubject, g);
+  if(!map.islands.length) return '';
+  const open = rpgMapOpen || !st || !ok, marks = '①②③④⑤⑥⑦⑧⑨';
+  const node = x => {
+    const cls = 'map-node' + (x.boss ? ' boss' : '') + (x.cleared ? ' cleared' : '') + (x.current ? ' current' : '') + (x.unlocked ? '' : ' locked');
+    const icon = !x.unlocked ? '🔒' : x.boss ? '👑' : x.monster.icon, label = x.boss ? '보스' : ['들판','동굴','탑'][x.step];
+    const go = x.unlocked && !x.current && !g.pendingAttack && !rpgBusy;
+    return '<button type="button" class="' + cls + '" ' + (go ? 'onclick="rpgEnterStage(\'' + x.id + '\')"' : 'disabled')
+      + ' title="' + escHtml(x.monster.name) + '"' + (x.current ? ' aria-current="step"' : '') + '><span>' + icon + '</span><small>' + (x.cleared ? '✓ ' : '') + label + '</small></button>';
+  };
+  const island = i => '<div class="map-island' + (i.open ? '' : ' closed') + (i.current ? ' here' : '') + (i.cleared ? ' done' : '') + '">'
+    + '<div class="map-island-head"><b>' + (qzSubject === 'english' ? i.icon : (marks[i.no - 1] || i.no)) + ' ' + escHtml(i.name) + '</b>'
+    + (i.cleared ? '<span class="map-badge">👑 클리어</span>' : !i.open ? '<span class="map-lock">🔒 선생님이 아직 안 열었어요</span>' : i.current ? '<span class="map-here">📍 지금 여기</span>' : '') + '</div>'
+    + '<div class="map-path">' + i.stages.map(node).join('<i class="map-link" aria-hidden="true"></i>') + '</div></div>';
+  const shown = open ? map.islands : map.islands.filter(i => i.current);
+  const title = qzSubject === 'english' ? c.grade + '학년 영단어 지도' : c.grade + '학년 ' + c.term + '학기 수학 지도';
+  const notice = !st ? '<p class="map-notice">🗺️ 지도가 생겼어요! 스테이지를 눌러 출발하세요. 지금 만난 몬스터를 마저 잡아도 돼요.</p>'
+    : !ok ? '<p class="map-notice">🗺️ 선생님이 출제 범위를 바꿨어요. 지도에서 갈 곳을 골라 주세요.</p>' : '';
+  return '<section class="rpg-map" aria-label="월드맵"><div class="map-head"><b>🗺️ ' + escHtml(title) + '</b><span>👑 ' + map.clearedCount + ' / ' + map.islands.length + '</span>'
+    + (st && ok ? '<button type="button" onclick="rpgMapToggle()">' + (open ? '접기 ▴' : '전체 지도 ▾') + '</button>' : '') + '</div>'
+    + notice + shown.map(island).join('') + '</section>';
 }
 
 /* ── 💪 공격력 ── 장착 아이템 공격력의 합. 사냥·보스 출발 때 공격권에 담겨 실제 피해에 곱해진다 */
@@ -8114,7 +8254,7 @@ function rpgActionHtml(){
   const g=rpgGame(),t=g.pendingAttack;if(!t)return '';
   if(rpgBusy)return '<section class="combat-action" aria-label="준비된 공격" role="status" data-learning-save>공격 결과를 저장하고 있어요…</section>';
   if(rpgShooterReport?.id===t.id)return '<section class="combat-action" aria-label="준비된 공격"><h3>전투 결과를 다시 저장할까요?</h3><p>명중 '+rpgShooterReport.hits+'회 · 공격 기회는 아직 남아 있어요.</p><button class="rpg-go" onclick="rpgRetryShooter()">결과 저장 다시 시도</button><button class="combat-basic" onclick="rpgSkipBattle()">기본 공격으로 다음 문제 →</button></section>';
-  return '<section class="combat-action" aria-label="준비된 공격"><div id="rpg-battle-choice"><div class="combat-ready">사냥 에너지가 준비됐어요</div><h3>'+t.ammo+'번 공격할 수 있어요</h3><p>몬스터에게 다가가 직접 공격해요.<br>태블릿: 왼쪽 조이스틱 이동 · 오른쪽 공격 버튼<br>키보드: 방향키 · A/S/D/F</p><button class="rpg-go shooter-start" onclick="rpgStartShooter()">⚔️ RPG 전투 시작</button><button class="combat-basic" onclick="rpgSkipBattle()">전투 건너뛰고 다음 문제 →</button><small>어느 쪽을 골라도 학습 코인·경험치는 같아요.</small></div>'
+  return '<section class="combat-action" aria-label="준비된 공격"><div id="rpg-battle-choice"><div class="combat-ready">사냥 에너지가 준비됐어요</div><h3>'+t.ammo+'번 공격할 수 있어요</h3><p>몬스터에게 다가가 직접 공격해요.<br>⚡ 붉은 원을 피하거나 막으면 다음 공격이 강타!<br>✨ 무기 스킬은 공격권 2개 — 몬스터 반격을 끊어요.<br>태블릿: 왼쪽 조이스틱 이동 · 오른쪽 공격 버튼<br>키보드: 방향키 · A/S/D/F</p><button class="rpg-go shooter-start" onclick="rpgStartShooter()">⚔️ RPG 전투 시작</button><button class="combat-basic" onclick="rpgSkipBattle()">전투 건너뛰고 다음 문제 →</button><small>학습 코인·경험치는 같아요. 직접 싸우면 피해를 최대 35% 더 줄 수 있고, 일찍 쓰러뜨리면 남은 공격권을 돌려받아요.</small></div>'
     + rpgShooterDialogHtml('rpg-shooter-host', t.ammo, '숲의 RPG 모험', 'rpgSkipBattle()', '지금 건너뛰고 다음 문제 →') + '</section>';
 }
 /* 전투 창 — 모험과 보스전이 같은 전투 화면을 쓴다 */
@@ -8126,7 +8266,8 @@ function rpgBattleHtml(me){
   const G = window.RPG, R = window.QRATE;
   const g = rpgGame();
   const mon = rpgMonster();
-  const rank = G.monsterRank(mon);
+  const stInfo = G.parseStage(mon.id);
+  const rank = stInfo ? (stInfo.boss ? {id:'hard', label:'👑 단원 보스'} : {id:['easy','mid','hard'][stInfo.step], label:['🌿 들판','🕳️ 동굴','🗼 탑'][stInfo.step]}) : G.monsterRank(mon);
   const lv = G.gameLevel(g.gxp);
   const inLv = G.gxpInLevel(g.gxp), per = G.gxpForNextLevel(g.gxp);
   const hpPct = Math.round(g.hp / mon.hp * 100);
@@ -8150,21 +8291,14 @@ function rpgBattleHtml(me){
           + (nxt ? '<span> · Lv.' + nxt.lv + ' 에 「' + escHtml(nxt.name) + '」</span>' : '<span> · 마지막 칭호예요</span>')
           + '</div>';
       })()
-    + petBar;
+    + petBar + rpgMapHtml();
 
-  // 몬스터 도감 — 고르는 버튼이 아니라 지금까지 잡은 기록만 보여준다
-  const dex = '<div class="rpg-dex"><div class="rpg-region-head">📖 몬스터 도감 <span class="rpg-lockmsg">몬스터는 무작위로 나타나요 — 약할 수도, 강할 수도!</span></div>'
-    + '<div class="rpg-mons">' + G.MONSTERS.map(m => {
-      const kills = g.kills[m.id] || 0;
-      return '<span class="rpg-mon' + (m.id === g.monsterId ? ' on' : '') + (kills ? '' : ' lock') + '">'
-        + '<span class="rpg-mon-icon">' + (kills || m.id === g.monsterId ? m.icon : '❔') + '</span>'
-        + '<span class="rpg-mon-name">' + (kills || m.id === g.monsterId ? escHtml(m.name) : '???') + '</span>'
-        + '<span class="rpg-mon-sub">' + G.monsterRank(m).label + (kills ? ' · ×' + kills : '') + '</span></span>';
-    }).join('') + '</div></div>';
+  // 몬스터 도감은 월드맵이 대신한다
+  const dex = '';
 
   const fromPct = rpgAnim.prevPct >= 0 ? rpgAnim.prevPct : hpPct;
   const stage = '<div class="rpg-stage' + (rev ? ' revenge' : '') + '" style="--mc:' + mon.color + '">'
-      + rpgArenaHtml(mon.icon, mon.color)
+      + rpgArenaHtml(mon.unitBoss && window.PeskBosses ? '<img src="' + window.PeskBosses.url(mon.art) + '" width="118" height="118" alt="">' : mon.icon, mon.color)
       + '<div class="rpg-mon-title">' + (rev ? '🔁 복수의 ' : '') + escHtml(mon.name) + ' <span class="rpg-rank ' + rank.id + '">' + rank.label + '</span></div>'
       + '<div class="rpg-hp"><i style="width:' + fromPct + '%" data-to="' + hpPct + '"></i></div>'
       + '<div class="rpg-hp-num">' + g.hp + ' / ' + mon.hp + '</div>'
@@ -8174,9 +8308,11 @@ function rpgBattleHtml(me){
   if(g.pendingAttack)return learning+head+stage+rpgActionHtml();
   if(rpgBusy)return learning+head+stage+'<div class="combat-action" role="status" data-learning-save>학습 기록 저장 중…</div>';
   if(g.hp===0)return learning+head+stage
-    + '<div class="combat-victory"><span>🏆</span><h3>'+escHtml(mon.name)+' 처치!</h3><p>또 하나의 모험을 해냈어요. 다음엔 어떤 몬스터가 나올까요?</p>'
-    + '<button class="rpg-go" onclick="rpgNext()">🎲 다음 몬스터 만나기 →</button></div>'+dex;
-  if(g.heroHp<=0)return learning+head+stage+'<div class="rpg-camp"><h3>모닥불에서 쉬어가요</h3><p>모험 체력이 바닥났어요. 잠깐 쉬면 다시 도전할 수 있어요.</p><button class="rpg-go" onclick="rpgRest()">🔥 쉬고 체력 회복</button></div>';
+    + '<div class="combat-victory"><span>'+(mon.unitBoss?'👑':'🏆')+'</span><h3>'+escHtml(mon.name)+' 처치!</h3>'
+    + '<p>'+(!stInfo?'또 하나의 모험을 해냈어요. 이제 지도에서 단원 스테이지로 가요!':stInfo.boss?'「'+escHtml(mon.name.replace(/ 수호자$/,''))+'」 단원을 클리어했어요!':'다음 스테이지가 열렸어요.')+'</p>'
+    + '<button class="rpg-go" onclick="rpgNext()">'+(!stInfo?'🗺️ 지도로 출발 →':stInfo.boss?'🗺️ 다음 단원으로 →':'➡️ 다음 스테이지로 →')+'</button></div>';
+  if(g.heroHp<=0)return learning+head+stage+rpgCampHtml();
+  if(stInfo && !rpgStageOk(stInfo))return learning+head+stage;   // 범위가 바뀌었다 — 지도 안내만 보여준다
   const c0 = qzCfg();
   const limit0 = Math.max(0, Number(c0.dailyQuestionLimit || 0));
   if(limit0 > 0 && Number(qzDaily().tried || 0) >= limit0 && rpgPicked===null){
@@ -8278,13 +8414,13 @@ function qzFromRate(q, cfg){
 }
 
 /* ── 문제 만들기 ── */
-function qzMake(){
+function qzMake(opts={}){
   if(!window.QUIZ) return null;
   const c = qzCfg(), s = qzState(), d = qzDaily(s);
   // 시드에 '오늘 푼 문제 수'를 넣어, 답하기 전에는 새로고침해도 같은 문제가 나오게 함
-  const seed = [roomId, myStudentNum, qzToday(), qzSubject, d.tried].join('|');
+  const seed = [roomId, myStudentNum, qzToday(), qzSubject, d.tried].join('|') + (opts.seedSuffix || '');
   if(!qzSubjects().some(x=>x.id===qzSubject))return null;
-  const allowReview = !window.PeskProgress || window.PeskProgress.reviewSlot(d.tried);
+  const allowReview = opts.forceReview || !window.PeskProgress || window.PeskProgress.reviewSlot(d.tried);
 
   /* 레이팅 모드 — 학생 실력에 맞춰 난이도를 정한다.
      예전에는 레벨 → tier(1~3) 로만 정해서 레벨 8 이상은 난이도가 더 오르지 않았다.
@@ -8303,7 +8439,7 @@ function qzMake(){
 
   // 🔁 복수 몬스터 — 전에 틀린 단원·난이도(영단어는 같은 단어)를 새 문제로 다시 낸다
   if(allowReview && window.PeskProgress){
-    const P = window.PeskProgress, units = (c.mathUnits || []).map(Number);
+    const P = window.PeskProgress, units = qzActiveUnits();
     const due = P.revengeDue(s.revenge, qzToday(), k => k.subject === qzSubject && (k.subject === 'english'
       || (k.grade === Number(c.grade) && k.term === Number(c.term) && (!units.length || units.includes(k.unitNo)))))[0];
     if(due){
@@ -8315,7 +8451,7 @@ function qzMake(){
   }
   return window.QUIZ.makeQuestion({
     subject: qzSubject, grade: c.grade, term: c.term,
-    unitNos: qzSubject === 'math' ? c.mathUnits : null,
+    unitNos: qzSubject === 'math' ? qzActiveUnits() : null, wordCats: qzWordCats(),
     level: qzQuestionLevel(), seed
   });
 }
@@ -9736,6 +9872,37 @@ waitFirebase(async()=>{
 .rpg-dex{margin-top:14px;}
 .rpg-dex .rpg-mon{cursor:default;}
 .rpg-dex .rpg-mon.lock{cursor:default;}
+.rpg-map{background:#fff;border:1px solid #dfe7e2;border-radius:16px;padding:12px;margin:10px 0;}
+.map-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.map-head b{font-size:14px;}
+.map-head span{font-size:12px;color:var(--sub);font-weight:700;}
+.map-head button{margin-left:auto;border:1px solid #cfdcd5;background:#f4f8f5;border-radius:8px;padding:5px 10px;font:inherit;font-size:12px;cursor:pointer;}
+.map-notice{margin:8px 0 0;padding:8px 10px;border-radius:10px;background:#fff6dc;color:#7a5a12;font-size:12px;font-weight:700;}
+.map-island{margin-top:10px;padding:9px 10px;border-radius:12px;background:#f5f9f6;border:1px solid #e3ece6;}
+.map-island.here{background:#eef6ff;border-color:#9cc3ef;}
+.map-island.done{background:#fff8e6;border-color:#f0d58c;}
+.map-island.closed{opacity:.55;}
+.map-island-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;margin-bottom:7px;}
+.map-badge,.map-lock,.map-here{font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;}
+.map-badge{background:#ffe7a3;color:#7a5600;}.map-lock{background:#e7ece9;color:#66756d;}.map-here{background:#d7e9ff;color:#2d5d93;}
+.map-path{display:flex;align-items:center;}
+.map-link{flex:1;height:4px;min-width:8px;background:#d6e2db;border-radius:2px;}
+.map-node{flex:0 0 auto;width:58px;min-height:56px;border-radius:14px;border:2px solid #cfdcd5;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;font:inherit;padding:3px;}
+.map-node span{font-size:22px;line-height:1.1;}
+.map-node small{font-size:10px;font-weight:700;color:#5b7065;}
+.map-node.cleared{border-color:#8fcf9e;background:#effaf1;}
+.map-node.boss{border-color:#e8b04c;background:#fff7e3;}
+.map-node.boss.cleared{background:#ffe9a8;}
+.map-node.current{border-color:#4d8ee8;box-shadow:0 0 0 3px #4d8ee833;}
+.map-node.locked{background:#f0f2f1;cursor:default;}
+.map-node.locked span{filter:grayscale(1);opacity:.6;}
+.map-node:disabled{cursor:default;}
+@media (prefers-reduced-motion:no-preference){.map-node.current{animation:mapPulse 1.6s ease-in-out infinite;}}
+@keyframes mapPulse{50%{box-shadow:0 0 0 6px #4d8ee822;}}
+@media(max-width:420px){.map-node{width:48px;min-height:50px;}.map-node span{font-size:19px;}}
+.rpg-region-row{margin-top:8px;}
+.rpg-region-row>small{display:block;margin:0 0 4px;font-size:11px;font-weight:700;color:#5b7065;}
+.rpg-region-row.closed .rpg-mons{opacity:.45;}
 .rpg-rank{display:inline-block;margin-left:4px;padding:1px 8px;border-radius:99px;font-size:10.5px;font-weight:800;vertical-align:middle;}
 .rpg-rank.easy{background:#e7f7ec;color:#15803d;}
 .rpg-rank.mid{background:#fff5d6;color:#a16207;}

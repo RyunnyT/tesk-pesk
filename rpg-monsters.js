@@ -28,26 +28,123 @@ const REGIONS = [
    무섭지 않은 쪽으로 고른다. hp 는 '정답 몇 번이면 잡히는가'로 잡았다
    (정답 1회 ≈ 10~13 데미지). exp 는 잡았을 때 주는 기본 경험치. */
 const MONSTERS = [
-  { id: 'm_mush',   region: 'field', name: '버섯몬',    icon: '🍄', hp: 36,  exp: 18, color: '#e88a8a' },
-  { id: 'm_worm',   region: 'field', name: '꼬물이',    icon: '🐛', hp: 48,  exp: 24, color: '#9ed36a' },
-  { id: 'm_bee',    region: 'field', name: '붕붕벌',    icon: '🐝', hp: 60,  exp: 30, color: '#f2c94c' },
-  { id: 'm_fox',    region: 'field', name: '장난꾸러기 여우', icon: '🦊', hp: 78, exp: 40, color: '#f0925a' },
-  { id: 'm_bat',    region: 'cave',  name: '동굴 박쥐',  icon: '🦇', hp: 96,  exp: 52, color: '#8d7fb8' },
-  { id: 'm_slime',  region: 'cave',  name: '바위 슬라임', icon: '🪨', hp: 120, exp: 66, color: '#9aa5b1' },
-  { id: 'm_crab',   region: 'cave',  name: '집게 바위게', icon: '🦀', hp: 144, exp: 82, color: '#e2705a' },
-  { id: 'm_ghost',  region: 'tower', name: '수줍은 유령', icon: '👻', hp: 170, exp: 100, color: '#b9c6e0' },
-  { id: 'm_wizard', region: 'tower', name: '숫자 마법사', icon: '🧙', hp: 200, exp: 122, color: '#8f7ae0' },
-  { id: 'm_dragon', region: 'tower', name: '아기 용',    icon: '🐉', hp: 240, exp: 150, color: '#5fc9a8' }
+  { id: 'm_mush',   region: 'field', name: '버섯몬',    icon: '🍄', hp: 36,  exp: 18, color: '#e88a8a', pattern: 'circle' },
+  { id: 'm_worm',   region: 'field', name: '꼬물이',    icon: '🐛', hp: 48,  exp: 24, color: '#9ed36a', pattern: 'circle' },
+  { id: 'm_bee',    region: 'field', name: '붕붕벌',    icon: '🐝', hp: 60,  exp: 30, color: '#f2c94c', pattern: 'dash' },
+  { id: 'm_fox',    region: 'field', name: '장난꾸러기 여우', icon: '🦊', hp: 78, exp: 40, color: '#f0925a', pattern: 'dash' },
+  { id: 'm_bat',    region: 'cave',  name: '동굴 박쥐',  icon: '🦇', hp: 96,  exp: 52, color: '#8d7fb8', pattern: 'double' },
+  { id: 'm_slime',  region: 'cave',  name: '바위 슬라임', icon: '🪨', hp: 120, exp: 66, color: '#9aa5b1', pattern: 'big' },
+  { id: 'm_crab',   region: 'cave',  name: '집게 바위게', icon: '🦀', hp: 144, exp: 82, color: '#e2705a', pattern: 'double' },
+  { id: 'm_ghost',  region: 'tower', name: '수줍은 유령', icon: '👻', hp: 170, exp: 100, color: '#b9c6e0', pattern: 'blink' },
+  { id: 'm_wizard', region: 'tower', name: '숫자 마법사', icon: '🧙', hp: 200, exp: 122, color: '#8f7ae0', pattern: 'triple' },
+  { id: 'm_dragon', region: 'tower', name: '아기 용',    icon: '🐉', hp: 240, exp: 150, color: '#5fc9a8', pattern: 'breath' }
 ];
 
 const BY_ID = {};
 MONSTERS.forEach(m => { BY_ID[m.id] = m; });
-const monsterById = id => BY_ID[id] || null;
+const monsterById = id => BY_ID[id] || stageMonster(id);
+
+/* ── 🗺️ 월드맵 ──
+   학기(수학) 또는 학년(영단어) 하나가 지도 한 장이다. 단원(영단어는 단어 섬)마다
+   들판 → 동굴 → 탑 스테이지 3개와 단원 보스 1마리가 있다.
+   스테이지 몬스터 id 는 'st|m|5-1|3|2' (수학 5-1 3단원 3번째) · 'st|e|5|2|0' (영단어 5학년 2번 섬 첫 번째).
+   진행은 kills(처치 기록)만으로 판단하므로 새 문서·새 규칙이 필요 없다. */
+const STAGE_HP = [40, 55, 70, 120];
+const STAGE_EXP = [22, 32, 44, 100];
+const STAGE_BASE = [['m_mush','m_worm','m_bee','m_fox'], ['m_bat','m_slime','m_crab'], ['m_ghost','m_wizard','m_dragon']];
+const UNIT_BOSS_ART = ['golem','slime','dragon','mushroom','ghost','robot','crystal','owl'];
+const WORD_ISLANDS = [
+  { no: 1, name: '사람과 가족', icon: '👪', cats: ['person','family','job','body'] },
+  { no: 2, name: '학교와 물건', icon: '🎒', cats: ['thing','place'] },
+  { no: 3, name: '음식과 자연', icon: '🍎', cats: ['food','animal','nature'] },
+  { no: 4, name: '시간과 날씨', icon: '⏰', cats: ['time','weather','sport'] },
+  { no: 5, name: '움직이는 말', icon: '🏃', cats: ['verb'] },
+  { no: 6, name: '꾸미는 말', icon: '✨', cats: ['adj','abstract'] }
+];
+const STAGE_COUNT = 4;
+function stageId(subject, key, no, step) { return ['st', subject === 'english' ? 'e' : 'm', key, no, step].join('|'); }
+function parseStage(id) {
+  const m = /^st\|([me])\|(\d(?:-[12])?)\|(\d{1,2})\|([0-3])$/.exec(String(id || ''));
+  if (!m) return null;
+  const subject = m[1] === 'e' ? 'english' : 'math';
+  if ((subject === 'math') !== m[2].includes('-')) return null;
+  const [grade, term] = m[2].split('-').map(Number);
+  return { id: String(id), subject, key: m[2], grade, term: term || 0, no: Number(m[3]), step: Number(m[4]), boss: m[4] === '3' };
+}
+function quizApi() { return root.QUIZ || null; }
+function islandName(st) {
+  if (st.subject === 'english') { const w = WORD_ISLANDS.find(x => x.no === st.no); return w ? w.name : '단어 섬'; }
+  const Q = quizApi(), u = Q && Q.unitsOf ? Q.unitsOf(st.grade, st.term).find(x => Number(x.no) === st.no) : null;
+  return u ? u.name : st.no + '단원';
+}
+const STAGE_CACHE = {};
+function stageMonster(id) {
+  if (STAGE_CACHE[id]) return STAGE_CACHE[id];
+  const st = parseStage(id);
+  if (!st) return null;
+  let m;
+  if (st.boss) {
+    const art = UNIT_BOSS_ART[(st.no - 1 + (st.subject === 'english' ? 3 : 0)) % UNIT_BOSS_ART.length];
+    m = { id, base: 'unit_boss', region: 'tower', name: islandName(st) + ' 수호자', icon: '👑', art,
+          hp: STAGE_HP[3], exp: STAGE_EXP[3], color: '#e8b04c', pattern: 'mix', unitBoss: true };
+  } else {
+    const list = STAGE_BASE[st.step], b = BY_ID[list[(st.no - 1) % list.length]];
+    m = { ...b, id, base: b.id, hp: STAGE_HP[st.step], exp: STAGE_EXP[st.step] };
+  }
+  m.stage = st;
+  return (STAGE_CACHE[id] = m);
+}
+/* 단원(섬) 목록 — 수학은 그 학기 출제 가능한 단원, 영단어는 그 학년 단어가 6개 이상인 섬 */
+function mapIslands(subject, grade, term) {
+  const Q = quizApi();
+  if (subject === 'english') {
+    const words = Q && Q._internal && Q._internal.wordsFor ? Q._internal.wordsFor(grade) : [];
+    return WORD_ISLANDS.filter(w => words.filter(x => w.cats.includes(x[2])).length >= 6)
+      .map(w => ({ no: w.no, name: w.name, icon: w.icon, cats: w.cats }));
+  }
+  return (Q && Q.unitsOf ? Q.unitsOf(grade, term) : []).map(u => ({ no: Number(u.no), name: u.name, icon: '' }));
+}
+/* 지도 한 장. opt = {subject, grade, term, openUnits:[번호] (수학만, 비면 전체), game}
+   스테이지는 앞 스테이지를 한 번 쓰러뜨리면 열린다. 단원 보스를 쓰러뜨리면 그 단원 클리어. */
+function worldMap(opt) {
+  const subject = opt.subject === 'english' ? 'english' : 'math';
+  const grade = Number(opt.grade) || 5, term = Number(opt.term) || 1;
+  const key = subject === 'english' ? String(grade) : grade + '-' + term;
+  const kills = (opt.game && opt.game.kills) || {}, cur = opt.game && opt.game.monsterId;
+  const open = (opt.openUnits || []).map(Number).filter(n => n > 0);
+  const islands = mapIslands(subject, grade, term).map(u => {
+    const isOpen = subject === 'english' || !open.length || open.includes(u.no);
+    const stages = [];
+    for (let step = 0; step < STAGE_COUNT; step++) {
+      const id = stageId(subject, key, u.no, step), cleared = (kills[id] || 0) > 0;
+      const unlocked = isOpen && (step === 0 || stages[step - 1].cleared);
+      stages.push({ id, step, boss: step === STAGE_COUNT - 1, cleared, unlocked, current: id === cur, monster: stageMonster(id) });
+    }
+    return { ...u, open: isOpen, stages, cleared: stages[STAGE_COUNT - 1].cleared, current: stages.some(x => x.current) };
+  });
+  return { subject, key, grade, term, islands, clearedCount: islands.filter(i => i.cleared).length };
+}
+/* 다음에 갈 곳 — 열린 단원 중 아직 못 깬 첫 스테이지 (모두 깼으면 null) */
+function mapFrontier(map) {
+  for (const i of map.islands) { if (!i.open) continue; const st = i.stages.find(x => x.unlocked && !x.cleared); if (st) return st.id; }
+  return null;
+}
+/* 같은 단원의 다음 스테이지 (보스 다음은 없음) */
+function nextStageId(id) {
+  const st = parseStage(id);
+  return st && !st.boss ? stageId(st.subject, st.key, st.no, st.step + 1) : null;
+}
+function stageCanEnter(map, id) {
+  for (const i of map.islands) for (const st of i.stages) if (st.id === id) return st.unlocked;
+  return false;
+}
 const monstersOf = regionId => MONSTERS.filter(m => m.region === regionId);
 /* 다음 몬스터는 학생이 고르지 않는다. 약한 몬스터도 강한 몬스터도 무작위로 나온다.
    방금 잡은 몬스터가 바로 다시 나오지 않게만 한다. */
-function randomMonster(excludeId, rnd) {
-  const pool = MONSTERS.filter(m => m.id !== excludeId);
+/* game 을 주면 열린 지역의 몬스터만 나온다 (동굴 8마리·탑 20마리 처치 후). 처음 하는 학생에게 아기 용이 나오지 않게 한다 */
+function randomMonster(excludeId, rnd, game) {
+  const open = game ? unlockedRegions(game).map(r => r.id) : null;
+  const pool = MONSTERS.filter(m => m.id !== excludeId && (!open || open.includes(m.region)));
   const r = typeof rnd === 'function' ? rnd() : Math.random();
   return pool[Math.min(pool.length - 1, Math.max(0, Math.floor(r * pool.length)))];
 }
@@ -102,13 +199,19 @@ function normalizeGame(raw) {
   const kills = (g.kills && typeof g.kills === 'object') ? g.kills : {};
   const cleanKills = {};
   Object.keys(kills).forEach(k => {
-    if (BY_ID[k]) cleanKills[k] = Math.max(0, Math.min(9999, Math.round(Number(kills[k]) || 0)));
+    if (monsterById(k)) cleanKills[k] = Math.max(0, Math.min(9999, Math.round(Number(kills[k]) || 0)));
   });
   // 보스는 모험 몬스터와 분리됐다. 예전에 대상을 '__boss__' 로 골라 둔 기록은
   // 첫 몬스터로 되돌린다 (그때 모아 둔 보스 공격권은 pendingAttack 에 그대로 남아 정산된다).
-  const known = !!BY_ID[g.monsterId];
+  const known = !!monsterById(g.monsterId);
   const mid = known ? g.monsterId : MONSTERS[0].id;
-  const max = BY_ID[mid].hp;
+  const max = monsterById(mid).hp;
+  // 다른 스테이지로 옮겨 갈 때 남겨 둔 체력 (돌아오면 이어서 싸운다)
+  const stageHp = {};
+  Object.keys(g.stageHp && typeof g.stageHp === 'object' ? g.stageHp : {}).slice(0, 80).forEach(k => {
+    const m = parseStage(k) && monsterById(k);
+    if (m) stageHp[k] = Math.max(1, Math.min(m.hp, Math.round(Number(g.stageHp[k]) || m.hp)));
+  });
   return {
     gxp: Math.max(0, Math.round(Number(g.gxp) || 0)),
     kills: cleanKills,
@@ -117,7 +220,8 @@ function normalizeGame(raw) {
     // NaN == null 은 false 라, 체력이 통째로 NaN 이 된다
     hp: known ? Math.max(0, Math.min(max, Number.isFinite(Number(g.hp)) ? Math.round(Number(g.hp)) : max)) : max,
     killDay: /^\d{4}-\d{2}-\d{2}$/.test(String(g.killDay || '')) ? String(g.killDay) : '',
-    streakId: BY_ID[g.streakId] ? g.streakId : '',
+    streakId: monsterById(g.streakId) ? g.streakId : '',
+    stageHp,
     streakCount: Math.max(0, Math.min(99, Math.round(Number(g.streakCount) || 0))),
     defeated: Math.max(0, Math.round(Number(g.defeated) || 0)),
     combatStyle: ['sword','staff','axe','spear','crystal','bow','dagger','mace'].includes(g.combatStyle) ? g.combatStyle : '',
@@ -135,7 +239,7 @@ function normalizeGame(raw) {
   };
 }
 function normalizeAttack(raw){
-  if(!raw || !raw.id || (!BY_ID[raw.monsterId] && raw.monsterId!=='__boss__')) return null;
+  if(!raw || !raw.id || (!monsterById(raw.monsterId) && raw.monsterId!=='__boss__')) return null;
   const finite=(x,d)=>Number.isFinite(Number(x)) ? Number(x) : d;
   return {id:String(raw.id).slice(0,100),monsterId:raw.monsterId,
     bossRound:String(raw.bossRound||'').slice(0,80),
@@ -356,6 +460,7 @@ const API = {
   gameLevel, gxpInLevel, gxpForNextLevel, gxpToReach,
   damageFor, healOnWrong,
   newGameState, normalizeGame, totalKills,
+  STAGE_HP, STAGE_EXP, WORD_ISLANDS, UNIT_BOSS_ART, stageId, parseStage, stageMonster, mapIslands, worldMap, mapFrontier, nextStageId, stageCanEnter,
   regionUnlocked, unlockedRegions, nextRegionInfo,
   TITLES, titleOf, nextTitle,
   normalizeBoss, normalizeBossRec, bossState, bossDays, bossTier, bossRollRound, bossRanking

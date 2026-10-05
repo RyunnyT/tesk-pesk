@@ -165,6 +165,15 @@ function prepare(raw, input, G){
   }
   return {game,guarded};
 }
+/* 직접 싸운 전투의 피해. 기본 공격 1칸 = 공격권 1개의 피해.
+   회피·방어 뒤 강타, 완벽한 사냥으로 더 줄 수 있지만 건너뛰기 대비 최대 +35%까지만 —
+   문제를 많이 맞힌 학생이 더 세다는 원칙은 그대로다. 전투 화면과 저장이 같은 식을 쓴다. */
+const ARENA_CAP=1.35,PERFECT_BONUS=1.1;
+function arenaDamage(ticket,units,perfect){
+  const ammo=Math.max(1,Number(ticket.ammo)||1),u=Math.max(0,Number(units)||0)*(perfect?PERFECT_BONUS:1);
+  if(!u)return 0;
+  return Math.max(1,Math.round(Number(ticket.baseDamage||0)/ammo*Math.min(u,ammo*ARENA_CAP)*powerMultiplier(ticket.power)));
+}
 function resolve(raw, input, G, R){
   const game=G.normalizeGame(raw),ticket=game.pendingAttack;
   if(!ticket || ticket.id!==input.ticketId) throw new Error('ATTACK_ALREADY_USED');
@@ -176,7 +185,11 @@ function resolve(raw, input, G, R){
   const played=shooting && !input.skip;
   const hit=shooting ? {strong:played && Number(report.hits)>=6,multiplier:played ? 1+Math.min(.15,Math.max(0,Number(report.hits)||0)*.015) : 1} : timing(weapon,input.position,skill && skill.id==='focus',input.automatic);
   const usedFraction=report.rpg&&!input.skip?Math.min(1,Math.max(0,Number(report.attacksUsed)||0)/ticket.ammo):1;
-  const damage=Math.max(usedFraction?1:0,Math.round(ticket.baseDamage*usedFraction*hit.multiplier*powerMultiplier(ticket.power)*(!shooting && skill && skill.id==='attack' ? 1.25 : 1)));
+  // v2 전투 보고(units)는 화면에서 본 피해 그대로 정산한다. 예전 보고는 예전 식을 쓴다.
+  const arena=played && Number.isFinite(Number(report.units));
+  if(arena)hit.strong=Number(report.boosts)>0||report.perfect===true;
+  const damage=arena ? arenaDamage(ticket,report.units,report.perfect===true)
+    : Math.max(usedFraction?1:0,Math.round(ticket.baseDamage*usedFraction*hit.multiplier*powerMultiplier(ticket.power)*(!shooting && skill && skill.id==='attack' ? 1.25 : 1)));
   if(!shooting && skill){game.petCharge=0;if(skill.id==='guard')game.petShield=true;}
   const used=(played||report.rpg===true) && report.skillUsed===true && game.petCharge>=3 && pet && (pet.tier!=='legend'||Number(report.hits)>=3);
   if(used){game.petCharge=pet.ability==='charge'?1:0;if(pet.ability==='shield')game.petShield=true;}
@@ -200,9 +213,16 @@ function resolve(raw, input, G, R){
       if(/^\d{4}-\d{2}-\d{2}$/.test(String(input.day||'')))game.killDay=String(input.day);
     }
   }
-  return {game,damage,strong:hit.strong,skill:shooting ? (used?pet.skill:'') : (skill ? skill.name : ''),defeated,exp,ticket};
+  // 전투 중에 쓰러뜨리면 남은 공격권은 사라지지 않고 다음 몬스터용으로 돌아온다
+  let refund=0;
+  if(arena && defeated && report.killed===true){
+    refund=Math.max(0,Math.min(30-game.huntEnergy.length,ticket.ammo-Math.max(0,Math.floor(Number(report.attacksUsed)||0))));
+    const each=Math.max(1,Math.min(40,Math.round(ticket.baseDamage/ticket.ammo)));
+    for(let i=0;i<refund;i++)game.huntEnergy.push(each);
+  }
+  return {game,damage,strong:hit.strong,skill:shooting ? (used?pet.skill:'') : (skill ? skill.name : ''),defeated,exp,ticket,refund};
 }
-const API={WEAPONS,SKILLS,TIERS,PETS,SETS,setsOf,setEffects,pieceMatches,BASE_POWER,MAX_POWER,POWER_SLOTS,ITEM_POWER,PET_POWER,itemPower,powerOf,powerMultiplier,petProfile,weaponProfile,weaponFor,skillFor,power,timing,prepare,resolve};
+const API={WEAPONS,SKILLS,TIERS,PETS,SETS,setsOf,setEffects,pieceMatches,BASE_POWER,MAX_POWER,POWER_SLOTS,ITEM_POWER,PET_POWER,itemPower,powerOf,powerMultiplier,petProfile,weaponProfile,weaponFor,skillFor,power,timing,prepare,resolve,ARENA_CAP,PERFECT_BONUS,arenaDamage};
 if(typeof module==='object' && module.exports) module.exports=API;
 root.PeskCombat=API;
 })(typeof window!=='undefined' ? window : globalThis);
