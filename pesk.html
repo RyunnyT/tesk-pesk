@@ -32,7 +32,7 @@
 <script src="shared/pesk-shooter.js?v=20261004atk1"></script>
 <script src="shared/pesk-subjects.js"></script>
 <script src="shared/todo-schedule.js?v=20261004todo2"></script>
-<script src="shared/literacy-core.js?v=20261005bank1"></script>
+<script src="shared/literacy-core.js?v=20261005lit2"></script>
 <script src="shared/pesk-progression.js?v=20261004grow1"></script>
 <script src="shared/economy-ownership.js?v=20260930bank1"></script>
 <script src="shared/pesk-boss-catalog.js?v=20260910rpg2"></script>
@@ -8638,7 +8638,7 @@ function litSheetHtml(){
   const finished = !!(r && r.done);
   const closed = litState(litView.date) !== 'open';
   const fb = litView.marks && !litView.marks.allRight
-    ? '<div class="lit-fb">' + litView.marks.wrong.map(w => '<button type="button" data-lit-goto="' + w.evidence + '">✗ ' + w.n + '번' + (w.empty ? '을 아직 고르지 않았어' : '이 틀렸어') + '. 👉 ' + w.evidence + '문단을 다시 읽어 봐</button>').join('') + '</div>' : '';
+    ? '<div class="lit-fb">' + litView.marks.wrong.map(w => '<button type="button" data-lit-goto="' + w.evidence + '">✗ ' + w.n + '번' + (w.empty ? (w.n === 4 ? '을 아직 고르지 않았어' : ' 빈칸을 아직 채우지 않았어') : '이 틀렸어') + '. 👉 ' + w.evidence + '문단을 다시 읽어 봐</button>').join('') + '</div>' : '';
   let tail = '';
   if(finished){
     tail = '<div class="lit-card lit-sec lit-reward"><h3>🎉 완료했어요!</h3><div class="lit-note">처음 채점: 4문항 중 ' + r.first + '개 정답</div>'
@@ -8647,7 +8647,8 @@ function litSheetHtml(){
       + ((typeof bossOn === 'function' && bossOn() && String(r.doneAt||'') && LiteracyCore.ymd(new Date(r.doneAt)) === todayISO()) ? '<div class="lit-note" style="margin-top:8px;">오늘 보스 도전 조건도 채웠어요! 🤝</div>' : '')
       + (Number(r.first) < litDoc.cfg.bonusMin ? '<div class="lit-note" style="margin-top:8px;">처음에 ' + litDoc.cfg.bonusMin + '개 이상 맞히면 보너스 🪙' + litDoc.cfg.coinBonus + '! 다음엔 천천히 읽어 봐요.</div>' : '')
       + '</div>'
-      + (s.essay ? litEssayHtml(s, r, closed) : '');
+      + (s.essay ? litEssayHtml(s, r, closed) : '')
+      + litNextHtml(litView.date);
   }else if(closed){
     tail = '<div class="lit-empty">이 지문은 풀 수 있는 기간이 지났어요.</div>';
   }else{
@@ -8660,6 +8661,13 @@ function litSheetHtml(){
     + LiteracyCore.renderSheet(s.sheet, {dateLabel: litLabel(s.date), subject: s.subject, answers: ans,
         marks: finished ? LiteracyCore.grade(s.sheet, ans) : litView.marks, locked: finished || closed || litBusy})
     + '<div class="lit">' + tail + '</div>';
+}
+/* 다 푼 뒤: 아직 안 푼 지문이 있으면 바로 이어 풀고, 없으면 모험으로 돌아간다 */
+function litNextHtml(date){
+  const next = litOpenList().find(x => x.date !== date && !litRec(x.date)?.done);
+  return next
+    ? '<button type="button" class="lit-btn" style="margin-top:4px;" onclick="openLiteracy(\'' + next.date + '\')">다음 지문 풀기 · ' + escHtml(next.sheet.title) + ' ›</button>'
+    : '<button type="button" class="lit-btn ghost" style="margin-top:4px;" onclick="closeLiteracy()">모험으로 돌아가기</button>';
 }
 function litEssayHtml(s, r, closed){
   const locked = !!r.essayOk || closed;

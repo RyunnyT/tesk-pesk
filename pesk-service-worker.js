@@ -1,4 +1,4 @@
-const PESK_CACHE = 'pesk-shell-v49-student-app';
+const PESK_CACHE = 'pesk-shell-v50-student-app';
 const PESK_ASSETS = [
   './landing.html',
   './pesk.html',
@@ -20,7 +20,7 @@ const PESK_ASSETS = [
   './shared/pesk-boss-catalog.js?v=20260910rpg2',
   './shared/pesk-subjects.js',
   './shared/todo-schedule.js?v=20261004todo2',
-  './shared/literacy-core.js?v=20261005bank1',
+  './shared/literacy-core.js?v=20261005lit2',
   './shared/pesk-progression.js?v=20261004grow1',
   './shared/economy-ownership.js?v=20260930bank1',
   './shared/pesk-student-auth-free.js?v=20261001app1',

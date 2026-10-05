@@ -167,7 +167,7 @@ function placeAnswer(sheet,seed){
 function grade(sheet,answers){
   const blanks=blanksOf(sheet);
   const a=answers||{};
-  const items=blanks.map((b,i)=>({n:i+1,ok:same((a.blanks||[])[i],b.answer),evidence:b.evidence}));
+  const items=blanks.map((b,i)=>({n:i+1,ok:same((a.blanks||[])[i],b.answer),evidence:b.evidence,empty:!String((a.blanks||[])[i]||'').trim()}));
   const choice=Number.isInteger(a.choice)?a.choice:-1;
   items.push({n:4,ok:choice===sheet.final_quiz.answer,evidence:sheet.final_quiz.evidence,empty:choice<0});
   const score=items.filter(x=>x.ok).length;
@@ -339,35 +339,37 @@ function toCsv(rows){return rows.map(r=>r.map(x=>/[",\n\r]/.test(x)?'"'+x.replac
 /* ── 화면 ── 학생 앱과 교사 미리보기가 같은 모양을 쓴다 */
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const CSS=`
-.lit{--lit-ac:#0ea5a4;--lit-acl:#e6faf8;--lit-line:#94d8d4;--lit-bd:#e8ebf3;--lit-sub:#6b7280;--lit-hint:#9aa3b2;--lit-ok:#16a34a;--lit-okl:#f0fdf4;--lit-no:#dc2626;--lit-nol:#fef2f2;--lit-hl:#fff3c4;color:#1a1a2e;font-family:inherit;}
+.lit{container-type:inline-size;--lit-fs:16px;--lit-ac:#0ea5a4;--lit-acl:#e6faf8;--lit-line:#94d8d4;--lit-bd:#e8ebf3;--lit-sub:#6b7280;--lit-hint:#9aa3b2;--lit-ok:#16a34a;--lit-okl:#f0fdf4;--lit-no:#dc2626;--lit-nol:#fef2f2;--lit-hl:#fff3c4;color:#1a1a2e;font-family:inherit;}
 .lit *{box-sizing:border-box;}
 .lit-card{background:#fff;border-radius:18px;box-shadow:0 4px 20px rgba(30,41,59,.07);overflow:hidden;margin-bottom:14px;}
 .lit-head{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--lit-bd);font-size:13px;color:var(--lit-sub);}
 .lit-round{background:var(--lit-ac);color:#fff;font-weight:900;border-radius:9px;padding:3px 9px;font-size:14px;}
 .lit-subj{margin-left:auto;background:var(--lit-acl);color:var(--lit-ac);font-weight:800;font-size:12px;padding:3px 10px;border-radius:99px;}
-.lit-body{display:grid;grid-template-columns:210px 1fr;}
-.lit-side{background:var(--lit-acl);padding:20px 16px;display:flex;flex-direction:column;gap:14px;}
-.lit-title{font-size:25px;font-weight:900;line-height:1.3;word-break:keep-all;margin:0;}
-.lit-gloss{margin-top:auto;font-size:12.5px;line-height:1.6;color:#334155;}
+.lit-body{display:grid;grid-template-columns:1fr;}
+.lit-side{background:var(--lit-acl);padding:16px 18px 14px;display:flex;flex-direction:column;gap:10px;}
+.lit-title{font-size:22px;font-weight:900;line-height:1.35;word-break:keep-all;margin:0;}
+.lit-gloss{font-size:13px;line-height:1.6;color:#334155;word-break:keep-all;}
 .lit-gloss div+div{margin-top:6px;}
 .lit-gloss b{color:var(--lit-ac);}
-.lit-text{padding:18px 20px 14px 26px;font-size:16px;line-height:1.9;word-break:keep-all;}
-.lit-text p{margin:0;text-indent:.6em;padding:4px 8px;border-radius:10px;position:relative;transition:background .3s;}
-.lit-text p+p{margin-top:6px;}
-.lit-pn{position:absolute;left:-16px;top:7px;font-size:11px;color:var(--lit-hint);text-indent:0;font-weight:700;}
+.lit-text{padding:14px 16px 12px 30px;font-size:var(--lit-fs);line-height:1.9;word-break:keep-all;overflow-wrap:break-word;}
+.lit-text p{margin:0;padding:4px 8px;border-radius:10px;position:relative;transition:background .3s;}
+.lit-text p+p{margin-top:8px;}
+.lit-pn{position:absolute;left:-18px;top:4px;width:16px;text-align:right;font-size:11px;line-height:calc(var(--lit-fs) * 1.9);color:var(--lit-hint);font-weight:700;}
 .lit-text p.lit-hl{background:var(--lit-hl);box-shadow:0 0 0 2px #fcd34d inset;}
 .lit-sec{padding:16px;}
 .lit-sec-t{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14.5px;margin-bottom:12px;}
 .lit-tag{background:#1a1a2e;color:#fff;font-size:11px;padding:3px 9px;border-radius:99px;}
 .lit-sec-t .lit-q{margin-left:auto;font-size:12px;color:var(--lit-sub);font-weight:600;}
-.lit-map{display:grid;grid-template-columns:auto 1fr;align-items:center;}
-.lit-center{background:var(--lit-ac);color:#fff;font-weight:900;font-size:17px;border-radius:50%;width:104px;height:104px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.25;padding:8px;word-break:keep-all;}
-.lit-brs{position:relative;padding-left:30px;display:flex;flex-direction:column;gap:10px;}
-.lit-brs::before{content:"";position:absolute;left:0;top:26px;bottom:26px;border-left:2px solid var(--lit-line);}
-.lit-br{position:relative;display:flex;align-items:center;gap:10px;}
-.lit-br::before{content:"";position:absolute;left:-30px;width:30px;top:50%;border-top:2px solid var(--lit-line);}
-.lit-br-l{flex:0 0 88px;text-align:center;border:2px solid var(--lit-ac);color:var(--lit-ac);font-weight:800;font-size:13px;border-radius:10px;padding:7px 4px;background:#fff;word-break:keep-all;}
-.lit-br-t{flex:1;border:1.5px solid var(--lit-bd);border-radius:12px;padding:9px 12px;font-size:15px;line-height:2.1;background:#fafbff;word-break:keep-all;}
+.lit-map{display:grid;grid-template-columns:1fr;justify-items:start;}
+.lit-center{background:var(--lit-ac);color:#fff;font-weight:900;font-size:16px;border-radius:14px;padding:9px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.25;word-break:keep-all;}
+.lit-brs{position:relative;padding-left:22px;width:100%;display:flex;flex-direction:column;gap:10px;}
+.lit-brs::before{content:"";position:absolute;left:0;top:-10px;bottom:26px;border-left:2px solid var(--lit-line);}
+.lit-br{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:6px;}
+.lit-br::before{content:"";position:absolute;left:-22px;width:22px;top:50%;border-top:2px solid var(--lit-line);}
+.lit-br-l{flex:none;align-self:flex-start;text-align:center;border:2px solid var(--lit-ac);color:var(--lit-ac);font-weight:800;font-size:13px;border-radius:10px;padding:4px 12px;background:#fff;word-break:keep-all;}
+.lit-br-t{flex:1;min-width:0;border:1.5px solid var(--lit-bd);border-radius:12px;padding:9px 12px;font-size:15px;line-height:2.1;background:#fafbff;word-break:keep-all;overflow-wrap:break-word;}
+.lit-bw{white-space:nowrap;}
+.lit-blank.tail{margin-right:0;}
 .lit-br-s{display:block;font-size:12px;color:var(--lit-sub);line-height:1.5;margin-top:2px;}
 .lit-blank{display:inline-flex;flex-direction:column;vertical-align:middle;margin:0 3px;}
 .lit-cho{display:flex;gap:3px;justify-content:center;margin-bottom:2px;}
@@ -379,7 +381,7 @@ const CSS=`
 .lit-blank.no input{border-color:var(--lit-no);background:var(--lit-nol);color:#b91c1c;}
 .lit-quiz{font-size:15px;font-weight:700;line-height:1.6;margin-bottom:10px;word-break:keep-all;}
 .lit-num{display:inline-block;background:#4f8ef7;color:#fff;border-radius:7px;font-size:12px;padding:1px 7px;margin-right:6px;}
-.lit-choices{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.lit-choices{display:grid;grid-template-columns:1fr;gap:8px;}
 .lit-choice{border:1.5px solid var(--lit-bd);background:#fafbff;border-radius:12px;padding:11px 12px;font:inherit;font-size:14px;text-align:left;cursor:pointer;color:inherit;word-break:keep-all;}
 .lit-choice.sel{border-color:#4f8ef7;background:#eef4ff;font-weight:700;}
 .lit-choice.ok{border-color:var(--lit-ok);background:var(--lit-okl);}
@@ -398,20 +400,23 @@ const CSS=`
 .lit-rw.off{color:var(--lit-hint);}
 .lit-rw.total{background:#1a1a2e;color:#fff;}
 .lit-note{font-size:12.5px;color:var(--lit-sub);line-height:1.6;}
-@media (max-width:680px){
-  .lit-body{grid-template-columns:1fr;}
-  .lit-side{padding:16px 16px 12px;gap:10px;}
-  .lit-title{font-size:22px;}
-  .lit-gloss{margin-top:0;}
-  .lit-text{padding:14px 14px 12px 24px;font-size:15.5px;}
-  .lit-map{grid-template-columns:1fr;justify-items:start;}
-  .lit-center{width:auto;height:auto;border-radius:14px;padding:9px 18px;font-size:16px;margin-bottom:10px;}
-  .lit-brs{padding-left:22px;width:100%;}
-  .lit-brs::before{top:-10px;}
-  .lit-br::before{left:-22px;width:22px;}
-  .lit-br{flex-direction:column;align-items:stretch;gap:6px;}
-  .lit-br-l{flex:none;align-self:flex-start;padding:4px 12px;}
-  .lit-choices{grid-template-columns:1fr;}
+@container (min-width:520px){
+  .lit-choices{grid-template-columns:1fr 1fr;}
+}
+@container (min-width:600px){
+  .lit-map{grid-template-columns:auto 1fr;align-items:center;}
+  .lit-center{border-radius:50%;width:104px;height:104px;padding:8px;margin-bottom:0;font-size:17px;}
+  .lit-brs{padding-left:30px;}
+  .lit-brs::before{top:26px;}
+  .lit-br{flex-direction:row;align-items:center;gap:10px;}
+  .lit-br::before{left:-30px;width:30px;}
+  .lit-br-l{flex:0 0 88px;align-self:auto;padding:7px 4px;}
+}
+@container (min-width:720px){
+  .lit-body{grid-template-columns:220px 1fr;}
+  .lit-side{padding:20px 18px;gap:14px;}
+  .lit-title{font-size:24px;}
+  .lit-text{padding:18px 22px 14px 32px;}
 }`;
 function injectStyles(doc){
   const d=doc||root.document;
@@ -423,7 +428,7 @@ function renderSheet(sheet,opts={}){
   const a=opts.answers||{},marks=opts.marks?Object.fromEntries(opts.marks.items.map(x=>[x.n,x.ok])):{};
   let bi=0;
   const brs=sheet.map.branches.map(b=>{
-    const t=esc(b.text).replace(/\{\{([^{}]+?)\}\}/g,(_,ansRaw)=>{
+    const t=esc(b.text).replace(/\{\{([^{}]+?)\}\}([^\s{]*)/g,(_,ansRaw,tail)=>{
       const i=bi++,ans=ansRaw.trim();
       const cho=choseong(ans).map(c=>c===' '?'<span class="gap"></span>':'<span>'+esc(c)+'</span>').join('');
       const w=Math.max(3.2,ans.length*1.25+1.2);
@@ -431,7 +436,7 @@ function renderSheet(sheet,opts={}){
       const inner=opts.reveal
         ?'<span class="lit-ans" style="min-width:'+w+'em">'+esc(ans)+'</span>'
         :'<input data-lit-blank="'+i+'" style="width:'+w+'em" value="'+esc((a.blanks||[])[i]||'')+'" aria-label="'+(i+1)+'번 빈칸" autocomplete="off"'+(opts.locked?' disabled':'')+'>';
-      return '<span class="lit-blank'+(opts.reveal?' ok':st)+'"><span class="lit-cho">'+cho+'</span>'+inner+'</span>';
+      return '<span class="lit-bw"><span class="lit-blank'+(opts.reveal?' ok':st)+(tail?' tail':'')+'"><span class="lit-cho">'+cho+'</span>'+inner+'</span>'+tail+'</span>';
     });
     return '<div class="lit-br"><div class="lit-br-l">'+esc(b.label)+'</div><div class="lit-br-t">'+t+(b.sub?'<span class="lit-br-s">'+esc(b.sub)+'</span>':'')+'</div></div>';
   }).join('');

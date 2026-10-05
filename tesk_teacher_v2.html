@@ -3,7 +3,7 @@
 <head>
 <script src="shared/teaching-core.js?v=20261001counsel3"></script>
 <script src="shared/todo-schedule.js?v=20261004todo2"></script>
-<script src="shared/literacy-core.js?v=20261005bank1"></script>
+<script src="shared/literacy-core.js?v=20261005lit2"></script>
 <script src="shared/pesk-progression.js?v=20261004grow1"></script>
 <link rel="stylesheet" href="shared/tesk-teaching.css?v=20261001counsel3">
 <script src="shared/peer-survey.js?v=20260929class1"></script>
@@ -4350,7 +4350,7 @@ async function renderLiteracy(){
     const lock = r.status === 'approved' ? ' disabled' : '';
     return '<tr data-lit-row="' + r.date + '"' + (r.date === litOpenDate ? ' style="background:var(--tesk-l);"' : '') + '>'
       + '<td style="white-space:nowrap;font-weight:700;padding:0 6px;' + (r.past ? 'color:var(--hint);' : '') + '">' + litDateLabel(r.date) + (r.today ? ' <span style="color:var(--tesk);">오늘</span>' : '') + '</td>'
-      + '<td><select class="form-input" data-lit-subject style="padding:6px 8px;font-size:12.5px;"' + lock + '>' + LiteracyCore.SUBJECTS.map(s=>'<option'+(s===r.subject?' selected':'')+'>'+s+'</option>').join('') + '</select></td>'
+      + '<td style="white-space:nowrap;"><select class="form-input" data-lit-subject style="padding:6px 8px;font-size:12.5px;width:auto;min-width:76px;"' + lock + '>' + LiteracyCore.SUBJECTS.map(s=>'<option'+(s===r.subject?' selected':'')+'>'+s+'</option>').join('') + '</select></td>'
       + '<td style="width:100%;"><input class="form-input" data-lit-topic value="' + escHtml(r.topic) + '" placeholder="주제를 입력하거나 AI로 채우세요" maxlength="40" style="padding:6px 10px;font-size:13px;"' + lock + '></td>'
       + '<td style="white-space:nowrap;"><span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:99px;color:' + st[1] + ';background:' + st[2] + ';">' + st[0] + '</span></td>'
       + '<td style="white-space:nowrap;">'
@@ -4364,7 +4364,7 @@ async function renderLiteracy(){
     + '<button class="btn btn-sm btn-primary" id="lit-fill-topics"' + (litBusy ? ' disabled' : '') + '>✨ 빈 주제 AI로 채우기</button></div>'
     + '<div class="insight-help" style="margin:-4px 0 10px;">앞으로 8회차가 요일표에서 자동으로 생겨요. 분야는 한 주에 사회 계열·과학 계열을 번갈아 제안하고, 바꿀 수 있어요. 주제를 고치면 바로 저장돼요.</div>'
     + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:separate;border-spacing:0 6px;font-size:13px;">'
-    + '<thead><tr style="color:var(--sub);font-size:11.5px;text-align:left;"><th style="padding:0 6px;">날짜</th><th>분야</th><th>주제</th><th>상태</th><th></th></tr></thead>'
+    + '<thead><tr style="color:var(--sub);font-size:11.5px;text-align:left;"><th style="padding:0 6px;white-space:nowrap;">날짜</th><th style="white-space:nowrap;">분야</th><th>주제</th><th style="white-space:nowrap;">상태</th><th></th></tr></thead>'
     + '<tbody>' + rowHtml + '</tbody></table></div></div>';
 
   el.innerHTML = cfgCard + litBankCardHtml() + listCard + '<div id="lit-editor"></div>';
@@ -4618,7 +4618,7 @@ function renderLitEditor(){
   const essayBox = '<div style="margin-top:12px;padding:14px;border:1px solid var(--border);border-radius:12px;">'
     + '<label class="qz-switch"><input type="checkbox" id="lit-essay-on"' + (essay.on ? ' checked' : '') + '> ✍️ 이 회차에 서술형 문제 내기 (선택)</label>'
     + '<textarea class="form-input" id="lit-essay-q" rows="2" style="margin-top:8px;" maxlength="200" placeholder="서술형 문제">' + escHtml(essay.question || '') + '</textarea>'
-    + '<div class="insight-help">AI가 예시를 넣어 두었어요. 고쳐 쓰거나 직접 내세요. 학생은 4문항을 다 푼 뒤 답을 쓰고, 선생님이 아래 결과에서 확인하면 보상을 줄 수 있어요.</div>'
+    + '<div class="insight-help">' + (s.bankId ? '지문 은행의 예시 문제를 넣어 두었어요.' : 'AI가 예시를 넣어 두었어요.') + ' 고쳐 쓰거나 직접 내세요. 학생은 4문항을 다 푼 뒤 답을 쓰고, 선생님이 아래 결과에서 확인하면 보상을 줄 수 있어요.</div>'
     + '<button class="btn btn-sm btn-secondary" id="lit-save-essay" style="margin-top:8px;">서술형 설정 저장</button></div>';
   box.innerHTML = '<div class="card" style="border-left:4px solid ' + (approved ? 'var(--tesk)' : 'var(--blue)') + ';">'
     + '<div class="card-header"><div class="card-title">📖 ' + litDateLabel(litOpenDate) + ' · ' + escHtml(s.subject||'') + ' · ' + escHtml(s.topic||'') + '</div>'
