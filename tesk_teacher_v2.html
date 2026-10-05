@@ -4299,6 +4299,13 @@ async function litPullServer(){
 function litDays(){
   return TodoSchedule.normalize(load('pesk-todo-schedule', null)).weekly.literacy || [];
 }
+/* 회차 표에서 바로 승인: 검토 중인 앞으로의 회차만, 검사를 통과해야 누를 수 있다 */
+function litRowApproveHtml(r){
+  if(r.status !== 'draft' || r.past) return '';
+  const v = LiteracyCore.validate(litData().sheets[r.date]?.sheet, {level: litData().cfg.level});
+  return '<button class="btn btn-sm btn-primary" data-lit-approve style="margin-right:6px;"'
+    + (v.ok && !litBusy ? '' : ' disabled title="' + escHtml(v.ok ? '저장하는 중이에요' : '고칠 점: ' + v.errors[0]) + '"') + '>✅ 승인</button>';
+}
 function litRows(){
   const {sheets} = litData();
   const today = LiteracyCore.ymd(new Date());
@@ -4328,21 +4335,21 @@ async function renderLiteracy(){
   const rows = litRows();
   const num = (id, label, v, min, max, help) => '<label class="qz-field" style="flex:0 0 auto;"><span>' + label + '</span>'
     + '<input class="form-input" type="number" id="' + id + '" min="' + min + '" max="' + max + '" value="' + v + '" style="width:96px;">'
-    + (help ? '<small>' + help + '</small>' : '') + '</label>';
+    + '<small>' + (help || '&nbsp;') + '</small></label>';
   const cfgCard = '<div class="card" style="margin-bottom:16px;">'
     + '<div class="card-header"><div class="card-title">⚙️ 운영 설정</div>'
     + '<div style="font-size:12px;color:var(--sub);">공개 요일: <b style="color:var(--tesk);">' + TodoSchedule.dowLabel(days) + '</b> '
     + '<a href="#" onclick="openTodoWeekModal();return false;" style="color:var(--tesk);font-weight:700;">요일 바꾸기 ›</a></div></div>'
-    + '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">'
+    + '<div class="lit-cfg-row">'
     + '<label class="qz-field" style="flex:0 0 auto;"><span>수준</span><select class="form-input" id="lit-level" style="width:110px;">'
-    + LiteracyCore.LEVEL_IDS.map(l=>'<option value="'+l+'"'+(l===cfg.level?' selected':'')+'>'+LiteracyCore.LEVELS[l].label+'</option>').join('') + '</select></label>'
+    + LiteracyCore.LEVEL_IDS.map(l=>'<option value="'+l+'"'+(l===cfg.level?' selected':'')+'>'+LiteracyCore.LEVELS[l].label+'</option>').join('') + '</select><small>&nbsp;</small></label>'
     + num('lit-base','기본 보상 🪙',cfg.coinBase,0,500,'다 풀면')
     + num('lit-bonus','정확도 보너스 🪙',cfg.coinBonus,0,500,'')
     + num('lit-bonusmin','보너스 기준',cfg.bonusMin,1,4,'처음 채점 n개 이상')
     + num('lit-grace','놓친 회차 기간',cfg.graceDays,0,6,'공개일 뒤 며칠까지')
     + num('lit-essay','서술형 확인 보상 🪙',cfg.coinEssay,0,500,'선생님 확인 시')
     + '<label class="qz-field" style="flex:1 1 260px;"><span>우리 반 지문 시트 주소 (선택)</span><input class="form-input" id="lit-sheet" value="' + escHtml(cfg.sheetUrl) + '" placeholder="비워 두면 공용 지문 은행을 써요"><small>시트를 \'링크가 있는 모든 사용자 보기\'로 공유해 주세요</small></label>'
-    + '<button class="btn btn-sm btn-primary" id="lit-save-cfg">설정 저장</button></div>'
+    + '<button class="btn btn-sm btn-primary lit-cfg-save" id="lit-save-cfg">설정 저장</button></div>'
     + '<div class="insight-help" style="margin-top:10px;">승인한 지문만 공개일에 학생 홈 <b>오늘 할 일</b>에 뜨고, 놓친 학생도 기간 안에 풀면 같은 보상을 받아요. 보너스는 <b>처음 채점했을 때</b>의 정답 수로 정해져서, 답을 바꿔 가며 맞혀도 받을 수 없어요.</div></div>';
 
   const rowHtml = rows.length ? rows.map(r => {
@@ -4353,8 +4360,8 @@ async function renderLiteracy(){
       + '<td style="white-space:nowrap;"><select class="form-input" data-lit-subject style="padding:6px 8px;font-size:12.5px;width:auto;min-width:76px;"' + lock + '>' + LiteracyCore.SUBJECTS.map(s=>'<option'+(s===r.subject?' selected':'')+'>'+s+'</option>').join('') + '</select></td>'
       + '<td style="width:100%;"><input class="form-input" data-lit-topic value="' + escHtml(r.topic) + '" placeholder="주제를 입력하거나 AI로 채우세요" maxlength="40" style="padding:6px 10px;font-size:13px;"' + lock + '></td>'
       + '<td style="white-space:nowrap;"><span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:99px;color:' + st[1] + ';background:' + st[2] + ';">' + st[0] + '</span></td>'
-      + '<td style="white-space:nowrap;">'
-      + (r.hasSheet ? '<button class="btn btn-sm btn-secondary" data-lit-open>열기</button>'
+      + '<td style="white-space:nowrap;text-align:right;">'
+      + (r.hasSheet ? litRowApproveHtml(r) + '<button class="btn btn-sm btn-secondary" data-lit-open>열기</button>'
                     : '<button class="btn btn-sm btn-primary" data-lit-gen' + (r.topic && !litBusy ? '' : ' disabled title="주제를 먼저 정하세요"') + '>✨ 지문 만들기</button>')
       + '</td></tr>';
   }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--hint);padding:18px;">요일표에 \'오늘의 지문\' 요일이 없어요. 요일을 체크하면 회차가 생겨요.</td></tr>';
@@ -4394,6 +4401,7 @@ function bindLiteracyPage(el){
     tr.querySelector('[data-lit-topic]')?.addEventListener('change', patch);
     tr.querySelector('[data-lit-gen]')?.addEventListener('click', ()=>generateLitSheet(date));
     tr.querySelector('[data-lit-open]')?.addEventListener('click', ()=>{ litOpenDate = date; litProgress = null; renderLiteracy(); });
+    tr.querySelector('[data-lit-approve]')?.addEventListener('click', ()=>setLitApproved(true, date));
   });
 }
 async function saveLitCfg(){
@@ -4667,8 +4675,7 @@ async function applyLitEdit(){
     renderLitEditor();
   }catch(e){ showToast('⚠️ 저장 실패: ' + e.message); }
 }
-async function setLitApproved(on){
-  const date = litOpenDate;
+async function setLitApproved(on, date = litOpenDate){
   const s = litData().sheets[date];
   if(on){
     const v = LiteracyCore.validate(s?.sheet, {level: litData().cfg.level});
@@ -16149,6 +16156,14 @@ function saveApiSettings(){
 .qz-field{display:flex;flex-direction:column;gap:4px;font-size:11.5px;font-weight:700;color:var(--sub);}
 .qz-field small{font-weight:600;color:var(--hint);}
 .qz-field .form-input{padding:8px 10px;font-size:13px;}
+/* 오늘의 지문 운영 설정: 칸마다 제목·입력·설명 높이를 같게 맞춘다 */
+.lit-cfg-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;}
+.lit-cfg-row .qz-field>span{display:flex;align-items:center;gap:3px;height:18px;line-height:18px;white-space:nowrap;}
+.lit-cfg-row .qz-field .form-input{height:38px;box-sizing:border-box;}
+.lit-cfg-row .qz-field small{display:block;min-height:16px;line-height:16px;}
+.lit-cfg-row .lit-cfg-save{height:38px;margin-top:22px;align-self:flex-start;}
+/* 회차 표: 누를 수 없는 버튼은 흐리게 */
+[data-lit-row] .btn:disabled{opacity:.45;cursor:not-allowed;}
 .qz-switch{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border:1px solid var(--border);
   border-radius:8px;background:var(--surface);font-size:11.5px;font-weight:700;color:var(--sub);cursor:pointer;}
 .qz-switch input{margin:0;cursor:pointer;}
