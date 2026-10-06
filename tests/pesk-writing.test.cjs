@@ -203,8 +203,14 @@ test('student logout ends Firebase auth, clears the session and replaces history
   assert.equal(await s.c.ensureActiveStudentSession(false),false);
 });
 
-test('failed Firebase logout can be retried instead of silently claiming success',async()=>{
-  const s=student(database());s.c._auth={};s.c._signOut=async()=>{throw Error('auth failed');};s.c.location.replace=()=>assert.fail('must not redirect');
+test('failed Firebase logout still logs out after removing the device login record',async()=>{
+  const s=student(database());let forced=0,target='';s.c._auth={};s.c._signOut=async()=>{throw Error('Quota exceeded');};
+  s.c._forceLocalSignOut=async()=>{forced++;};s.c.location.replace=url=>target=url;
+  await s.c.logout();assert.equal(forced,1);assert.equal(target,'landing.html');assert.equal(s.storage.has('pesk-account-uid'),false);assert.equal(s.alerts.length,0);
+});
+
+test('logout stops and can be retried only when the device login record cannot be removed',async()=>{
+  const s=student(database());s.c._auth={};s.c._signOut=async()=>{throw Error('auth failed');};s.c._forceLocalSignOut=async()=>{throw Error('storage failed');};s.c.location.replace=()=>assert.fail('must not redirect');
   await s.c.logout();assert.equal(s.storage.get('pesk-account-uid'),'student1');assert.match(s.alerts[0],/로그아웃을 완료하지 못했어요/);
   s.c._signOut=async()=>{};s.c.location.replace=()=>{};await s.c.logout();assert.equal(s.storage.has('pesk-account-uid'),false);
 });

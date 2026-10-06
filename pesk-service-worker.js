@@ -1,4 +1,4 @@
-const PESK_CACHE = 'pesk-shell-v55-quota';
+const PESK_CACHE = 'pesk-shell-v56-logout';
 const PESK_ASSETS = [
   './landing.html',
   './pesk.html',
