@@ -309,3 +309,13 @@ test('student loads only own writings and published anthology, not the whole cla
   assert.deepEqual(seen.at(-1),['mine','mine2','published']);
   stop();
 });
+
+test('coin check rereads the roster only when local points look short',async()=>{
+  const d=database(),s=student(d);let reads=0;const get=s.c._fsGetDoc;
+  s.c._fsGetDoc=async r=>{if(r.path.endsWith('/tesk-students'))reads++;return get(r);};s.c.renderEconomyPanels=()=>{};
+  d.docs.set('classrooms/test/data/tesk-students',{value:[{num:1,name:'테스트',points:900}]});
+  vm.runInContext('students=[{num:1,name:"테스트",points:100}]',s.c);
+  assert.equal((await s.c.ensurePointsFresh(50)).points,100);assert.equal(reads,0);
+  assert.equal((await s.c.ensurePointsFresh(500)).points,900);assert.equal(reads,1);
+  await s.c.pullStudents();assert.equal(reads,1,'periodic pull is throttled right after a fresh read');
+});
