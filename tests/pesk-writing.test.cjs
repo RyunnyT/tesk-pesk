@@ -17,7 +17,9 @@ function database(legacy = [], entries = []){
   let seq = 0, retry = null, failure = null;
   const ref = (p, type='doc')=>({path:p, id:p.split('/').at(-1), type});
   const snapshot = r=>({id:r.id, exists:()=>docs.has(r.path), data:()=>copy(docs.get(r.path))});
-  const collectionSnapshot = r=>({docs:[...docs.keys()].filter(p=>p.startsWith(r.path+'/') && !p.slice(r.path.length+1).includes('/')).map(p=>snapshot(ref(p)))});
+  const field = (o, f)=>f.split('.').reduce((v, k)=>v==null ? undefined : v[k], o);
+  const collectionSnapshot = r=>({docs:[...docs.keys()].filter(p=>p.startsWith(r.path+'/') && !p.slice(r.path.length+1).includes('/'))
+    .filter(p=>!r.where || field(docs.get(p), r.where.f)===r.where.v).map(p=>snapshot(ref(p)))});
   function emit(){ for(const l of listeners) if(l.active) l.next(l.ref.type==='collection' ? collectionSnapshot(l.ref) : snapshot(l.ref)); }
   function commit(pending){
     if(failure) throw failure;
@@ -31,6 +33,8 @@ function database(legacy = [], entries = []){
     _fsCollection:(_db,...parts)=>ref(parts.join('/'),'collection'),
     _fsGetDoc:async r=>snapshot(r),
     _fsGetDocs:async r=>collectionSnapshot(r),
+    _fsWhere:(f,op,v)=>({f,op,v}),
+    _fsQuery:(r,w)=>({...r,where:w}),
     _fsSetDoc:async(r,data)=>commit([[r,data]]),
     _fsOnSnapshot:(r,next,error)=>{
       const l={ref:r,next,error,active:true};listeners.push(l);
@@ -277,4 +281,25 @@ test('teacher feedback, read, rubric and deletion use individual documents',asyn
   assert.equal(w.feedback,'선생님 피드백');assert.equal(w.readAt,'2026-09-08');assert.equal(w.score,90);
   await c.deletePeskWriting('old');assert.deepEqual(await d.store.load(),[]);
   assert.ok(d.writes.every(p=>p.startsWith(ITEMS+'/')));
+});
+
+test('student loads only own writings and published anthology, not the whole class',async()=>{
+  const legacy=[entry('oldMine'),entry('oldOther',{studentNum:2,accountUid:'student2'})];
+  const d=database(legacy,[
+    entry('mine'),
+    entry('other',{studentNum:2,accountUid:'student2'}),
+    entry('published',{studentNum:3,accountUid:'student3',anthology:{status:'published',publishedAt:'2026-10-01'}}),
+    entry('oldMine',{deleted:true})
+  ]);
+  const owner={studentNum:1,accountUid:'student1'};
+  const ids=rows=>rows.map(w=>w.id).sort();
+  assert.deepEqual(ids(await d.store.loadMine(owner)),['mine','published']);
+  const seen=[];
+  const stop=d.store.subscribeMine(owner,rows=>seen.push(ids(rows)));
+  await new Promise(r=>setTimeout(r,0));
+  assert.deepEqual(seen.at(-1),['mine','published']);
+  await d.store.add(entry('mine2'));
+  await d.store.add(entry('other2',{studentNum:2,accountUid:'student2'}));
+  assert.deepEqual(seen.at(-1),['mine','mine2','published']);
+  stop();
 });

@@ -1,4 +1,4 @@
-const PESK_CACHE = 'pesk-shell-v54-student-app';
+const PESK_CACHE = 'pesk-shell-v55-quota';
 const PESK_ASSETS = [
   './landing.html',
   './pesk.html',
@@ -12,7 +12,7 @@ const PESK_ASSETS = [
   './rpg-monsters.js?v=20261005map1',
   './shared/pesk-boss-quest.js?v=20261004rank1',
   './shared/pesk-class-quest-ui.js?v=20261004tab1',
-  './shared/pesk-writing-store.js?v=20260920teach1',
+  './shared/pesk-writing-store.js?v=20261006quota1',
   './shared/pesk-learning-sync.js?v=20260918',
   './shared/peer-survey.js?v=20260920',
   './shared/pesk-combat.js?v=20261005arena1',

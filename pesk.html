@@ -24,7 +24,7 @@
 <script src="quiz-rating.js?v=20260912mixed1"></script>
 <script src="rpg-monsters.js?v=20261005map1"></script>
 <script src="boss-sprites.js"></script>
-<script src="shared/pesk-writing-store.js?v=20260920teach1"></script>
+<script src="shared/pesk-writing-store.js?v=20261006quota1"></script>
 <script src="shared/writing-proofread.js?v=20260928wr1"></script>
 <script src="shared/pesk-learning-sync.js?v=20260918"></script>
 <script src="shared/peer-survey.js?v=20260920"></script>
@@ -42,13 +42,19 @@
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, getDoc, getDocs, setDoc, onSnapshot, collection, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence, doc, getDoc, getDocs, setDoc, onSnapshot, collection, query, where, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { firebaseConfig } from "./shared/firebase-config.js";
 // 학생 앱은 교사 Google 로그인과 다른 Firebase 앱 이름을 쓴다 (shared/pesk-student-auth-free.js 의 STUDENT_APP).
 // 같은 브라우저에서 교사 화면을 열어도 학생 로그인이 풀리지 않고, 교사 화면도 학생 계정으로 바뀌지 않는다.
 const app = initializeApp(firebaseConfig, 'pesk-student');
-const db = getFirestore(app);
+// 무료 요금제 읽기 한도(하루 5만) 절약 — 기기에 캐시를 두면 새로고침해도 바뀐 문서만 다시 읽는다.
+// 학교 공용 기기에 반 기록이 남지 않게 로그아웃할 때 캐시를 지운다 (_fsClearCache).
+let db;
+try{ db = initializeFirestore(app, {localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})}); }
+catch(e){ console.warn('Firestore 캐시 사용 불가 — 기본 방식으로 연결', e); db = getFirestore(app); }
+window._fsClearCache = async()=>{ try{ await terminate(db); await clearIndexedDbPersistence(db); }catch(e){ console.warn('캐시 정리 실패', e); } };
+window._fsQuery=query; window._fsWhere=where;
 window._auth = getAuth(app); window._signOut = signOut;
 window._db=db; window._fsDoc=doc; window._fsGetDoc=getDoc;
 window._fsGetDocs=getDocs;
@@ -845,6 +851,10 @@ let myMissions = {};
 let peskWritings = [];
 let classAnthology = [];   // 우리 반 글 모음집에 실린 글 (다른 친구 글 포함)
 function writingStore(){ return window.PeskWritings.create(window, roomId); }
+/* 학생은 내 글 + 모음집 글만 받는다 (반 전체를 받으면 읽기 한도를 금방 넘긴다) */
+function myWritingOwner(){ return {studentNum: myStudentNum, accountUid: myAccountUid || ''}; }
+function loadMyWritings(){ const st=writingStore(); return (window._fsQuery && st.loadMine) ? st.loadMine(myWritingOwner()) : st.load(); }
+function subscribeMyWritings(next, error){ const st=writingStore(); return (window._fsQuery && st.subscribeMine) ? st.subscribeMine(myWritingOwner(), next, error) : st.subscribe(next, error); }
 let stockPrices = {};
 let myPortfolio = [];
 let mySurvey = null;
@@ -1201,7 +1211,7 @@ async function loadData(){
     studentBadges    = snaps[2].exists() ? snaps[2].data().value : {};
     jobs             = snaps[3].exists() ? snaps[3].data().value : [];
 
-    const allWritings = await writingStore().load();
+    const allWritings = await loadMyWritings();
     peskWritings = allWritings.filter(recordBelongsToMe);
     classAnthology = anthologyFrom(allWritings);
 
@@ -6705,6 +6715,18 @@ function scheduleAdventureRefresh(){
   },250);
 }
 let _quizResyncTimer=null, _quizSnapshotVersion=0;
+let _quizPullAt=0, _quizPullBusy=false;
+/* 친구 모험 기록 가져오기 — 1분에 한 번까지만 (탭을 빠르게 오가도 읽기가 늘지 않게) */
+async function pullQuizProgress(){
+  if(!window._fbReady || !window._db || !roomId || document.hidden || _quizPullBusy) return;
+  if(Date.now() - _quizPullAt < 60000) return;
+  _quizPullBusy = true; _quizPullAt = Date.now();
+  try{
+    const snap = await window._fsGetDoc(window._fsDoc(window._db,'classrooms',roomId,'data','pesk-quiz-progress'));
+    receiveQuizProgress(snap.exists() ? (snap.data().value || {}) : {});
+  }catch(e){ console.warn('모험 기록 불러오기 실패', e); }
+  finally{ _quizPullBusy = false; }
+}
 function receiveQuizProgress(all){
   _quizSnapshotVersion++;
   if(qzBusy || rpgBusy || _bossClaimBusy || classBossSettlementBusy){queueQuizResync();return;}
@@ -8586,7 +8608,7 @@ function showTab(tab){
   const topMore=document.getElementById('tab-more');
   if(topMore) topMore.classList.toggle('active', ['stock','checklist','challenge'].includes(tab));
   if(tab==='myroom' && !['me','store','class','dex'].includes(avRoomTab)) avRoomTab = 'me';
-  if(tab==='myroom' || tab==='adventure' || tab==='boss') avRefresh();
+  if(tab==='myroom' || tab==='adventure' || tab==='boss'){ avRefresh(); pullQuizProgress(); }
   if(tab==='home') refreshTodayPanel(true);
   if(tab==='writing') markWritingFeedbackSeen();
   if(tab==='shop'||tab==='stock')renderEconomyPanels();
@@ -9148,6 +9170,7 @@ async function logout(){
   localStorage.removeItem('pesk-class-name');
   localStorage.removeItem('pesk-class-code');
   renderNoAccess();
+  if(window._fsClearCache) await window._fsClearCache();
   window.location.replace('landing.html');
 }
 
@@ -9320,7 +9343,7 @@ function subscribeToUpdates(){
   ));
 
   // 내 글쓰기 피드백 실시간
-  _unsubs.push(writingStore().subscribe(
+  _unsubs.push(subscribeMyWritings(
     (allWritings)=>{
         const myNewWritings = allWritings.filter(recordBelongsToMe);
         const prevSignature = _myWritingSignature;
@@ -9500,12 +9523,13 @@ function subscribeToUpdates(){
     }
   ));
 
-  // Coalesce class-wide updates and reread updates that arrived during our save.
-  _unsubs.push(window._fsOnSnapshot(
-    window._fsDoc(window._db,'classrooms',roomId,'data','pesk-quiz-progress'),
-    snap=>receiveQuizProgress(snap.exists()?(snap.data().value||{}):{}),
-    error=>{console.warn('모험 실시간 연결 실패',error);showFeedbackNotice('실시간 연결이 끊겼어요. 인터넷 연결을 확인해주세요.');}
-  ));
+  // 반 전체 모험 기록은 실시간으로 받지 않는다 — 한 명이 저장할 때마다 접속한 모두가 다시 읽어
+  // 무료 읽기 한도를 넘겼다. 내 기록은 저장할 때 바로 반영되고, 친구 기록은 화면을 열 때·3분마다 받는다.
+  _quizPullAt = Date.now();   // 첫 화면은 시작할 때 이미 읽었다
+  const quizTimer = setInterval(()=>{ if(avAnyVisible()) pullQuizProgress(); }, 180000);
+  const quizVisible = ()=>{ if(!document.hidden && avAnyVisible()) pullQuizProgress(); };
+  document.addEventListener('visibilitychange', quizVisible);
+  _unsubs.push(()=>{ clearInterval(quizTimer); document.removeEventListener('visibilitychange', quizVisible); });
 
   // 상담 신청 상태
   _unsubs.push(window._fsOnSnapshot(

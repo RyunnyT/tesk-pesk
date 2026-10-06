@@ -32,19 +32,23 @@
 <link rel="stylesheet" href="shared/pesk-teacher-adventure.css?v=20260910rpg2">
 <!-- 학습 퀘스트 문제 생성기 (초등 3~6학년 교육과정) -->
 <script src="quiz-bank.js?v=20261004grow1"></script>
-<script src="shared/pesk-writing-store.js?v=20261001read1"></script>
+<script src="shared/pesk-writing-store.js?v=20261006quota1"></script>
 <script src="shared/pesk-subjects.js"></script>
 <script src="shared/economy-ownership.js?v=20260930bank1"></script>
 <title>Tesk — 교사 대시보드</title>
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, getDocs, onSnapshot, collection, updateDoc, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence, doc, setDoc, getDoc, getDocs, onSnapshot, collection, updateDoc, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { firebaseConfig, MASTER_EMAILS } from "./shared/firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// 무료 요금제 읽기 한도 절약 — 새로고침해도 바뀐 문서만 다시 읽는다. 로그아웃하면 캐시를 지운다.
+let db;
+try{ db = initializeFirestore(app, {localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})}); }
+catch(e){ console.warn('Firestore 캐시 사용 불가 — 기본 방식으로 연결', e); db = getFirestore(app); }
+window._fsClearCache = async()=>{ try{ await terminate(db); await clearIndexedDbPersistence(db); }catch(e){ console.warn('캐시 정리 실패', e); } };
 const auth = getAuth(app);
 
 window._db = db;
@@ -2536,6 +2540,7 @@ async function teacherLogout(){
   localStorage.removeItem('tesk-teacher-role');
   localStorage.removeItem('tesk-teacher-approved');
   sessionStorage.removeItem('tesk-room-sync-reloaded');
+  if(window._fsClearCache) await window._fsClearCache();
   window.location.replace('landing.html');
 }
 

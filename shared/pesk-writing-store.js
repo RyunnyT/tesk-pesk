@@ -32,6 +32,36 @@ function create(api, roomId){
     const stopCurrent = api._fsOnSnapshot(items, snap=>{ current=itemRows(snap); currentReady=true; emit(); }, fail);
     return ()=>{ active=false; stopOld(); stopCurrent(); };
   }
+  /* 학생용 — 반 전체 글 대신 '내 글 + 모음집에 실린 글'만 받는다.
+     반 전체를 받으면 앱을 열 때마다 글 수만큼 읽기가 나가 무료 한도(하루 5만)를 넘긴다.
+     모음집 게시는 개별 문서(items)에만 저장되므로 옛 배열에서는 내 글만 고르면 된다. */
+  function mineQueries(owner){
+    const qs = [];
+    if(Number.isFinite(Number(owner.studentNum))) qs.push(api._fsQuery(items, api._fsWhere('studentNum', '==', Number(owner.studentNum))));
+    if(owner.accountUid) qs.push(api._fsQuery(items, api._fsWhere('accountUid', '==', String(owner.accountUid))));
+    qs.push(api._fsQuery(items, api._fsWhere('anthology.status', '==', 'published')));
+    return qs;
+  }
+  const isMine = (owner, w)=>!!w && w.scope!=='class' && ((owner.accountUid && w.accountUid===owner.accountUid) || parseInt(w.studentNum)===Number(owner.studentNum));
+  function mergeMine(owner, old, parts){
+    const seen = new Map();
+    parts.forEach(rows=>rows.forEach(w=>seen.set(w.id, w)));
+    return merge(old.filter(w=>isMine(owner, w)), [...seen.values()]);
+  }
+  async function loadMine(owner){
+    const [old, ...parts] = await Promise.all([api._fsGetDoc(legacyRef), ...mineQueries(owner).map(q=>api._fsGetDocs(q))]);
+    return mergeMine(owner, legacyRows(old), parts.map(itemRows));
+  }
+  function subscribeMine(owner, next, error){
+    const qs = mineQueries(owner);
+    let old = [], oldReady = false, active = true;
+    const parts = qs.map(()=>null);
+    const emit = ()=>{ if(active && oldReady && parts.every(Boolean)) next(mergeMine(owner, old, parts)); };
+    const fail = e=>{ if(active && error) error(e); };
+    const stops = [api._fsOnSnapshot(legacyRef, snap=>{ old=legacyRows(snap); oldReady=true; emit(); }, fail)];
+    qs.forEach((q, i)=>stops.push(api._fsOnSnapshot(q, snap=>{ parts[i]=itemRows(snap); emit(); }, fail)));
+    return ()=>{ active=false; stops.forEach(fn=>fn()); };
+  }
   function newId(){ return api._fsDoc(items).id; }
   async function add(entry){
     const ref = entryRef(entry.id);
@@ -83,7 +113,7 @@ function create(api, roomId){
     for(const w of before) if(!ids.has(w.id)) await remove(w.id);
   }
   async function history(id){const snap=await api._fsGetDocs(api._fsCollection(db,'classrooms',roomId,'data','pesk-writings','items',String(id),'revisions'));return snap.docs.map(d=>d.data()).sort((a,b)=>Number(b.revision)-Number(a.revision));}
-  return {load, subscribe, newId, add, update, remove, replaceAll, history};
+  return {load, subscribe, loadMine, subscribeMine, newId, add, update, remove, replaceAll, history};
 }
 const API = {create, merge};
 // Confirm only the exact text the teacher saw, including transaction retries.
