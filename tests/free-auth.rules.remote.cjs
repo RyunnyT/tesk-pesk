@@ -147,6 +147,19 @@ check('owner writes old quiz aggregate',D+'pesk-quiz-progress','update',ids.teac
 check('owner deletes quiz record',Q,'delete',ids.teacher,true,{old:{value:{}}});
 check('writing rules do not open quiz paths',D+'pesk-avatars/students/1','update',ids.student,false);
 
+// ── 학급 공동 기금 · 경매 (학생이 기부·입찰하며 씀) / 교사 전용 경제 설정 ──
+check('student cannot write class fund (hidden feature)',D+'pesk-class-fund','update',ids.student,false);
+for(const key of ['pesk-auctions']){
+ check('student writes '+key,D+key,'update',ids.student,true);
+ check('legacy anonymous writes '+key,D+key,'update',ids.anon,true,{w:legacy});
+ check('other room student denied '+key,D+key,'update',ids.studentB,false);
+}
+for(const key of ['tesk-bank-settings','tesk-wealth-tax','tesk-stock-index','tesk-econ-snapshots','pesk-econ-archive-2026-W41']){
+ check('student reads '+key,D+key,'get',ids.student,true);
+ check('student cannot write '+key,D+key,'update',ids.student,false);
+ check('owner writes '+key,D+key,'update',ids.teacher,true);
+}
+
 (async()=>{
  const source=fs.readFileSync(process.env.RULES_SOURCE||'firestore.rules','utf8');
  auth.setActiveAccount({},auth.getGlobalDefaultAccount());

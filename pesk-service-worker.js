@@ -1,4 +1,4 @@
-const PESK_CACHE = 'pesk-shell-v58-quiz-split';
+const PESK_CACHE = 'pesk-shell-v59-economy';
 const PESK_ASSETS = [
   './landing.html',
   './pesk.html',
@@ -14,6 +14,9 @@ const PESK_ASSETS = [
   './shared/pesk-class-quest-ui.js?v=20261006split1',
   './shared/pesk-writing-store.js?v=20261006quota1',
   './shared/pesk-quiz-store.js?v=20261006split1',
+  './shared/econ-core.js?v=20261009econ2',
+  './shared/pesk-econ-ui.js?v=20261009econ2',
+  './shared/pesk-seat-auction.js?v=20261009seat1',
   './shared/pesk-learning-sync.js?v=20260918',
   './shared/peer-survey.js?v=20260920',
   './shared/pesk-combat.js?v=20261005arena1',

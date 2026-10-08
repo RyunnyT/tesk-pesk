@@ -148,6 +148,7 @@ function student(d){
     document:{getElementById:el,querySelector:()=>el('submit'),querySelectorAll:()=>[],addEventListener(){},documentElement:{style:{setProperty(){}}},body:{classList:{add(){},remove(){}}}},
     setTimeout(){},setInterval(){},clearTimeout(){},clearInterval(){},navigator:{},location:{},alert:m=>alerts.push(m),confirm:()=>true,Image:class{},addEventListener(){}};
   c.window=c;vm.createContext(c);
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../shared/econ-core.js'),'utf8'),c);vm.runInContext(fs.readFileSync(path.join(__dirname,'../shared/pesk-econ-ui.js'),'utf8'),c);
   const html=fs.readFileSync(path.join(ROOT,'pesk.html'),'utf8');
   vm.runInContext(html.split('<script>')[1].split('</script>')[0],c);
   Object.assign(c,d.api,{PeskWritings:Store,_fbReady:true});

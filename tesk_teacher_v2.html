@@ -34,6 +34,8 @@
 <script src="quiz-bank.js?v=20261004grow1"></script>
 <script src="shared/pesk-writing-store.js?v=20261006quota1"></script>
 <script src="shared/pesk-quiz-store.js?v=20261006split1"></script>
+<script src="shared/econ-core.js?v=20261009econ2"></script>
+<script src="shared/tesk-econ-ui.js?v=20261009econ2"></script>
 <script src="shared/pesk-subjects.js"></script>
 <script src="shared/economy-ownership.js?v=20260930bank1"></script>
 <title>Tesk — 교사 대시보드</title>
@@ -1443,6 +1445,7 @@ window.addEventListener('error', function(e){
         <div class="econ-card"><div class="econ-icon">💰</div><div class="econ-label">시중 유통량</div><div class="econ-value" id="econ-circulating">18,420 🪙</div><div id="econ-circulating-detail" style="margin-top:6px;font-size:10px;line-height:1.5;color:var(--sub);font-weight:700;">포인트 0 · 예금 0 · 이자 0 · 주식평가 0</div></div>
         <div class="econ-card"><div class="econ-icon">🏪</div><div class="econ-label">학생 사용액</div><div class="econ-value" id="econ-spent">0 🪙</div></div>
       </div>
+      <div id="econ-indicators"></div>
 
       <!-- 탭 네비 -->
       <div class="economy-tabs" role="tablist" aria-label="학급 경제 메뉴">
@@ -1451,6 +1454,7 @@ window.addEventListener('error', function(e){
         <button class="btn btn-sm btn-secondary" id="econ-tab-stock" role="tab" onclick="showEconTab('stock')">📈 주식 투자</button>
         <button class="btn btn-sm btn-secondary" id="econ-tab-bank" role="tab" onclick="showEconTab('bank')">🏦 은행</button>
         <button class="btn btn-sm btn-secondary" id="econ-tab-tax" role="tab" onclick="showEconTab('tax')">🏛️ 국세청</button>
+        <button class="btn btn-sm btn-secondary" id="econ-tab-auction" role="tab" onclick="showEconTab('auction')">🔨 경매</button>
         <button class="btn btn-sm btn-secondary" id="econ-tab-log" role="tab" onclick="showEconTab('log')">📒 거래 로그</button>
         <button class="btn btn-sm btn-secondary" id="econ-tab-assets" role="tab" onclick="showEconTab('assets')">💎 학생 자산/회수</button>
         <button class="btn btn-sm btn-secondary" id="econ-tab-report" role="tab" onclick="showEconTab('report')">🏆 경제 리포트</button>
@@ -1488,6 +1492,7 @@ window.addEventListener('error', function(e){
 
       <!-- 주식 투자 -->
       <div id="econ-panel-stock" style="display:none;">
+        <div id="class-index-card"></div>
         <div class="card" style="margin-bottom:16px;">
           <div class="card-header"><div class="card-title">📈 코스피 100 주식 시장</div>
             <div style="display:flex;gap:6px;">
@@ -1531,6 +1536,7 @@ window.addEventListener('error', function(e){
 
       <!-- 은행 -->
       <div id="econ-panel-bank" style="display:none;">
+        <div id="bank-rules-card"></div>
         <div class="card" style="margin-bottom:16px;">
           <div class="card-header"><div class="card-title">🏦 예금 상품 관리</div>
             <button class="btn btn-sm btn-primary" onclick="addBankPlan()">+ 예금 상품 추가</button></div>
@@ -1541,6 +1547,7 @@ window.addEventListener('error', function(e){
 
       <!-- 국세청 -->
       <div id="econ-panel-tax" style="display:none;">
+        <div id="wealth-tax-card"></div>
         <div class="card" style="margin-bottom:16px;">
           <div class="card-header"><div class="card-title">🏛️ 국세청 — 세금 관리</div>
             <button class="btn btn-sm btn-primary" onclick="openModal('modal-add-tax')">+ 세금 항목 추가</button></div>
@@ -1551,6 +1558,14 @@ window.addEventListener('error', function(e){
           <div class="card-header"><div class="card-title">📋 세금 징수</div>
             <button class="btn btn-sm btn-coral" onclick="collectAllTax()">전체 징수 실행</button></div>
           <div id="tax-collection-preview"></div>
+        </div>
+      </div>
+
+      <!-- 경매 -->
+      <div id="econ-panel-auction" style="display:none;">
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-header"><div class="card-title">🔨 우리 반 경매</div></div>
+          <div id="econ-auction-body">불러오는 중...</div>
         </div>
       </div>
 
@@ -1577,6 +1592,7 @@ window.addEventListener('error', function(e){
             </div>
           </div>
           <div id="econ-audit-center" style="display:none;margin:0 10px 10px;"></div>
+          <div id="econ-log-tools"></div>
           <div id="econ-log-list" style="font-size:12px;color:var(--sub);padding:10px;">로그를 불러오는 중...</div>
         </div>
       </div>
@@ -2684,14 +2700,16 @@ const SYNC_KEYS=['tesk-settings','tesk-students','tesk-missions','tesk-shop','te
   'tesk-jobs','tesk-records','tesk-exams','tesk-writings','tesk-counsels',
   'tesk-counsel-requests','tesk-friends','tesk-observations','tesk-seats','tesk-activities','tesk-accounts',
   'tesk-stock-prices','tesk-portfolios','tesk-taxes','tesk-salary-tax-enabled','tesk-badge-discount','tesk-bank-plans','tesk-bank-badge-bonus',
-  'tesk-student-badges','tesk-cal-events','tesk-quick-points','tesk-checklist-items','tesk-challenges','tesk-challenge-awards','tesk-writing-rubric-reports','tesk-economy-restrictions','pesk-deposits','pesk-checklists','pesk-challenge-submissions','pesk-writing-topic','pesk-writing-duty','pesk-class-boss','tesk-writing-phrases','pesk-todo-schedule','pesk-literacy','pesk-quest-config'];
+  'tesk-student-badges','tesk-cal-events','tesk-quick-points','tesk-checklist-items','tesk-challenges','tesk-challenge-awards','tesk-writing-rubric-reports','tesk-economy-restrictions','pesk-deposits','pesk-checklists','pesk-challenge-submissions','pesk-writing-topic','pesk-writing-duty','pesk-class-boss','tesk-writing-phrases','pesk-todo-schedule','pesk-literacy','pesk-quest-config',
+  'tesk-bank-settings','tesk-wealth-tax','tesk-stock-index','tesk-econ-snapshots'];
 
 // ── 학급 데이터 백업/복원 ──
 const BACKUP_DOC_KEYS = [...new Set([
   ...SYNC_KEYS,
   'pesk-writings','pesk-purchases','pesk-purchase-log','pesk-portfolios',
   'pesk-peer-survey','tesk-teacher-notif','tesk-stock-raw-prices',
-  'pesk-avatars','pesk-avatar-prices','pesk-writing-topic','pesk-writing-duty','pesk-class-boss','pesk-quiz-config','pesk-quiz-progress'
+  'pesk-avatars','pesk-avatar-prices','pesk-writing-topic','pesk-writing-duty','pesk-class-boss','pesk-quiz-config','pesk-quiz-progress',
+  'pesk-class-fund','pesk-auctions','pesk-econ-archive-index'
 ])];
 // 백업: 한 항목이라도 읽지 못하면 파일을 만들지 않습니다(빠진 백업을 성공으로 알리지 않기 위해).
 async function exportClassBackup(opts={}){
@@ -2704,6 +2722,13 @@ async function exportClassBackup(opts={}){
       try{
         if(k==='pesk-writings'){ docs[k]=await writingStore().load(); continue; }
         if(k==='pesk-quiz-progress'){ docs[k]=await quizStoreT().loadAllFull(); continue; }   // 학생별 문서를 합친 전체 기록
+        if(k==='pesk-econ-archive-index'){   // 보관된 거래 로그(주 단위 문서)도 함께 담는다
+          const snap=await window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',k));
+          const weeks=snap.exists()?(snap.data().value||[]):[];
+          if(weeks.length) docs[k]=weeks;
+          for(const w of weeks){ const ws=await window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','pesk-econ-archive-'+w)); if(ws.exists()) docs['pesk-econ-archive-'+w]=ws.data().value; }
+          continue;
+        }
         const snap=await window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',k));
         if(snap.exists()) docs[k]=snap.data().value;
       }catch(e){ console.warn('백업 읽기 실패:',k,e); failed.push(k); }
@@ -2736,8 +2761,9 @@ async function importClassBackup(file){
     return showToast('⚠️ 올바른 학급 백업 파일이 아니에요');
   }
   const allowed=new Set(BACKUP_DOC_KEYS);
-  const keys=Object.keys(payload.docs).filter(k=>allowed.has(k) && payload.docs[k]!==undefined);
-  const unknown=Object.keys(payload.docs).filter(k=>!allowed.has(k));
+  const isAllowed=k=>allowed.has(k) || /^pesk-econ-archive-\d{4}-W\d{2}$/.test(k);   // 보관된 거래 로그(주 단위)
+  const keys=Object.keys(payload.docs).filter(k=>isAllowed(k) && payload.docs[k]!==undefined);
+  const unknown=Object.keys(payload.docs).filter(k=>!isAllowed(k));
   if(!keys.length) return showToast('⚠️ 백업 파일에 복원할 데이터가 없어요');
   const missing=BACKUP_DOC_KEYS.filter(k=>!keys.includes(k));
   const when=payload.exportedAt ? new Date(payload.exportedAt).toLocaleString('ko-KR') : '알 수 없음';
@@ -3075,6 +3101,7 @@ function subscribePeskData(){
     (snap)=>{
       const rows = snap.exists() ? (snap.data().value||[]) : [];
       econLogsAll = rows.sort((a,b)=>(b.ts||0)-(a.ts||0));
+      maybeArchiveEconLogs(rows);   // 커지면 2주 지난 줄을 주 단위 보관 문서로 옮긴다 (shared/tesk-econ-ui.js)
       if(document.getElementById('page-economy')?.classList.contains('active') && currentEconTab==='log'){
         renderEconLog();
       } else if(document.getElementById('page-economy')?.classList.contains('active')){
@@ -3610,13 +3637,8 @@ function purgeStudentEconomy(store, stuNum){
   return window.EconomyOwnership.setOwnedList(store, economyOwnerForStudent(stuNum), []);
 }
 function depositCurrentValueForTeacher(dep){
-  const start = new Date(dep.startDate).getTime();
-  if(!start || !dep.termDays) return Number(dep.amount||0);
-  const elapsedDays = Math.max(0, (Date.now() - start)/(1000*60*60*24));
-  const progress = Math.min(1, elapsedDays/Number(dep.termDays||1));
-  const rate = Number(dep.rate||0) / 100;
-  const effRate = progress >= 1 ? rate : rate * 0.3 * progress;
-  return Math.floor(Number(dep.amount||0) * (1 + effRate));
+  // 학생 화면과 같은 계산 — 예금마다 만들 때의 중도 해지 규칙(earlyPct, 예전 예금은 30%) (shared/econ-core.js)
+  return window.EconCore.depositValueAt(dep, Date.now());
 }
 
 // ★ 주식 시뮬레이션 (코스피 100 주요 종목 — 학급 화폐 기준 가격)
@@ -3662,7 +3684,7 @@ function initStockPrices(){
     }
   });
   // 항상 Firebase에 동기화 (pesk에서 불러올 수 있게)
-  save('tesk-stock-prices',stockPrices);
+  _refreshClassIndexPrice();save('tesk-stock-prices',stockPrices);
 }
 initStockPrices();
 
@@ -3967,7 +3989,7 @@ function refreshStockPrices(){
     stockPrices[s.code]=Math.max(10,Math.round(stockPrices[s.code]*(1+change)));
   });
   recordStockSyncComparison(beforePrices, stockPrices, '시뮬레이션 변동');
-  save('tesk-stock-prices',stockPrices);
+  _refreshClassIndexPrice();save('tesk-stock-prices',stockPrices);
   renderEconomy();
   renderStockAutoSyncStatus();
   showToast('📈 시세가 갱신됐어요! (시뮬레이션)');
@@ -4079,7 +4101,7 @@ async function syncRealStockPrices(opts={}){
       beforeRawPrices,
       afterRawPrices: stockRawPrices
     });
-    save('tesk-stock-prices', stockPrices);
+    _refreshClassIndexPrice();save('tesk-stock-prices', stockPrices);
     renderEconomy();
     renderStockAutoSyncStatus();
     if(failed > 0){
@@ -5544,7 +5566,7 @@ async function _givePointNow(target,amt,reason){
       detail:'포인트 조정: '+reason
     });
   });
-  for(const log of logs){ await pushTeacherEconLog(log); }
+  await pushTeacherEconLogs(logs);
   renderPage(document.querySelector('.nav-item.active')?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1]||'points');
   const updated = students.find(s=>Number(s.num)===Number(target.num)) || target;
   showToast(`${amt>0?C():'⚠️'} ${updated.name} ${reason}`);
@@ -5644,7 +5666,7 @@ async function applyQuickPointPreset(id, idx){
           logs.push({type:'teacher_adjust',studentNum:s.num,studentName:s.name||'',delta:Number(s.points-before),balanceBefore:before,balanceAfter:Number(s.points||0),detail:'선택 빠른 지급: '+reason});
         });
       }));
-      for(const log of logs){ await pushTeacherEconLog(log); }
+      await pushTeacherEconLogs(logs);
       renderPoints();
       showToast(`✅ 선택 학생 ${selectedNums.length}명 ${amount>0?'+':''}${amount}${C()} 적용`);
       return;
@@ -5663,7 +5685,7 @@ async function applyQuickPointPreset(id, idx){
         logs.push({type:'teacher_adjust',studentNum:s.num,studentName:s.name||'',delta:Number(s.points-before),balanceBefore:before,balanceAfter:Number(s.points||0),detail:'빠른 지급: '+reason});
       });
     }));
-    for(const log of logs){ await pushTeacherEconLog(log); }
+    await pushTeacherEconLogs(logs);
     renderPoints();
     showToast(`✅ 전체 학생 ${amount>0?'+':''}${amount}${C()} 적용`);
     return;
@@ -5702,7 +5724,7 @@ async function bulkPoint(scope='selected'){
       });
     });
   }));
-  for(const log of logs){ await pushTeacherEconLog(log); }
+  await pushTeacherEconLogs(logs);
   closeModal('modal-bulk-point');
   renderPoints();
   showToast(`${C()} ${scope==='all'?'전체 학생':`선택 학생 ${targetNums.length}명`} ${v>0?'+':''}${v} (${r})`);
@@ -5984,7 +6006,7 @@ async function payAutoChallenge(type){
     });
   });
   await saveChallengeAwards();
-  for(const log of logs){ await pushTeacherEconLog(log); }
+  await pushTeacherEconLogs(logs);
   renderPoints();showToast(`🏁 자동 챌린지 ${nums.size}명 지급 완료`);
 }
 async function addManualChallenge(){
@@ -6073,7 +6095,7 @@ async function payManualChallenge(chId,stuNum){
     logs.push({type:'teacher_adjust',studentNum:s.num,studentName:s.name||'',delta:reward,balanceBefore:before,balanceAfter:Number(s.points||0),detail:'수동 챌린지 보상: '+ch.title});
   });
   await saveChallengeAwards();
-  for(const log of logs){ await pushTeacherEconLog(log); }
+  await pushTeacherEconLogs(logs);
   renderManualChallengeReviewBody();renderPoints();showToast(`🏁 ${stu.name} 챌린지 보상 지급`);
 }
 
@@ -6083,7 +6105,7 @@ function showEconTab(tab){
   const relocated={checklist:'checklist',quiz:'adventure',myroom:'myroom'};
   if(relocated[tab]){goPage(relocated[tab]);return;}
   currentEconTab=tab;
-  ['shop','job','checklist','stock','bank','tax','myroom','quiz','log','assets','report'].forEach(t=>{
+  ['shop','job','checklist','stock','bank','tax','fund','auction','myroom','quiz','log','assets','report'].forEach(t=>{
     const panel=document.getElementById('econ-panel-'+t);
     if(panel && !relocated[t]) panel.style.display=t===tab?'block':'none';
     const btn=document.getElementById('econ-tab-'+t);
@@ -6098,6 +6120,8 @@ function showEconTab(tab){
   }
   if(tab==='stock')renderStocks();
   if(tab==='bank')renderBankPlans();
+  if(tab==='fund')renderClassFundPanel(true);
+  if(tab==='auction')renderAuctionPanel(true);
   if(tab==='myroom')loadMyRoom();
   if(tab==='quiz')loadQuiz();
   if(tab==='tax'){
@@ -6110,6 +6134,7 @@ function showEconTab(tab){
       if(currentEconTab==='tax') renderTax();
     })();
   }
+  if(tab==='log'){ const t=document.getElementById('econ-log-tools'); if(t) t.innerHTML=econLogToolsHtml(); }
   if(tab==='log'){
     renderEconLog();
     (async()=>{
@@ -6123,6 +6148,7 @@ function showEconTab(tab){
 }
 
 function renderBankPlans(){
+  renderBankRulesCard();
   const el=document.getElementById('bank-plan-list'); if(!el) return;
   if(bankPlans.length===0){
     el.innerHTML='<div style="padding:20px;text-align:center;color:var(--sub);font-size:12px;">예금 상품이 없습니다. 위 버튼으로 추가하세요.</div>';
@@ -6207,6 +6233,7 @@ function renderEconomy(){
   }
   const spentEl=document.getElementById('econ-spent');
   if(spentEl) spentEl.textContent=moneyStats.studentSpent.toLocaleString()+' '+C();
+  renderEconIndicators();
   const salaryTaxToggle=document.getElementById('salary-tax-toggle');
   if(salaryTaxToggle) salaryTaxToggle.checked=!!salaryTaxEnabled;
   document.getElementById('shop-grid').innerHTML=shopItems.length===0
@@ -7499,7 +7526,7 @@ async function paySalary(ji){
       }
     });
   });
-  for(const log of logs){ if(log.delta) await pushTeacherEconLog(log); }
+  await pushTeacherEconLogs(logs.filter(l=>l.delta));
   const taxMsg = salaryTaxEnabled ? `, 세금 -${totalTax}${C()}` : ', 세금 차감 없음';
   addActivity(`💰 ${j.title} 월급 지급 (${names.join(', ')} / +${totalNet}${C()}${taxMsg})`);
   renderEconomy();renderStudents();
@@ -7524,7 +7551,7 @@ async function deductSalary(ji){
       }
     });
   });
-  for(const log of logs){ if(log.delta) await pushTeacherEconLog(log); }
+  await pushTeacherEconLogs(logs.filter(l=>l.delta));
   addActivity(`⚠️ ${j.title} 월급 차감 (${names.join(', ')} / -${total}${C()})`);
   renderEconomy();renderStudents();
   showToast(`⚠️ ${j.title} 담당 ${names.length}명에게서 월급 차감! (총 ${total}${C()})`);
@@ -7549,7 +7576,7 @@ async function bulkPaySalary(){
       });
     });
   });
-  for(const log of logs){ if(log.delta) await pushTeacherEconLog(log); }
+  await pushTeacherEconLogs(logs.filter(l=>l.delta));
   const taxMsg = salaryTaxEnabled ? `, 세금 -${totalTax}${C()}` : ', 세금 차감 없음';
   addActivity(`💰 전체 월급 일괄 지급 (+${totalNet}${C()}${taxMsg})`);
   renderEconomy();renderStudents();
@@ -7574,7 +7601,7 @@ async function bulkDeductSalary(){
       });
     });
   });
-  for(const log of logs){ if(log.delta) await pushTeacherEconLog(log); }
+  await pushTeacherEconLogs(logs.filter(l=>l.delta));
   addActivity(`⚠️ 전체 월급 일괄 차감 (-${total}${C()})`);
   renderEconomy();renderStudents();
   showToast(`⚠️ 전체 직원 월급 일괄 차감! (총 ${total}${C()})`);
@@ -7582,6 +7609,7 @@ async function bulkDeductSalary(){
 
 /* ── 주식 ── */
 async function renderStocks(){
+  renderClassIndexCard();
   const sel=document.getElementById('stock-select');
   if(sel) sel.innerHTML=KOSPI100.map(s=>`<option value="${s.code}">${s.name} (${stockPrices[s.code]||s.base} ${C()})</option>`).join('');
   const stuSel=document.getElementById('stock-student');
@@ -7625,7 +7653,7 @@ function _applyManualStockPrice(code, nextPrice, label){
   if(before===price) return showToast('ℹ️ 가격 변화가 없어요');
   stockPrices[code]=price;
   recordStockSyncComparison(beforePrices, stockPrices, label || '교사 가격 조정');
-  save('tesk-stock-prices', stockPrices);
+  _refreshClassIndexPrice();save('tesk-stock-prices', stockPrices);
   updateStockInfo();
   renderPortfolios();
   renderStockSyncDeltaPanel();
@@ -7732,7 +7760,7 @@ async function undoLastStockSync(){
   if(Object.keys(snap.beforeRawPrices||{}).length){
     stockRawPrices = {...snap.beforeRawPrices};
   }
-  save('tesk-stock-prices', stockPrices);
+  _refreshClassIndexPrice();save('tesk-stock-prices', stockPrices);
   saveLocal('tesk-stock-raw-prices', stockRawPrices);
   recordStockSyncComparison(beforePrices, stockPrices, '주식 갱신 되돌림', {
     beforeRawPrices,
@@ -8123,6 +8151,7 @@ function renderPortfolios(){
 
 /* ── 세금 ── */
 function renderTax(){
+  renderWealthTaxCard();
   document.getElementById('tax-list').innerHTML=taxes.map(t=>`
     <div style="display:flex;align-items:center;gap:12px;padding:12px;border:0.5px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;" onclick="editTax('${t.id}')">
       <div style="width:40px;height:40px;border-radius:10px;background:var(--coral-l);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🏛️</div>
@@ -8214,14 +8243,17 @@ async function collectTaxItem(taxId){
     stuList.forEach(s=>{
       const before=Number(s.points||0);
       const tax=Math.max(0,_calcStudentTaxItem(s,taxItem));
-      s.points=before-tax;
-      totalCollected+=tax;
-      if(tax>0){
-        logs.push({type:'teacher_adjust',studentNum:s.num,studentName:s.name||'',delta:-tax,balanceBefore:before,balanceAfter:Number(s.points||0),detail:'세금 징수: '+taxItem.name});
+      // 현금보다 많으면 잔액을 마이너스로 만들지 않고 미납으로 남긴다 (다음 징수 때 함께)
+      const prevDue=Math.max(0,Number(s.taxDue||0)), pay=window.EconCore.payTax(before,tax,prevDue);
+      s.points=pay.cashAfter; s.taxDue=pay.due;
+      if(tax>0||pay.paid) s.taxReceipt={name:taxItem.name,at:new Date().toISOString(),tax,prevDue,paid:pay.paid,due:pay.due};
+      totalCollected+=pay.paid;
+      if(pay.paid>0){
+        logs.push({type:'teacher_adjust',studentNum:s.num,studentName:s.name||'',delta:-pay.paid,balanceBefore:before,balanceAfter:Number(s.points||0),detail:'세금 징수: '+taxItem.name+(pay.due?' · 미납 '+pay.due:'')});
       }
     });
   });
-  for(const log of logs){ await pushTeacherEconLog(log); }
+  await pushTeacherEconLogs(logs);
   addActivity(`🏛️ ${taxItem.name} 징수 완료 (총 ${totalCollected}${C()})`);
   renderTax();renderStudents();renderEconLog();
   showToast(`🏛️ ${taxItem.name} ${totalCollected}${C()} 징수 완료`);
@@ -8233,11 +8265,13 @@ async function collectAllTax(){
     stuList.forEach(s=>{
       const before=Number(s.points||0);
       const rawTax=Math.max(0,_calcStudentTax(s));
-      s.points=before-rawTax;totalCollected+=rawTax;
-      logs.push({type:'teacher_adjust',studentNum:s.num,studentName:s.name||'',delta:-rawTax,balanceBefore:before,balanceAfter:Number(s.points||0),detail:'전체 세금 징수'});
+      const prevDue=Math.max(0,Number(s.taxDue||0)), pay=window.EconCore.payTax(before,rawTax,prevDue);   // 잔액이 마이너스가 되지 않게, 모자라면 미납으로
+      s.points=pay.cashAfter; s.taxDue=pay.due; totalCollected+=pay.paid;
+      if(rawTax>0||pay.paid) s.taxReceipt={name:'세금',at:new Date().toISOString(),tax:rawTax,prevDue,paid:pay.paid,due:pay.due};
+      logs.push({type:'teacher_adjust',studentNum:s.num,studentName:s.name||'',delta:-pay.paid,balanceBefore:before,balanceAfter:Number(s.points||0),detail:'전체 세금 징수'+(pay.due?' · 미납 '+pay.due:'')});
     });
   });
-  for(const log of logs){ if(log.delta) await pushTeacherEconLog(log); }
+  await pushTeacherEconLogs(logs.filter(l=>l.delta));
   addActivity(`🏛️ 전체 세금 징수 완료 (총 ${totalCollected}${C()})`);
   renderTax();renderStudents();renderEconLog();
   showToast(`🏛️ 세금 징수 완료! 총 ${totalCollected} ${C()}`);

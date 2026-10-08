@@ -10,6 +10,7 @@ function fixture(){
     setTimeout(){},setInterval(){},clearInterval(){},clearTimeout(){},requestAnimationFrame(){},cancelAnimationFrame(){},addEventListener(){},alert(){}};
   context.window=context;context.RPG=G;context.PeskBossQuest=require('../shared/pesk-boss-quest.js');context.PeskQuizStore=require('../shared/pesk-quiz-store.js');vm.createContext(context);
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../shared/pesk-class-quest-ui.js'),'utf8'),context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../shared/econ-core.js'),'utf8'),context);vm.runInContext(fs.readFileSync(path.join(__dirname,'../shared/pesk-econ-ui.js'),'utf8'),context);
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../shared/economy-ownership.js'),'utf8'),context);
   for(const name of ['quiz-bank.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',name),'utf8'),context);
   const source=fs.readFileSync(path.join(__dirname,'../pesk.html'),'utf8').split('<script>')[1].split('</script>')[0];

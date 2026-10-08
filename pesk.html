@@ -26,6 +26,9 @@
 <script src="boss-sprites.js"></script>
 <script src="shared/pesk-writing-store.js?v=20261006quota1"></script>
 <script src="shared/pesk-quiz-store.js?v=20261006split1"></script>
+<script src="shared/econ-core.js?v=20261009econ2"></script>
+<script src="shared/pesk-econ-ui.js?v=20261009econ2"></script>
+<script src="shared/pesk-seat-auction.js?v=20261009seat1"></script>
 <script src="shared/writing-proofread.js?v=20260928wr1"></script>
 <script src="shared/pesk-learning-sync.js?v=20260918"></script>
 <script src="shared/peer-survey.js?v=20260920"></script>
@@ -1220,9 +1223,11 @@ async function loadData(){
                 'pesk-writings','tesk-stock-prices','pesk-portfolios',
                 'tesk-counsel-requests','pesk-peer-survey','pesk-purchases','tesk-shop',
                 'tesk-bank-plans','tesk-bank-badge-bonus','pesk-deposits',
-                'tesk-checklist-items','pesk-checklists','tesk-challenges','pesk-challenge-submissions','tesk-challenge-awards','pesk-purchase-log','tesk-economy-restrictions',
+                'tesk-checklist-items','pesk-checklists','tesk-challenges','pesk-challenge-submissions','tesk-challenge-awards','pesk-class-fund','tesk-economy-restrictions',
                 'pesk-avatars','pesk-avatar-prices','pesk-quiz-config','pesk-quiz-summary',
-                'pesk-writing-topic','pesk-writing-duty','pesk-class-boss','pesk-todo-schedule','pesk-literacy','pesk-quest-config'];
+                'pesk-writing-topic','pesk-writing-duty','pesk-class-boss','pesk-todo-schedule','pesk-literacy','pesk-quest-config',
+                'tesk-bank-settings','tesk-wealth-tax','pesk-auctions'];
+    // 거래 로그(pesk-purchase-log)는 큰 문서라 시작할 때 읽지 않는다 — 상점을 열 때 가져온다 (pullShopEconomy)
     const snaps=await Promise.all(keys.map(k=>
       window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data',k))
     ));
@@ -1270,7 +1275,11 @@ async function loadData(){
     classChallenges = (snaps[16] && snaps[16].exists()) ? (snaps[16].data().value || {manual:[]}) : {manual:[]};
     challengeSubmissions = (snaps[17] && snaps[17].exists()) ? (snaps[17].data().value || {}) : {};
     challengeAwards = (snaps[18] && snaps[18].exists()) ? (snaps[18].data().value || {}) : {};
-    purchaseLogs = (snaps[19] && snaps[19].exists()) ? (snaps[19].data().value || []) : [];
+    purchaseLogs = [];
+    applyEconExtras({fund:(snaps[19] && snaps[19].exists()) ? snaps[19].data().value : null,
+      bank:(snaps[31] && snaps[31].exists()) ? snaps[31].data().value : null,
+      wealth:(snaps[32] && snaps[32].exists()) ? snaps[32].data().value : null,
+      auctions:(snaps[33] && snaps[33].exists()) ? snaps[33].data().value : []});
     economyRestrictions = (snaps[20] && snaps[20].exists()) ? (snaps[20].data().value || {}) : {};
     _applyAvatarDoc((snaps[21] && snaps[21].exists()) ? (snaps[21].data().value || {}) : {});
     _applyAvatarPriceDoc((snaps[22] && snaps[22].exists()) ? snaps[22].data().value : null);
@@ -1728,8 +1737,9 @@ function _trimLogsToByteLimit(logs, maxBytes=850000){
   return logs;
 }
 
-async function pushEconLog(entry){
-  if(!window._fbReady || !window._db || !roomId) return;
+/* opts.mergeId: 같은 id 줄이 있으면 금액·횟수를 더한다 (모험 정답 보상 하루 합계). 저장했으면 true */
+async function pushEconLog(entry, opts={}){
+  if(!window._fbReady || !window._db || !roomId) return false;
   try{
     const ref = window._fsDoc(window._db,'classrooms',roomId,'data','pesk-purchase-log');
     const payload = {
@@ -1743,11 +1753,12 @@ async function pushEconLog(entry){
       createdAt: new Date().toISOString(),
       ...entry
     };
+    if(opts.mergeId) payload.id = opts.mergeId;
     if(window._fsRunTxn){
       await window._fsRunTxn(window._db, async (txn)=>{
         const snap = await txn.get(ref);
         const logs = snap.exists() ? (snap.data().value||[]) : [];
-        logs.push(payload);
+        if(opts.mergeId && window.EconCore) window.EconCore.upsertLog(logs, payload); else logs.push(payload);
         if(logs.length > 2000) logs.splice(0, logs.length - 2000);
         _trimLogsToByteLimit(logs);
         txn.set(ref, { value: logs, updatedAt: new Date().toISOString() });
@@ -1760,8 +1771,10 @@ async function pushEconLog(entry){
       _trimLogsToByteLimit(logs);
       await window._fsSetDoc(ref, { value: logs, updatedAt: new Date().toISOString() });
     }
+    return true;
   }catch(e){
     console.warn('econ log save failed', e);
+    return false;
   }
 }
 
@@ -2337,14 +2350,16 @@ function buildShopPanel(me){
 
   // 3탭 바
   const tabBar = '<div style="display:flex;gap:4px;margin-bottom:14px;background:#f3f4f6;padding:4px;border-radius:10px;">'
-    + `<button onclick="switchShopPanelTab('items')" style="flex:1;padding:9px;border:none;border-radius:8px;font-weight:700;font-size:11px;cursor:pointer;${shopPanelTab==='items'?'background:#fff;color:var(--pesk);box-shadow:0 1px 3px rgba(0,0,0,.08);':'background:none;color:var(--sub);'}">🏪 상품</button>`
-    + `<button onclick="switchShopPanelTab('myitems')" style="flex:1;padding:9px;border:none;border-radius:8px;font-weight:700;font-size:11px;cursor:pointer;position:relative;${shopPanelTab==='myitems'?'background:#fff;color:var(--pesk);box-shadow:0 1px 3px rgba(0,0,0,.08);':'background:none;color:var(--sub);'}">🎒 내 물건${myItemCount>0?' <span style="background:var(--pesk);color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:2px;">'+myItemCount+'</span>':''}</button>`
-    + `<button onclick="switchShopPanelTab('classrewards')" style="flex:1;padding:9px;border:0;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;${shopPanelTab==='classrewards'?'background:#d8e8dc;color:#23533a;':'background:none;color:var(--sub);'}">🤝 공동 보상</button>`
-    + (canApproveShopUse() ? `<button onclick="switchShopPanelTab('approvals')" style="flex:1;padding:9px;border:none;border-radius:8px;font-weight:700;font-size:11px;cursor:pointer;position:relative;${shopPanelTab==='approvals'?'background:#fff;color:var(--pesk);box-shadow:0 1px 3px rgba(0,0,0,.08);':'background:none;color:var(--sub);'}">✅ 승인${approvalCount>0?' <span style="background:var(--coral);color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:2px;">'+approvalCount+'</span>':''}</button>` : '')
-    + `<button onclick="switchShopPanelTab('history')" style="flex:1;padding:9px;border:none;border-radius:8px;font-weight:700;font-size:11px;cursor:pointer;${shopPanelTab==='history'?'background:#fff;color:var(--pesk);box-shadow:0 1px 3px rgba(0,0,0,.08);':'background:none;color:var(--sub);'}">📋 내역</button>`
+    + `<button onclick="switchShopPanelTab('items')" style="flex:1;white-space:nowrap;padding:9px 4px;border:none;border-radius:8px;font-weight:700;font-size:11px;cursor:pointer;${shopPanelTab==='items'?'background:#fff;color:var(--pesk);box-shadow:0 1px 3px rgba(0,0,0,.08);':'background:none;color:var(--sub);'}">🏪 상품</button>`
+    + `<button onclick="switchShopPanelTab('myitems')" style="flex:1;white-space:nowrap;padding:9px 4px;border:none;border-radius:8px;font-weight:700;font-size:11px;cursor:pointer;position:relative;${shopPanelTab==='myitems'?'background:#fff;color:var(--pesk);box-shadow:0 1px 3px rgba(0,0,0,.08);':'background:none;color:var(--sub);'}">🎒 내 물건${myItemCount>0?' <span style="background:var(--pesk);color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:2px;">'+myItemCount+'</span>':''}</button>`
+    + `<button onclick="switchShopPanelTab('classrewards')" style="flex:1;white-space:nowrap;padding:9px 4px;border:0;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;${shopPanelTab==='classrewards'?'background:#d8e8dc;color:#23533a;':'background:none;color:var(--sub);'}">🤝 공동 보상</button>`
+    + `<button onclick="switchShopPanelTab('auction')" style="flex:1;white-space:nowrap;padding:9px 4px;border:0;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;${shopPanelTab==='auction'?'background:#fff;color:var(--pesk);box-shadow:0 1px 3px rgba(0,0,0,.08);':'background:none;color:var(--sub);'}">🔨 경매${openAuctionCount()>0?' <span style="background:#f59e0b;color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:2px;">'+openAuctionCount()+'</span>':''}</button>`
+    + (canApproveShopUse() ? `<button onclick="switchShopPanelTab('approvals')" style="flex:1;white-space:nowrap;padding:9px 4px;border:none;border-radius:8px;font-weight:700;font-size:11px;cursor:pointer;position:relative;${shopPanelTab==='approvals'?'background:#fff;color:var(--pesk);box-shadow:0 1px 3px rgba(0,0,0,.08);':'background:none;color:var(--sub);'}">✅ 승인${approvalCount>0?' <span style="background:var(--coral);color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:2px;">'+approvalCount+'</span>':''}</button>` : '')
+    + `<button onclick="switchShopPanelTab('history')" style="flex:1;white-space:nowrap;padding:9px 4px;border:none;border-radius:8px;font-weight:700;font-size:11px;cursor:pointer;${shopPanelTab==='history'?'background:#fff;color:var(--pesk);box-shadow:0 1px 3px rgba(0,0,0,.08);':'background:none;color:var(--sub);'}">📋 내역</button>`
     + '</div>';
 
-  if(shopPanelTab === 'classrewards') return tabBar + buildClassRewardInventory();
+  if(shopPanelTab === 'classrewards') return tabBar + buildClassFundSection() + buildClassRewardInventory();
+  if(shopPanelTab === 'auction') return tabBar + buildAuctionPanel();
   if(shopPanelTab === 'approvals') return tabBar + buildShopApprovalPanel();
   if(shopPanelTab === 'history') return tabBar + buildTxnList();
   if(shopPanelTab === 'myitems') return tabBar + buildMyItemsPanel();
@@ -2737,6 +2752,7 @@ async function approveShopUseRequest(requestId, approved){
 
 function switchShopPanelTab(tab){
   shopPanelTab = tab;
+  if(tab==='auction' || tab==='classrewards' || tab==='approvals') pullShopEconomy();
   const panel = document.getElementById('panel-shop');
   if(panel){
     const me = students.find(s=>s.num===myStudentNum);
@@ -4241,12 +4257,8 @@ function _myBadgeCount(){ return (studentBadges[myStudentNum]||[]).length; }
 function _bonusRate(){ return 0; }
 function _effectiveRate(planRate){ return planRate; }
 function _depositValueNow(dep){
-  const elapsedMs = Date.now() - new Date(dep.startDate).getTime();
-  const elapsedDays = Math.max(0, elapsedMs/(1000*60*60*24));
-  const progress = Math.min(1, elapsedDays/dep.termDays);
-  // 만기 전 중도해지시 이율의 30%만 적용
-  const effRate = progress>=1 ? dep.rate/100 : (dep.rate/100)*0.3*progress;
-  return Math.floor(dep.amount * (1 + effRate));
+  // 만기 전 중도 해지: 예금을 만들 때의 학급 규칙(earlyPct)만큼 이자 — 예전 예금은 30% (shared/econ-core.js)
+  return window.EconCore.depositValueAt(dep, Date.now());
 }
 function _depositMaturedValue(dep){
   return Math.floor(dep.amount * (1 + dep.rate/100));
@@ -4278,15 +4290,7 @@ function checkDepositMaturityNotices(){
   }
 }
 function _depositValueAt(dep, nowMs){
-  const start = new Date(dep.startDate).getTime();
-  const termDays = Number(dep.termDays||0);
-  const amount = Number(dep.amount||0);
-  if(!start || !termDays || !amount) return Math.floor(amount);
-  const elapsedDays = Math.max(0, (Number(nowMs||Date.now()) - start)/(1000*60*60*24));
-  const progress = Math.min(1, elapsedDays/termDays);
-  const rate = Number(dep.rate||0) / 100;
-  const effRate = progress>=1 ? rate : rate*0.3*progress;
-  return Math.floor(amount * (1 + effRate));
+  return window.EconCore.depositValueAt(dep, nowMs);
 }
 function _economyListFromDoc(allData, merger){
   return _canonicalEconomyList(allData||{}, merger);
@@ -4347,9 +4351,9 @@ function buildBankPanel(me){
     '</div>';
 
   let body = '';
-  if(bankActiveTab==='dashboard') body = buildDashboardTab(me, coins);
+  if(bankActiveTab==='dashboard') body = buildDashboardTab(me, coins) + buildTaxCard(me);
   else if(bankActiveTab==='stock') body = buildStockTab(me, coins);
-  else if(bankActiveTab==='bank') body = buildBankTab(me, coins);
+  else if(bankActiveTab==='bank') body = buildBankRulesNote() + buildBankTab(me, coins);
 
   const blockKind = bankActiveTab==='stock' ? 'stock' : (bankActiveTab==='bank' ? 'bank' : '');
   const blockNotice = blockKind && economyBlocked(blockKind)
@@ -4513,6 +4517,8 @@ async function _createDeposit(planId){
   if(!Number.isSafeInteger(amt)||amt<10) return alert('10 🪙 이상의 정수로 예금해주세요');
   const me = await ensurePointsFresh(amt);
   if(!me || me.points < amt) return alert('보유 금액이 부족해요');
+  const room = window.EconCore.depositRoom(myDeposits, myBankRules());
+  if(amt > room) return alert('1인 예금 한도를 넘어요.\n지금 더 넣을 수 있는 돈: ' + room.toLocaleString() + ' 🪙');
   const effRate = _effectiveRate(plan.rate);
   if(!confirm(`${amt.toLocaleString()} 🪙을 ${plan.label} 예금(+${effRate.toFixed(1)}%)에 예치할까요?\n만기 ${plan.days}일 후: ${Math.floor(amt*(1+effRate/100)).toLocaleString()} 🪙`)) return;
   const serverApi = _serverBank();
@@ -4531,8 +4537,10 @@ async function _createDeposit(planId){
     const portfoliosRef = window._fsDoc(db,'classrooms',roomId,'data','pesk-portfolios');
     const stockPricesRef = window._fsDoc(db,'classrooms',roomId,'data','tesk-stock-prices');
     const plansRef = window._fsDoc(db,'classrooms',roomId,'data','tesk-bank-plans');
+    const bankSetRef = window._fsDoc(db,'classrooms',roomId,'data','tesk-bank-settings');
     await window._fsRunTxn(db, async (txn)=>{
-      const [studSnap, depSnap, portSnap, priceSnap, planSnap] = await Promise.all([txn.get(studentsRef), txn.get(depositsRef), txn.get(portfoliosRef), txn.get(stockPricesRef), txn.get(plansRef)]);
+      const [studSnap, depSnap, portSnap, priceSnap, planSnap, setSnap] = await Promise.all([txn.get(studentsRef), txn.get(depositsRef), txn.get(portfoliosRef), txn.get(stockPricesRef), txn.get(plansRef), txn.get(bankSetRef)]);
+      const rules = window.EconCore.bankSettings(setSnap.exists() ? setSnap.data().value : null);
       const allStudents = studSnap.exists() ? (studSnap.data().value||[]) : [];
       const allDeposits = depSnap.exists() ? (depSnap.data().value||{}) : {};
       const allPortfolios = portSnap.exists() ? (portSnap.data().value||{}) : {};
@@ -4549,10 +4557,13 @@ async function _createDeposit(planId){
       allStudents[stuIdx].points = afterPoints;
 
       const current = _canonicalEconomyList(allDeposits, _mergeDepositLists);
+      // 1인 예금 한도는 서버에 저장된 내 예금으로 다시 확인한다
+      if(amt > window.EconCore.depositRoom(current, rules)) throw new Error('DEPOSIT_LIMIT:' + window.EconCore.depositRoom(current, rules));
       const beforeDeposits = current.map(d=>({...d}));
       const myPortForSnapshot = _economyListFromDoc(allPortfolios, _mergePortfolioLists);
       const snapAt = Date.now();
-      const dep = {id:uid(),accountUid:myAccountUid,studentNum:myStudentNum,planId:serverPlan.id,label:serverPlan.label,amount:amt,rate:Number(serverPlan.rate),termDays:Number(serverPlan.days),startDate:new Date(snapAt).toISOString()};
+      const dep = {id:uid(),accountUid:myAccountUid,studentNum:myStudentNum,planId:serverPlan.id,label:serverPlan.label,amount:amt,rate:Number(serverPlan.rate),termDays:Number(serverPlan.days),startDate:new Date(snapAt).toISOString(),
+        earlyPct:rules.earlyPct};   // 이 예금의 중도 해지 규칙 (나중에 학급 규칙이 바뀌어도 그대로)
       current.push(dep);
       const assetBefore = _buildAssetSnapshot(beforePoints, myPortForSnapshot, beforeDeposits, serverPrices, snapAt);
       const assetAfter = _buildAssetSnapshot(afterPoints, myPortForSnapshot, current, serverPrices, snapAt);
@@ -4566,6 +4577,10 @@ async function _createDeposit(planId){
     if(String(e?.message||'').startsWith('INSUFFICIENT_BALANCE:')){
       const balance = Number(String(e.message).split(':')[1]||0);
       alert('현재 보유 금액이 부족해요.\n필요: '+amt.toLocaleString()+' 🪙\n보유: '+balance.toLocaleString()+' 🪙');
+      return;
+    }
+    if(String(e?.message||'').startsWith('DEPOSIT_LIMIT:')){
+      alert('1인 예금 한도를 넘어요.\n지금 더 넣을 수 있는 돈: ' + Number(String(e.message).split(':')[1]||0).toLocaleString() + ' 🪙');
       return;
     }
     if(String(e?.message||'')==='PLAN_CHANGED'){
@@ -4601,7 +4616,7 @@ async function _withdrawDeposit(idx, matured){
   const dep = myDeposits[idx]; if(!dep) return;
   const val = matured ? _depositMaturedValue(dep) : _depositValueNow(dep);
   const label = matured ? '만기 수령' : '중도 해지';
-  if(!confirm(`${label}하시겠어요?\n수령액: ${val.toLocaleString()} 🪙${!matured?'\n(만기 전 해지는 이율의 30%만 적용돼요)':''}`)) return;
+  if(!confirm(`${label}하시겠어요?\n수령액: ${val.toLocaleString()} 🪙${!matured?'\n(만기 전 해지는 이자를 '+window.EconCore.depositEarlyPct(dep)+'%만 받아요)':''}`)) return;
   const serverApi = _serverBank();
   if(serverApi){
     const r = await _runServerBank('예금 해지', ()=>serverApi.bankWithdraw(roomId, dep.id, matured));
@@ -4780,7 +4795,10 @@ function buildTradeView(me){
     '032830':'삼성생명','003670':'포스코퓨처엠','000810':'삼성화재','036570':'엔씨소프트',
     '251270':'넷마블','259960':'크래프톤',
   });
-  const listHtml = Object.entries(stockPrices).map(([code, price])=>{
+  // 우리반 펀드: 학급 종목 전체의 평균 등락을 따라가는 상품 (1주 1,000 메소 안팎이라 누구나 살 수 있다)
+  if(window.EconCore) KOSPI_MAP[window.EconCore.INDEX_CODE] = window.EconCore.INDEX_NAME + ' (전체 종목 평균)';
+  const idx = window.EconCore ? window.EconCore.INDEX_CODE : '';
+  const listHtml = Object.entries(stockPrices).sort((a,b)=>(a[0]===idx?-1:0)-(b[0]===idx?-1:0)).map(([code, price])=>{
     const name = KOSPI_MAP[code] || code;
     const myHolding = myPortfolio.find(p=>p.code===code);
     return '<div class="stock-list-item">'
@@ -8612,13 +8630,8 @@ async function qzCommit(q, right, battleInput){
   try{
   if(out.gainCoin > 0){
     addTxn('모험 학습 정답 보상', out.gainCoin, 'earn');
-    void pushEconLog({
-      type:'quiz_reward',
-      detail:'모험 학습 정답 (' + (q.unit||'') + ')',
-      delta: out.gainCoin,
-      balanceBefore: out.before, balanceAfter: out.after,
-      meta:{subject:q.subject, unit:out.unitKey, xp:out.gainXp}
-    });
+    // 문제마다 거래 로그를 쓰지 않고 하루 한 줄로 모아 몇 분마다 올린다 (shared/pesk-econ-ui.js)
+    queueQuizRewardLog({gain: out.gainCoin, before: out.before, after: out.after, unit: q.unit || out.unitKey});
     renderEconomyPanels(getMyStudent());
   }
   // 레벨업 알림
@@ -8665,6 +8678,7 @@ function showTab(tab){
   if(tab==='home') refreshTodayPanel(true);
   if(tab==='writing') markWritingFeedbackSeen();
   if(tab==='shop'||tab==='stock'||tab==='home')pullStudents();
+  if(tab==='shop')pullShopEconomy();
   if(tab==='shop'||tab==='stock')renderEconomyPanels();
   petTick(tab === 'myroom');
   window.scrollTo({top:0,behavior:'smooth'});
@@ -9210,7 +9224,7 @@ async function logout(){
   if(_loggingOut) return;
   _loggingOut = true;
   captureWritingDraftFromDom();
-  try{ await pullQuizProgress(true); }catch(_e){}   // 반 요약에 밀린 내 기록을 올리고 나간다
+  try{ await pullQuizProgress(true); await flushQuizRewardLog(); }catch(_e){}   // 반 요약·정답 보상 로그에 밀린 기록을 올리고 나간다
   try{
     if(window._auth && window._signOut) await window._signOut(window._auth);
   }catch(e){
@@ -9338,14 +9352,10 @@ function subscribeToUpdates(){
     }
   ));
 
-  _unsubs.push(window._fsOnSnapshot(
-    window._fsDoc(window._db,'classrooms',roomId,'data','pesk-purchase-log'),
-    (snap)=>{
-      purchaseLogs = snap.exists() ? (snap.data().value || []) : [];
-      const panel = document.getElementById('panel-shop');
-      if(panel) panel.innerHTML = buildShopPanel(getMyStudent());
-    }
-  ));
+  // 거래 로그·공동 기금·경매는 실시간으로 받지 않는다 — 상점을 보고 있을 때 1분마다 가져온다.
+  // (거래 로그는 큰 문서라 실시간이면 정답 하나마다 학생 모두에게 다시 내려갔다)
+  const shopTimer = setInterval(()=>{ if(shopPanelVisible() && recentlyActive()) pullShopEconomy(); }, 60000);
+  _unsubs.push(()=>clearInterval(shopTimer));
 
   _unsubs.push(window._fsOnSnapshot(
     window._fsDoc(window._db,'classrooms',roomId,'data','pesk-purchases'),
@@ -9616,9 +9626,9 @@ function subscribeToUpdates(){
   // 무료 읽기 한도를 넘겼다. 내 기록은 저장할 때 바로 반영되고, 친구 기록은 화면을 열 때·3분마다 받는다.
   _quizPullAt = Date.now();   // 첫 화면은 시작할 때 이미 읽었다
   // 밀린 내 요약은 3분마다 올린다(받기도 함께). 화면을 떠날 때도 올린다. 쓰기 한도(하루 2만)를 아끼려고 문제마다 올리지 않는다.
-  const quizTimer = setInterval(()=>{ if(_quizSummaryDirty || (avAnyVisible() && recentlyActive())) pullQuizProgress(); }, 180000);
-  const quizVisible = ()=>{ if(document.hidden) pullQuizProgress(true); else if(avAnyVisible()) pullQuizProgress(); };
-  const quizLeave = ()=>pullQuizProgress(true);
+  const quizTimer = setInterval(()=>{ if(_quizSummaryDirty || (avAnyVisible() && recentlyActive())) pullQuizProgress(); void flushQuizRewardLog(); }, 180000);
+  const quizVisible = ()=>{ if(document.hidden){ pullQuizProgress(true); void flushQuizRewardLog(); } else if(avAnyVisible()) pullQuizProgress(); };
+  const quizLeave = ()=>{ pullQuizProgress(true); void flushQuizRewardLog(); };
   document.addEventListener('visibilitychange', quizVisible);
   window.addEventListener('pagehide', quizLeave);
   _unsubs.push(()=>{ clearInterval(quizTimer); document.removeEventListener('visibilitychange', quizVisible); window.removeEventListener('pagehide', quizLeave); });
