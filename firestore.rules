@@ -92,7 +92,7 @@ service cloud.firestore {
         'pesk-checklists',
         'pesk-challenge-submissions',
         'pesk-avatars',
-        'pesk-quiz-progress',
+        'pesk-quiz-summary',
         'tesk-counsel-requests',
         'tesk-students',
         'tesk-accounts',
@@ -111,7 +111,7 @@ service cloud.firestore {
         'pesk-checklists',
         'pesk-challenge-submissions',
         'pesk-avatars',
-        'pesk-quiz-progress',
+        'pesk-quiz-summary',
         'tesk-counsel-requests',
         'tesk-students',
         'tesk-shop',
@@ -231,6 +231,15 @@ service cloud.firestore {
       }
 
       match /data/{key} {
+        // 모험 기록은 학생마다 문서 하나 (pesk-quiz-progress/students/{번호}).
+        // 옛 묶음 문서 pesk-quiz-progress 는 학생이 쓰지 못한다 — 예전 화면이 새 기록을 덮어쓰지 않게.
+        // 보스 처치 보상은 마지막 공격을 한 학생이 참여자 모두의 문서에 함께 저장하므로 본인 문서로 제한하지 않는다.
+        match /students/{studentId} {
+          allow read: if key == 'pesk-quiz-progress' && (isMaster() || ownsRoom(roomId)
+            || !isSecuredRoom(roomId) || isStudentOfRoom(roomId));
+          allow write: if key == 'pesk-quiz-progress' && (isMaster() || ownsRoom(roomId)
+            || !isSecuredRoom(roomId) || isStudentOfRoom(roomId));
+        }
         // 글은 개별 문서에 저장한다.
         match /items/{writingId} {
           match /revisions/{revisionId} {

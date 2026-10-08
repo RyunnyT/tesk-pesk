@@ -55,7 +55,7 @@ async function bossSettleRewards(){
   if(classBossSettlementBusy || rpgBusy || qzBusy || !b?.on || !b.cleared || classBossSettled() || !window._fsRunTxn) return;
   classBossSettlementBusy = true;
   try{
-    const out = await window.PeskBossQuest.settle({db:window._db,
+    const out = await window.PeskBossQuest.settle({db:window._db, store:quizStore(), num:myStudentNum,
       ref:key => window._fsDoc(window._db,'classrooms',roomId,'data',key), runTransaction:window._fsRunTxn});
     _applyQuizProgress(out.all); _applyBossCfg(out.cfg); applyClassBossPurchases(out.buys);
     myPurchases=out.buys.filter(recordBelongsToMe);

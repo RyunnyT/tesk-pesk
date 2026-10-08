@@ -86,7 +86,8 @@ async function completeClassRewardT(id){
 }
 async function settleClassBossT(){
   if(!window._db || !window._fsRunTxn) return;
-  const out = await window.PeskBossQuest.settle({db:window._db,
+  const store = quizStoreT();
+  const out = await window.PeskBossQuest.settle({db:window._db, store,
     ref:key => window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',key),runTransaction:window._fsRunTxn});
-  qzProgress = out.all;
+  qzProgress = out.changed ? await store.loadAllFull() : qzProgress;   // 교사 화면은 전체 기록을 쓴다
 }

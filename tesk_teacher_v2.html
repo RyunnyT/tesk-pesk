@@ -27,12 +27,13 @@
 <!-- 우리 반 보스 계산 (학생앱과 같은 규칙을 쓴다) -->
 <script src="rpg-monsters.js?v=20261004grow1"></script>
 <script src="shared/pesk-boss-catalog.js?v=20260910rpg2"></script>
-<script src="shared/pesk-boss-quest.js?v=20261004rank1"></script>
-<script src="shared/tesk-class-quest-ui.js?v=20261004rank1"></script>
+<script src="shared/pesk-boss-quest.js?v=20261006split1"></script>
+<script src="shared/tesk-class-quest-ui.js?v=20261006split1"></script>
 <link rel="stylesheet" href="shared/pesk-teacher-adventure.css?v=20260910rpg2">
 <!-- 학습 퀘스트 문제 생성기 (초등 3~6학년 교육과정) -->
 <script src="quiz-bank.js?v=20261004grow1"></script>
 <script src="shared/pesk-writing-store.js?v=20261006quota1"></script>
+<script src="shared/pesk-quiz-store.js?v=20261006split1"></script>
 <script src="shared/pesk-subjects.js"></script>
 <script src="shared/economy-ownership.js?v=20260930bank1"></script>
 <title>Tesk — 교사 대시보드</title>
@@ -2702,6 +2703,7 @@ async function exportClassBackup(opts={}){
     for(const k of BACKUP_DOC_KEYS){
       try{
         if(k==='pesk-writings'){ docs[k]=await writingStore().load(); continue; }
+        if(k==='pesk-quiz-progress'){ docs[k]=await quizStoreT().loadAllFull(); continue; }   // 학생별 문서를 합친 전체 기록
         const snap=await window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',k));
         if(snap.exists()) docs[k]=snap.data().value;
       }catch(e){ console.warn('백업 읽기 실패:',k,e); failed.push(k); }
@@ -2763,7 +2765,7 @@ async function importClassBackup(file){
   const st=document.getElementById('backup-status');
   if(st) st.textContent='복원 중...';
   try{
-    const docKeys=keys.filter(k=>k!=='pesk-writings');
+    const docKeys=keys.filter(k=>k!=='pesk-writings' && k!=='pesk-quiz-progress');
     const at=new Date().toISOString();
     await window._fsRunTxn(window._db, async (txn)=>{
       docKeys.forEach(k=>txn.set(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',k),{value:payload.docs[k],updatedAt:at}));
@@ -2772,6 +2774,10 @@ async function importClassBackup(file){
     if(keys.includes('pesk-writings')){
       try{ await writingStore().replaceAll(payload.docs['pesk-writings']); }
       catch(e){ writingNote=' (학생 글쓰기는 복원하지 못했어요: '+e.message+')'; }
+    }
+    if(keys.includes('pesk-quiz-progress')){
+      try{ await quizStoreT().restoreAll(payload.docs['pesk-quiz-progress']); }
+      catch(e){ writingNote+=' (모험 기록은 복원하지 못했어요: '+e.message+')'; }
     }
     addActivity('♻️ 백업 파일로 학급 데이터 복원');
     showToast('✅ 복원 완료 ('+keys.length+'개 항목)'+writingNote+' — 잠시 후 새로고침해요');
@@ -2846,6 +2852,8 @@ function setSyncStatus(status){
 // ★ Pesk 연동 데이터 (Firebase 실시간)
 let peskWritingsAll = [];    // 전체 학생 글쓰기 (Firebase pesk-writings)
 function writingStore(){ return window.PeskWritings.create(window, TESK_ROOM); }
+/* 모험 기록 — 학생별 문서 + 반 요약 (shared/pesk-quiz-store.js). 교사는 전체 기록을 읽는다. */
+function quizStoreT(){ return window.PeskQuizStore.create(window, TESK_ROOM); }
 function applyPeskWritingEntry(entry){
   peskWritingsAll = window.PeskWritings.merge(peskWritingsAll, [entry]);
 }
@@ -4717,8 +4725,7 @@ async function renderLitResults(){
   if(!window._fbReady || !window._db){ body.textContent = 'Firebase에 연결되면 학생 결과가 보여요.'; return; }
   try{
     if(!litProgress){
-      const snap = await window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','pesk-quiz-progress'));
-      litProgress = snap.exists() ? (snap.data().value || {}) : {};
+      litProgress = await quizStoreT().loadAllFull();
     }
   }catch(e){ body.textContent = '학생 결과를 불러오지 못했어요: ' + e.message; return; }
   if(date !== litOpenDate || !document.getElementById('lit-results-body')) return;
@@ -4747,15 +4754,12 @@ async function confirmLitEssay(num, btn){
   if(btn) btn.disabled = true;
   try{
     let first = false;
-    await _mutateServerDoc('pesk-quiz-progress', v => {
-      const all = {...(v || {})};
-      const key = all[num] ? num : String(num);
-      const stu = all[key];
+    await quizStoreT().mutateStudent(num, stu => {
+      first = false;   // 트랜잭션 재시도 때 다시 계산
       const rec = stu?.literacy?.[date];
-      if(!rec || !rec.essay || rec.essayOk) return v;
+      if(!rec || !rec.essay || rec.essayOk) return null;
       first = true;
-      all[key] = {...stu, literacy: {...stu.literacy, [date]: {...rec, essayOk: true, essayOkAt: new Date().toISOString()}}};
-      return all;
+      return {...stu, literacy: {...stu.literacy, [date]: {...rec, essayOk: true, essayOkAt: new Date().toISOString()}}};
     });
     const {cfg} = litData();
     const idx = students.findIndex(s => Number(s.num) === Number(num));
@@ -5056,9 +5060,9 @@ async function _homeLoadQuizProgress(){
   if(!window._fbReady || !window._db) return;
   _homeQzLoading = true;
   try{
-    const [c, p] = await Promise.all(['pesk-quiz-config','pesk-quiz-progress'].map(k=>
-      window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',k))));
-    _homeQz = {cfg:qzNormalize(c.exists() ? c.data().value : null), progress:p.exists() ? (p.data().value || {}) : {}};
+    // 홈은 오늘 푼 수만 보면 되므로 반 요약 하나만 읽는다 (학생별 기록은 몇 분 늦게 올라올 수 있다)
+    const [c, p] = await Promise.all([window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','pesk-quiz-config')), quizStoreT().loadSummary()]);
+    _homeQz = {cfg:qzNormalize(c.exists() ? c.data().value : null), progress:p || {}};
     _homeQzAt = Date.now();
     if(document.getElementById('page-home')?.classList.contains('active')) renderHome();
   }catch(e){
@@ -8988,12 +8992,12 @@ async function loadQuiz(){
   box.textContent = '⏳ 로딩 중...';
   try{
     if(!window._fbReady||!window._db){ box.textContent='⚠️ Firebase 미연결'; return; }
-    const [cSnap, pSnap] = await Promise.all([
+    const [cSnap, all] = await Promise.all([
       window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','pesk-quiz-config')),
-      window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','pesk-quiz-progress'))
+      quizStoreT().loadAllFull()
     ]);
     qzConfig  = qzNormalize(cSnap.exists() ? cSnap.data().value : null);
-    qzProgress = pSnap.exists() ? (pSnap.data().value || {}) : {};
+    qzProgress = all || {};
     qzFillForm();
     renderBoss();
     renderQuestT();
@@ -15799,7 +15803,10 @@ async function deleteStudent(num){
   await step('예금', ()=>_mutateServerDoc('pesk-deposits', v=>_dropStudentEconomy(v||{},num,deletedAccountUid)));
   await step('친구 설문', ()=>_mutateServerDoc('pesk-peer-survey', v=>_dropStudentKeys(v||{},num,deletedAccountUid)));
   await step('아바타', ()=>_mutateServerDoc('pesk-avatars', v=>_dropStudentKeys(v||{},num,deletedAccountUid)));
-  await step('퀴즈 진행', ()=>_mutateServerDoc('pesk-quiz-progress', v=>_dropStudentKeys(v||{},num,deletedAccountUid)));
+  await step('퀴즈 진행', async ()=>{
+    await quizStoreT().removeStudent([num, deletedAccountUid]);   // 학생 문서와 반 요약 칸
+    await _mutateServerDoc('pesk-quiz-progress', v=>_dropStudentKeys(v||{},num,deletedAccountUid));   // 옛 묶음 문서
+  });
   await step('생활 체크', async ()=>{
     const next = await _mutateServerDoc('pesk-checklists', v=>{
       const out={...(v||{})};

@@ -64,7 +64,7 @@ check('secured anonymous writing read denied',D+'pesk-writings/items/w','get',id
 check('secured anonymous writing create denied',D+'pesk-writings/items/w','create',ids.anon,false,{next:{title:'x'}});
 
 // ── 전환한 학급: 학생 ──
-for(const key of ['tesk-students','tesk-shop','pesk-deposits','pesk-portfolios','pesk-peer-survey','pesk-quiz-progress']){
+for(const key of ['tesk-students','tesk-shop','pesk-deposits','pesk-portfolios','pesk-peer-survey','pesk-quiz-progress','pesk-quiz-summary']){
  check('student reads '+key,D+key,'get',ids.student,true);
 }
 for(const key of ['tesk-students','pesk-deposits','pesk-portfolios','pesk-checklists','tesk-counsel-requests'])check('student writes '+key,D+key,'update',ids.student,true);
@@ -130,6 +130,22 @@ check('student cannot change feedback',W,'update',ids.student,false,{old:entry,n
 check('student cannot delete writing',W,'delete',ids.student,false,{old:entry});
 check('student archives own revision',W+'/revisions/2','create',ids.student,true,{next:{...entry,archivedAt:'now'},w:world({item:entry})});
 check('owner writes writing feedback',W,'update',ids.teacher,true,{old:entry,next:{...entry,feedback:'좋아요'}});
+
+// ── 모험 기록 (학생별 문서 + 반 요약) ──
+const Q=D+'pesk-quiz-progress/students/1';
+check('student reads quiz record',Q,'get',ids.student,true);
+check('student writes quiz record',Q,'update',ids.student,true,{old:{value:{}},next:{value:{xp:1}}});
+check('student writes classmate quiz record (boss reward)',D+'pesk-quiz-progress/students/2','update',ids.student,true,{old:{value:{}},next:{value:{xp:1}}});
+check('student writes class quiz summary',D+'pesk-quiz-summary','update',ids.student,true);
+check('student cannot write old quiz aggregate',D+'pesk-quiz-progress','update',ids.student,false);
+check('student of another room denied quiz record',Q,'update',ids.studentB,false,{old:{value:{}},next:{value:{xp:1}}});
+check('secured anonymous quiz record denied',Q,'get',ids.anon,false);
+check('legacy anonymous writes quiz record',Q,'update',ids.anon,true,{w:legacy,old:{value:{}},next:{value:{xp:1}}});
+check('legacy anonymous writes quiz summary',D+'pesk-quiz-summary','update',ids.anon,true,{w:legacy});
+check('legacy anonymous cannot write old quiz aggregate',D+'pesk-quiz-progress','update',ids.anon,false,{w:legacy});
+check('owner writes old quiz aggregate',D+'pesk-quiz-progress','update',ids.teacher,true);
+check('owner deletes quiz record',Q,'delete',ids.teacher,true,{old:{value:{}}});
+check('writing rules do not open quiz paths',D+'pesk-avatars/students/1','update',ids.student,false);
 
 (async()=>{
  const source=fs.readFileSync(process.env.RULES_SOURCE||'firestore.rules','utf8');

@@ -64,7 +64,7 @@ function fixture(){
     localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
     document:{getElementById:el,querySelector:()=>null,querySelectorAll:()=>[],addEventListener(){},documentElement:{style:{setProperty(){}}}},
     setTimeout(){},setInterval(){},clearInterval(){},clearTimeout(){},requestAnimationFrame(){},cancelAnimationFrame(){},addEventListener(){},alert(){}};
-  context.window=context;context.RPG=G;context.PeskBossQuest=require('../shared/pesk-boss-quest.js');vm.createContext(context);
+  context.window=context;context.RPG=G;context.PeskBossQuest=require('../shared/pesk-boss-quest.js');context.PeskQuizStore=require('../shared/pesk-quiz-store.js');vm.createContext(context);
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../shared/pesk-class-quest-ui.js'),'utf8'),context);
   for(const name of ['quiz-bank.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',name),'utf8'),context);
   const source=fs.readFileSync(path.join(__dirname,'../pesk.html'),'utf8').split('<script>')[1].split('</script>')[0];
@@ -79,13 +79,14 @@ function fixture(){
   context.incoming=structuredClone(docs['pesk-quiz-progress']);context._applyQuizProgress(context.incoming);
   context._applyBossCfg(docs['pesk-class-boss']);
   vm.runInContext('students=[{num:1,name:"학생",points:0}]; myAvatar={equipped:{},owned:[]};',context);
-  return {c:context,docs,date,storage,elements,fail:()=>{fail=true;},run:code=>vm.runInContext(code,context)};
+  return {c:context,docs,date,storage,elements,fail:()=>{fail=true;},run:code=>vm.runInContext(code,context),
+    rec:n=>docs[String(n)]||docs['pesk-quiz-progress'][n]};   // 학생별 문서(fake ref = 마지막 경로 조각)가 있으면 그것, 없으면 옛 묶음 문서
 }
 test('actual answer + attack preserves study records, boss contribution and unrelated claims',async()=>{
   const f=fixture();f.run('rpgEnsureQuestion()');await f.c.rpgAnswer(f.run('rpgQ.options.findIndex(x=>String(x)===String(rpgQ.answer))'));
-  let rec=f.docs['pesk-quiz-progress'][1];assert.equal(rec.tried,1);assert.equal(rec.game.hp,36);assert.equal(rec.game.huntEnergy.length,1);assert.equal(rec.game.pendingAttack,null);await f.c.rpgBeginHunt();
+  let rec=f.rec(1);assert.equal(rec.tried,1);assert.equal(rec.game.hp,36);assert.equal(rec.game.huntEnergy.length,1);assert.equal(rec.game.pendingAttack,null);await f.c.rpgBeginHunt();
   assert.equal(rec.boss.dmg,10);assert.equal(rec.goalClaims.keep,true);assert.equal(f.docs['tesk-students'][0].points,5);
-  await f.c.rpgReleaseAttack(true);rec=f.docs['pesk-quiz-progress'][1];assert.ok(rec.game.hp<36);assert.equal(rec.tried,1);
+  await f.c.rpgReleaseAttack(true);rec=f.rec(1);assert.ok(rec.game.hp<36);assert.equal(rec.tried,1);
   assert.equal(rec.game.pendingAttack,null);assert.equal(rec.boss.dmg,10);
 });
 test('a final daily question still exposes its attack before the done screen',async()=>{
@@ -94,42 +95,42 @@ test('a final daily question still exposes its attack before the done screen',as
 });
 test('failed answer save grants no damage or rewards and leaves the question retryable',async()=>{
   const f=fixture();f.fail();f.run('rpgEnsureQuestion()');await f.c.rpgAnswer(f.run('rpgQ.options.findIndex(x=>String(x)===String(rpgQ.answer))'));
-  const rec=f.docs['pesk-quiz-progress'][1];assert.equal(rec.tried,0);assert.equal(rec.game.hp,36);assert.equal(rec.game.pendingAttack,null);assert.equal(f.run('rpgPicked'),null);
+  const rec=f.rec(1);assert.equal(rec.tried,0);assert.equal(rec.game.hp,36);assert.equal(rec.game.pendingAttack,null);assert.equal(f.run('rpgPicked'),null);
 });
 test('failed attack save keeps the pending opportunity',async()=>{
   const f=fixture();f.run('rpgEnsureQuestion()');await f.c.rpgAnswer(f.run('rpgQ.options.findIndex(x=>String(x)===String(rpgQ.answer))'));
-  await f.c.rpgBeginHunt();f.fail();await f.c.rpgReleaseAttack(true);assert.ok(f.docs['pesk-quiz-progress'][1].game.pendingAttack);assert.equal(f.docs['pesk-quiz-progress'][1].game.hp,36);
+  await f.c.rpgBeginHunt();f.fail();await f.c.rpgReleaseAttack(true);assert.ok(f.rec(1).game.pendingAttack);assert.equal(f.rec(1).game.hp,36);
 });
 test('boss fight uses its own daily ticket, not adventure energy, and settles once',async()=>{
   const f=fixture();f.run('rpgEnsureQuestion()');await f.c.rpgAnswer(f.run('rpgQ.options.findIndex(x=>String(x)===String(rpgQ.answer))'));
-  await f.c.bossStartFight();let rec=f.docs['pesk-quiz-progress'][1];
+  await f.c.bossStartFight();let rec=f.rec(1);
   assert.equal(rec.boss.pending.monsterId,'__boss__');assert.equal(rec.boss.pending.ammo,6);assert.equal(rec.boss.day,f.date);
   assert.equal(rec.game.huntEnergy.length,1);assert.equal(rec.game.pendingAttack,null);
-  const ticket=rec.boss.pending.id;await f.c.bossSkipFight();rec=f.docs['pesk-quiz-progress'][1];
+  const ticket=rec.boss.pending.id;await f.c.bossSkipFight();rec=f.rec(1);
   assert.equal(rec.boss.dmg,10+72);assert.equal(rec.boss.pending,null);assert.equal(rec.game.huntEnergy.length,1);assert.equal(rec.game.hp,36);
-  assert.equal(await f.c.bossFinishFight({skip:true}),false);assert.equal(f.docs['pesk-quiz-progress'][1].boss.dmg,82);
-  await f.c.bossStartFight();rec=f.docs['pesk-quiz-progress'][1];assert.equal(rec.boss.pending,null);assert.equal(rec.boss.dmg,82);
+  assert.equal(await f.c.bossFinishFight({skip:true}),false);assert.equal(f.rec(1).boss.dmg,82);
+  await f.c.bossStartFight();rec=f.rec(1);assert.equal(rec.boss.pending,null);assert.equal(rec.boss.dmg,82);
   assert.match(f.c.buildBossPanel({num:1}),/오늘 보스 도전을 마쳤어요/);assert.ok(ticket);
 });
 test('adventure attacks never damage the boss',async()=>{
   const f=fixture();f.run('rpgEnsureQuestion()');await f.c.rpgAnswer(f.run('rpgQ.options.findIndex(x=>String(x)===String(rpgQ.answer))'));
-  await f.c.rpgBeginHunt();assert.equal(f.docs['pesk-quiz-progress'][1].game.pendingAttack.monsterId,'m_mush');
-  await f.c.rpgReleaseAttack(true);assert.equal(f.docs['pesk-quiz-progress'][1].boss.dmg,10);
+  await f.c.rpgBeginHunt();assert.equal(f.rec(1).game.pendingAttack.monsterId,'m_mush');
+  await f.c.rpgReleaseAttack(true);assert.equal(f.rec(1).boss.dmg,10);
   assert.doesNotMatch(f.c.buildRpgPanel({num:1,points:5}),/rpgPickMonster|onclick="rpgNextMonster/);
 });
 test('boss unlocks by daily questions or by a monster defeated today',async()=>{
   const f=fixture();f.docs['pesk-class-boss'].entryNeed=5;f.c._applyBossCfg(f.docs['pesk-class-boss']);
   assert.match(f.c.buildBossPanel({num:1}),/5문제를 더 풀거나, 모험에서 몬스터 1마리/);
-  await f.c.bossStartFight();assert.equal(f.docs['pesk-quiz-progress'][1].boss.pending,undefined);
-  f.docs['pesk-quiz-progress'][1].game.hp=5;await f.c.rpgReloadProgress();f.run('rpgEnsureQuestion()');
+  await f.c.bossStartFight();assert.equal(f.rec(1).boss.pending,undefined);
+  f.rec(1).game.hp=5;await f.c.rpgReloadProgress();f.run('rpgEnsureQuestion()');
   await f.c.rpgAnswer(f.run('rpgQ.options.findIndex(x=>String(x)===String(rpgQ.answer))'));await f.c.rpgBeginHunt();await f.c.rpgReleaseAttack(true);
-  assert.equal(f.docs['pesk-quiz-progress'][1].game.killDay,f.date);assert.match(f.c.buildBossPanel({num:1}),/보스 치러 가기/);
-  await f.c.bossStartFight();assert.ok(f.docs['pesk-quiz-progress'][1].boss.pending);
+  assert.equal(f.rec(1).game.killDay,f.date);assert.match(f.c.buildBossPanel({num:1}),/보스 치러 가기/);
+  await f.c.bossStartFight();assert.ok(f.rec(1).boss.pending);
 });
 test('changing boss rounds retires a pending boss fight without damaging the new boss',async()=>{
   const f=fixture();await f.c.bossStartFight();f.docs['pesk-class-boss'].roundId='round2';
   await f.c.bossFinishFight({skip:true});
-  assert.equal(f.docs['pesk-quiz-progress'][1].boss.dmg,10);assert.equal(f.docs['pesk-quiz-progress'][1].boss.pending,null);
+  assert.equal(f.rec(1).boss.dmg,10);assert.equal(f.rec(1).boss.pending,null);
 });
 test('configured unit bounds and due reviews stay within teacher scope',()=>{
   const f=fixture();f.run('quizConfig={grade:5,term:1,mathUnits:[1]};myQuiz.review=[{code:"DML-01",d:1000,due:"2020-01-01",n:0}]');
@@ -146,15 +147,15 @@ test('diagnostic stays within the configured type pool',()=>{
   const st=R.newDiagnostic('test',1100,['MIX-01']);while(!st.done){const q=R.diagnosticNext(st);assert.equal(q.typeCode,'MIX-01');R.diagnosticAnswer(st,true);}assert.equal(st.history.length,10);
 });
 test('defeated monsters are replaced at random; living monsters cannot be swapped',async()=>{
-  const f=fixture();await f.c.rpgNextMonster();assert.equal(f.docs['pesk-quiz-progress'][1].game.monsterId,'m_mush');
+  const f=fixture();await f.c.rpgNextMonster();assert.equal(f.rec(1).game.monsterId,'m_mush');
   const seen=new Set();
-  for(let i=0;i<40;i++){f.docs['pesk-quiz-progress'][1].game.hp=0;await f.c.rpgReloadProgress();const before=f.docs['pesk-quiz-progress'][1].game.monsterId;
-    await f.c.rpgNext();const g=f.docs['pesk-quiz-progress'][1].game;assert.notEqual(g.monsterId,before);assert.equal(g.hp,G.monsterById(g.monsterId).hp);seen.add(g.monsterId);}
+  for(let i=0;i<40;i++){f.rec(1).game.hp=0;await f.c.rpgReloadProgress();const before=f.rec(1).game.monsterId;
+    await f.c.rpgNext();const g=f.rec(1).game;assert.notEqual(g.monsterId,before);assert.equal(g.hp,G.monsterById(g.monsterId).hp);seen.add(g.monsterId);}
   // 처치 0마리 — 들판 몬스터만 나온다
   assert.equal(seen.size,4);assert.ok([...seen].every(id=>G.monsterById(id).region==='field'));
   // 20마리 이상 처치하면 동굴·탑 몬스터도 나온다
   const vet=new Set();
-  for(let i=0;i<60;i++){const p=f.docs['pesk-quiz-progress'][1];p.game.hp=0;p.game.kills={m_mush:20};await f.c.rpgReloadProgress();await f.c.rpgNext();vet.add(p.game.monsterId);}
+  for(let i=0;i<60;i++){const p=f.rec(1);p.game.hp=0;p.game.kills={m_mush:20};await f.c.rpgReloadProgress();await f.c.rpgNext();vet.add(p.game.monsterId);}
   assert.ok([...vet].some(id=>G.monsterById(id).region==='tower'));assert.ok([...vet].some(id=>G.monsterById(id).region==='cave'));
 });
 test('regions open by total kills and the picker only uses open regions',()=>{
@@ -170,7 +171,7 @@ test('legacy boss-targeted adventure records return to a real monster',()=>{
 });
 test('another session consuming the daily limit refreshes the stale question',async()=>{
   const f=fixture();f.run('quizConfig={dailyQuestionLimit:1};rpgEnsureQuestion()');
-  f.docs['pesk-quiz-progress'][1].daily[f.date]={tried:1,correct:1,coin:5};
+  f.rec(1).daily[f.date]={tried:1,correct:1,coin:5};
   await f.c.rpgAnswer(f.run('rpgQ.options.findIndex(x=>String(x)===String(rpgQ.answer))'));
   assert.match(f.c.buildRpgPanel({num:1,points:0}),/오늘 몫을 다 풀었어요/);
   assert.equal(f.docs['tesk-students'][0].points,0);
@@ -191,18 +192,18 @@ test('an in-flight old-grade answer is rejected when the teacher changes the sav
   const f=fixture();f.run('quizConfig={grade:3,term:1,mathUnits:[1]};rpgEnsureQuestion()');
   f.docs['pesk-quiz-config']={grade:3,term:2,mathUnits:[4]};
   await f.c.rpgAnswer(f.run('rpgQ.options.findIndex(x=>String(x)===String(rpgQ.answer))'));
-  assert.equal(f.docs['pesk-quiz-progress'][1].tried,0);assert.equal(f.docs['tesk-students'][0].points,0);
+  assert.equal(f.rec(1).tried,0);assert.equal(f.docs['tesk-students'][0].points,0);
   const q=f.c.rpgEnsureQuestion();assert.equal(q.grade,3);assert.equal(q.term,2);assert.equal(q.unitNo,4);
 });
 test('equipped avatar weapon overrides obsolete saved training weapon choice',async()=>{
   const f=fixture();f.run('myAvatar.equipped.weapon="w_staff_arcane";myQuiz.game.combatStyle="axe";rpgEnsureQuestion()');
   assert.equal(f.c.rpgWeapon().id,'staff');await f.c.rpgAnswer(f.run('rpgQ.options.findIndex(x=>String(x)===String(rpgQ.answer))'));
-  await f.c.rpgBeginHunt();const ticket=f.docs['pesk-quiz-progress'][1].game.pendingAttack;assert.equal(ticket.weaponStyle,'staff');assert.equal(ticket.weaponId,'w_staff_arcane');
+  await f.c.rpgBeginHunt();const ticket=f.rec(1).game.pendingAttack;assert.equal(ticket.weaponStyle,'staff');assert.equal(ticket.weaponId,'w_staff_arcane');
   assert.doesNotMatch(f.c.rpgEquipmentHtml(),/rpgChooseWeapon|훈련 무기 선택/);
 });
 test('skip advances immediately, grants learning reward once and does not spend a ready pet skill',async()=>{
   const f=fixture();f.run('quizConfig={grade:3,term:1,mathUnits:[1]};rpgSetAuto(true);rpgEnsureQuestion()');await f.c.rpgAnswer(f.run('rpgQ.options.findIndex(x=>String(x)===String(rpgQ.answer))'));
-  const rec=f.docs['pesk-quiz-progress'][1];assert.equal(rec.tried,1);assert.equal(rec.game.hp,24);assert.equal(rec.game.pendingAttack,null);assert.equal(rec.game.shooting.rounds,0);assert.equal(f.docs['tesk-students'][0].points,5);assert.equal(f.run('rpgPicked'),null);
+  const rec=f.rec(1);assert.equal(rec.tried,1);assert.equal(rec.game.hp,24);assert.equal(rec.game.pendingAttack,null);assert.equal(rec.game.shooting.rounds,0);assert.equal(f.docs['tesk-students'][0].points,5);assert.equal(f.run('rpgPicked'),null);
 });
 test('fixed teacher difficulty stays fixed at high student levels',()=>{
   const f=fixture();f.run('quizConfig={grade:3,term:1,mathUnits:[1],difficulty:1};myQuiz.xp=99999');
@@ -215,24 +216,24 @@ test('only math and English remain available even with old custom-subject flags'
 async function answerNext(f,correct=true){f.run('rpgEnsureQuestion()');const right=f.run('rpgQ.options.findIndex(x=>String(x)===String(rpgQ.answer))');await f.c.rpgAnswer(correct?right:(right+1)%4);await f.c.rpgNext();}
 test('six of eight questions become exactly six attacks, with no combat between questions',async()=>{
   const f=fixture();f.run('quizConfig={grade:3,term:1,mathUnits:[1],huntQuestionLimit:8,dailyQuestionLimit:20}');
-  for(let i=0;i<6;i++){await answerNext(f);assert.equal(f.docs['pesk-quiz-progress'][1].game.pendingAttack,null);}
-  const rec=f.docs['pesk-quiz-progress'][1];assert.equal(rec.game.huntEnergy.length,6);assert.equal(rec.game.hp,36);assert.equal(rec.tried,6);
-  await f.c.rpgBeginHunt();const g=f.docs['pesk-quiz-progress'][1].game;assert.equal(g.pendingAttack.ammo,6);assert.equal(g.pendingAttack.baseDamage,72);assert.equal(g.huntEnergy.length,0);
-  await f.c.rpgReleaseAttack(true,0,{skip:true});assert.equal(f.docs['tesk-students'][0].points,30);assert.equal(f.docs['pesk-quiz-progress'][1].tried,6);
+  for(let i=0;i<6;i++){await answerNext(f);assert.equal(f.rec(1).game.pendingAttack,null);}
+  const rec=f.rec(1);assert.equal(rec.game.huntEnergy.length,6);assert.equal(rec.game.hp,36);assert.equal(rec.tried,6);
+  await f.c.rpgBeginHunt();const g=f.rec(1).game;assert.equal(g.pendingAttack.ammo,6);assert.equal(g.pendingAttack.baseDamage,72);assert.equal(g.huntEnergy.length,0);
+  await f.c.rpgReleaseAttack(true,0,{skip:true});assert.equal(f.docs['tesk-students'][0].points,30);assert.equal(f.rec(1).tried,6);
 });
 test('teacher maximum rejects extra attempts without granting coins, and failed departure preserves energy',async()=>{
   const f=fixture();f.run('quizConfig={grade:3,term:1,mathUnits:[1],huntQuestionLimit:2}');
   await answerNext(f);await answerNext(f);await answerNext(f);
-  assert.equal(f.docs['pesk-quiz-progress'][1].tried,2);assert.equal(f.docs['tesk-students'][0].points,10);
-  f.fail();await f.c.rpgBeginHunt();assert.equal(f.docs['pesk-quiz-progress'][1].game.huntEnergy.length,2);assert.equal(f.docs['pesk-quiz-progress'][1].game.pendingAttack,null);
+  assert.equal(f.rec(1).tried,2);assert.equal(f.docs['tesk-students'][0].points,10);
+  f.fail();await f.c.rpgBeginHunt();assert.equal(f.rec(1).game.huntEnergy.length,2);assert.equal(f.rec(1).game.pendingAttack,null);
 });
 test('wrong attempts grant no attack rights, cost adventure HP and preserve learning XP',async()=>{
-  const f=fixture();await answerNext(f,false);const rec=f.docs['pesk-quiz-progress'][1];assert.equal(rec.game.huntEnergy.length,0);assert.equal(rec.game.huntAttempts,1);assert.equal(rec.game.heroHp,88);assert.equal(rec.xp,0);assert.equal(f.docs['tesk-students'][0].points,0);
+  const f=fixture();await answerNext(f,false);const rec=f.rec(1);assert.equal(rec.game.huntEnergy.length,0);assert.equal(rec.game.huntAttempts,1);assert.equal(rec.game.heroHp,88);assert.equal(rec.xp,0);assert.equal(f.docs['tesk-students'][0].points,0);
 });
 
 test('wrong-answer penalty persists, full incorrect batch can restart and zero HP requires rest',async()=>{
- const f=fixture();f.run('quizConfig={grade:3,term:1,mathUnits:[1],huntQuestionLimit:2}');await answerNext(f,false);await answerNext(f,false);assert.match(f.c.buildRpgPanel({num:1,points:0}),/다시 준비하기/);await f.c.rpgRest();assert.equal(f.docs['pesk-quiz-progress'][1].game.heroHp,100);assert.equal(f.docs['pesk-quiz-progress'][1].game.huntAttempts,0);assert.equal(f.docs['pesk-quiz-progress'][1].tried,2);
- f.docs['pesk-quiz-progress'][1].game.heroHp=4;await f.c.rpgReloadProgress();await answerNext(f,false);assert.equal(f.docs['pesk-quiz-progress'][1].game.heroHp,0);assert.match(f.c.buildRpgPanel({num:1,points:0}),/모닥불/);await f.c.rpgRest();assert.equal(f.docs['pesk-quiz-progress'][1].game.heroHp,100);
+ const f=fixture();f.run('quizConfig={grade:3,term:1,mathUnits:[1],huntQuestionLimit:2}');await answerNext(f,false);await answerNext(f,false);assert.match(f.c.buildRpgPanel({num:1,points:0}),/다시 준비하기/);await f.c.rpgRest();assert.equal(f.rec(1).game.heroHp,100);assert.equal(f.rec(1).game.huntAttempts,0);assert.equal(f.rec(1).tried,2);
+ f.rec(1).game.heroHp=4;await f.c.rpgReloadProgress();await answerNext(f,false);assert.equal(f.rec(1).game.heroHp,0);assert.match(f.c.buildRpgPanel({num:1,points:0}),/모닥불/);await f.c.rpgRest();assert.equal(f.rec(1).game.heroHp,100);
 });
 test('compact equipment UI contains only always skip preference beside the arena',()=>{
  const f=fixture(),html=f.c.rpgEquipmentHtml();assert.doesNotMatch(html,/효과음|흔들림|combat-loadout/);assert.match(html,/항상 건너뛰기/);assert.match(f.c.rpgArenaHtml('🍄','#fff'),/rpg-arena-info/);
@@ -242,7 +243,7 @@ test('typed answers use the real reward transaction exactly once and preserve in
   const f=fixture();f.run('quizConfig={grade:3,term:1,mathUnits:[1]};rpgEnsureQuestion();rpgQ.responseMode="short";rpgQ.inputKind="number";rpgQ.answer=1200');
   f.elements['rpg-short-answer']={value:' 1,200 ',focus(){}};f.elements['rpg-short-error']={textContent:''};
   await Promise.all([f.c.rpgSubmitShort(),f.c.rpgSubmitShort()]);
-  assert.equal(f.docs['pesk-quiz-progress'][1].tried,1);assert.equal(f.docs['pesk-quiz-progress'][1].correct,1);assert.equal(f.docs['pesk-quiz-progress'][1].game.huntEnergy.length,1);
+  assert.equal(f.rec(1).tried,1);assert.equal(f.rec(1).correct,1);assert.equal(f.rec(1).game.huntEnergy.length,1);
   assert.match(f.c.buildRpgPanel({num:1,points:5}),/정답이에요/);
   const bad=fixture();bad.run('rpgEnsureQuestion();rpgQ.responseMode="short";rpgQ.inputKind="number"');
   bad.elements['rpg-short-answer']={value:'',focus(){}};bad.elements['rpg-short-error']={textContent:''};
@@ -255,9 +256,9 @@ test('typed English accepts capitals, shows no answer options, and wrong input g
   const f=fixture();f.run('qzSubject="english";rpgEnsureQuestion();rpgQ=QUIZ.prepareQuestion(rpgQ,"typed-test",{responseMode:"short"})');
   const answer=f.run('rpgQ.answer');f.elements['rpg-short-answer']={value:' '+answer.toUpperCase()+' ',focus(){}};f.elements['rpg-short-error']={textContent:''};
   const panel=f.c.buildRpgPanel({num:1,points:0});assert.match(panel,/rpg-short-answer/);assert.doesNotMatch(panel,/onclick="rpgAnswer\(/);
-  await f.c.rpgSubmitShort();assert.equal(f.docs['pesk-quiz-progress'][1].correct,1);assert.match(f.c.buildRpgPanel({num:1,points:5}),/정답이에요/);
+  await f.c.rpgSubmitShort();assert.equal(f.rec(1).correct,1);assert.match(f.c.buildRpgPanel({num:1,points:5}),/정답이에요/);
   await f.c.rpgNext();f.run('rpgEnsureQuestion();rpgQ=QUIZ.prepareQuestion(rpgQ,"typed-wrong",{responseMode:"short"})');
-  f.elements['rpg-short-answer'].value='wrongword';await f.c.rpgSubmitShort();assert.equal(f.docs['pesk-quiz-progress'][1].correct,1);assert.equal(f.docs['pesk-quiz-progress'][1].tried,2);assert.match(f.c.buildRpgPanel({num:1,points:5}),/정답:/);
+  f.elements['rpg-short-answer'].value='wrongword';await f.c.rpgSubmitShort();assert.equal(f.rec(1).correct,1);assert.equal(f.rec(1).tried,2);assert.match(f.c.buildRpgPanel({num:1,points:5}),/정답:/);
 });
 test('equipped item power adds up and multiplies the real damage (1% per point, capped)',()=>{
   const full=C.powerOf({weapon:'w_axe_gold',top:'t_plate',bottom:'l_plate',shoes:'e_plate',hat:'a_horned_flame',pet:'p_chick_g'},'legend');
@@ -302,10 +303,10 @@ test('world map: teacher-opened units only, stages open in order, boss clears th
   }finally{if(prev===undefined)delete globalThis.QUIZ;else globalThis.QUIZ=prev;}
 });
 test('students left on a stage monster from the map release return to random monsters',async()=>{
-  const f=fixture();const p=f.docs['pesk-quiz-progress'][1];
+  const f=fixture();const p=f.rec(1);
   p.game.monsterId='st|m|5-1|2|1';p.game.hp=30;p.game.stageHp={'st|m|5-1|2|0':12};await f.c.rpgReloadProgress();
   assert.equal(f.run('rpgMonster().id'),'st|m|5-1|2|1');assert.equal(f.run('rpgGame().hp'),30);
   f.run('quizConfig={grade:5,term:1,mathUnits:[1,3]}');const q=f.run('rpgQ=null;rpgEnsureQuestion()');assert.ok([1,3].includes(Number(q.unitNo)),'teacher units, not the stage unit');
   p.game.hp=0;await f.c.rpgReloadProgress();await f.c.rpgNext();
-  assert.match(f.docs['pesk-quiz-progress'][1].game.monsterId,/^m_/);
+  assert.match(f.rec(1).game.monsterId,/^m_/);
 });

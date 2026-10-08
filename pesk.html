@@ -25,6 +25,7 @@
 <script src="rpg-monsters.js?v=20261005map1"></script>
 <script src="boss-sprites.js"></script>
 <script src="shared/pesk-writing-store.js?v=20261006quota1"></script>
+<script src="shared/pesk-quiz-store.js?v=20261006split1"></script>
 <script src="shared/writing-proofread.js?v=20260928wr1"></script>
 <script src="shared/pesk-learning-sync.js?v=20260918"></script>
 <script src="shared/peer-survey.js?v=20260920"></script>
@@ -36,8 +37,8 @@
 <script src="shared/pesk-progression.js?v=20261004grow1"></script>
 <script src="shared/economy-ownership.js?v=20260930bank1"></script>
 <script src="shared/pesk-boss-catalog.js?v=20260910rpg2"></script>
-<script src="shared/pesk-boss-quest.js?v=20261004rank1"></script>
-<script src="shared/pesk-class-quest-ui.js?v=20261004tab1"></script>
+<script src="shared/pesk-boss-quest.js?v=20261006split1"></script>
+<script src="shared/pesk-class-quest-ui.js?v=20261006split1"></script>
 <link rel="stylesheet" href="shared/pesk-combat.css?v=20260918tablet1">
 <!-- Firebase SDK -->
 <script type="module">
@@ -867,6 +868,9 @@ let myMissions = {};
 let peskWritings = [];
 let classAnthology = [];   // 우리 반 글 모음집에 실린 글 (다른 친구 글 포함)
 function writingStore(){ return window.PeskWritings.create(window, roomId); }
+/* 모험 기록 — 학생별 문서 + 반 요약 (shared/pesk-quiz-store.js) */
+function quizStore(){ return window.PeskQuizStore.create(window, roomId); }
+async function loadQuizProgressView(summarySnap){ return quizStore().loadForStudent(myStudentNum, summarySnap); }
 /* 학생은 내 글 + 모음집 글만 받는다 (반 전체를 받으면 읽기 한도를 금방 넘긴다) */
 function myWritingOwner(){ return {studentNum: myStudentNum, accountUid: myAccountUid || ''}; }
 function loadMyWritings(){ const st=writingStore(); return (window._fsQuery && st.loadMine) ? st.loadMine(myWritingOwner()) : st.load(); }
@@ -1217,7 +1221,7 @@ async function loadData(){
                 'tesk-counsel-requests','pesk-peer-survey','pesk-purchases','tesk-shop',
                 'tesk-bank-plans','tesk-bank-badge-bonus','pesk-deposits',
                 'tesk-checklist-items','pesk-checklists','tesk-challenges','pesk-challenge-submissions','tesk-challenge-awards','pesk-purchase-log','tesk-economy-restrictions',
-                'pesk-avatars','pesk-avatar-prices','pesk-quiz-config','pesk-quiz-progress',
+                'pesk-avatars','pesk-avatar-prices','pesk-quiz-config','pesk-quiz-summary',
                 'pesk-writing-topic','pesk-writing-duty','pesk-class-boss','pesk-todo-schedule','pesk-literacy','pesk-quest-config'];
     const snaps=await Promise.all(keys.map(k=>
       window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data',k))
@@ -1271,7 +1275,7 @@ async function loadData(){
     _applyAvatarDoc((snaps[21] && snaps[21].exists()) ? (snaps[21].data().value || {}) : {});
     _applyAvatarPriceDoc((snaps[22] && snaps[22].exists()) ? snaps[22].data().value : null);
     _applyQuizConfig((snaps[23] && snaps[23].exists()) ? snaps[23].data().value : null);
-    _applyQuizProgress((snaps[24] && snaps[24].exists()) ? (snaps[24].data().value || {}) : {});
+    _applyQuizProgress(await loadQuizProgressView(snaps[24]));   // 반 요약 + 내 기록 (학생별 문서)
     _applyWritingTopic((snaps[25] && snaps[25].exists()) ? snaps[25].data().value : null);
     _applyWritingDuty((snaps[26] && snaps[26].exists()) ? snaps[26].data().value : null);
     applyClassBossPurchases((snaps[9] && snaps[9].exists()) ? (snaps[9].data().value || []) : []);
@@ -6735,14 +6739,28 @@ function scheduleAdventureRefresh(){
 }
 let _quizResyncTimer=null, _quizSnapshotVersion=0;
 let _quizPullAt=0, _quizPullBusy=false;
-/* 친구 모험 기록 가져오기 — 1분에 한 번까지만 (탭을 빠르게 오가도 읽기가 늘지 않게) */
-async function pullQuizProgress(){
-  if(!window._fbReady || !window._db || !roomId || document.hidden || _quizPullBusy) return;
-  if(Date.now() - _quizPullAt < 60000) return;
+/* 반 요약에 아직 올리지 않은 내 기록이 있다 — 일별 푼 수·경험치는 문제마다 올리지 않고 몇 분에 한 번 모아 올린다 */
+let _quizSummaryDirty=false;
+function markQuizSummaryDirty(){ _quizSummaryDirty = true; }
+function withMyQuiz(summary){
+  const all = {...(summary || {})};
+  delete all[String(myStudentNum)];
+  if(myQuiz) all[myStudentNum] = myQuiz;
+  return all;
+}
+/* 친구 모험 기록 가져오기 — 1분에 한 번까지만. 올릴 내 기록이 있으면 올리면서 받는다(같은 읽기 1회).
+   force: 화면을 떠날 때 밀린 요약을 올리는 경우 (숨김 상태여도 보낸다) */
+async function pullQuizProgress(force){
+  if(!window._fbReady || !window._db || !roomId || _quizPullBusy) return;
+  if(!force && (document.hidden || Date.now() - _quizPullAt < 60000)) return;
+  if(force && !_quizSummaryDirty) return;
   _quizPullBusy = true; _quizPullAt = Date.now();
   try{
-    const snap = await window._fsGetDoc(window._fsDoc(window._db,'classrooms',roomId,'data','pesk-quiz-progress'));
-    receiveQuizProgress(snap.exists() ? (snap.data().value || {}) : {});
+    const st = quizStore();
+    let summary;
+    if(_quizSummaryDirty && myQuiz){ _quizSummaryDirty = false; summary = await st.flushSummary(myStudentNum, myQuiz); }
+    else summary = await st.loadSummary();
+    if(!force) receiveQuizProgress(withMyQuiz(summary));
   }catch(e){ console.warn('모험 기록 불러오기 실패', e); }
   finally{ _quizPullBusy = false; }
 }
@@ -6761,8 +6779,8 @@ function queueQuizResync(){
     if(qzBusy || rpgBusy || _bossClaimBusy || classBossSettlementBusy){queueQuizResync();return;}
     const version=_quizSnapshotVersion;
     try{
-      const snap=await window._fsGetDoc(window._fsDoc(window._db,'classrooms',roomId,'data','pesk-quiz-progress'));
-      if(version===_quizSnapshotVersion)receiveQuizProgress(snap.exists()?snap.data().value:{});
+      const all=await loadQuizProgressView();
+      if(version===_quizSnapshotVersion)receiveQuizProgress(all);
     }catch(e){console.warn('모험 진행도 동기화 실패',e);}
   },500);
 }
@@ -7143,15 +7161,16 @@ async function buyShopItemWithXp(item){
 
   const db = window._db;
   if(!db || !window._fsRunTxn) return alert('연결 상태를 확인해주세요.');
-  const progRef  = window._fsDoc(db,'classrooms',roomId,'data','pesk-quiz-progress');
+  const qs = quizStore();
   const purchRef = window._fsDoc(db,'classrooms',roomId,'data','pesk-purchases');
   const shopRef  = window._fsDoc(db,'classrooms',roomId,'data','tesk-shop');
   let out = null;
   qzBusy = true;
   try{
     await window._fsRunTxn(db, async (txn)=>{
-      const [pSnap, buySnap, shopSnap] = await Promise.all([txn.get(progRef), txn.get(purchRef), txn.get(shopRef)]);
-      const all   = pSnap.exists() ? (pSnap.data().value || {}) : {};
+      const qctx = await qs.open(txn, myStudentNum, {cls:true});   // 공동 목표 확인에 반 요약이 필요하다
+      const [buySnap, shopSnap] = await Promise.all([txn.get(purchRef), txn.get(shopRef)]);
+      const all   = qctx.all;
       const buys  = buySnap.exists() ? (buySnap.data().value || []) : [];
       const items = shopSnap.exists() ? (shopSnap.data().value || []) : [];
 
@@ -7193,7 +7212,7 @@ async function buyShopItemWithXp(item){
         });
       }
 
-      txn.set(progRef,  {value: all,   updatedAt: new Date().toISOString()});
+      qs.save(qctx, {[myStudentNum]: all[myStudentNum]});
       txn.set(purchRef, {value: buys,  updatedAt: new Date().toISOString()});
       if(idx >= 0) txn.set(shopRef, {value: items, updatedAt: new Date().toISOString()});
       out = {all, buys, items, price};
@@ -7475,14 +7494,16 @@ async function qzClaimGoal(goalId){
   try{
     if(!window._fbReady || !window._db || !roomId || !window._fsRunTxn) throw new Error('OFFLINE');
     const db = window._db;
-    const progRef = window._fsDoc(db,'classrooms',roomId,'data','pesk-quiz-progress');
+    const qs = quizStore();
     const avRef   = window._fsDoc(db,'classrooms',roomId,'data','pesk-avatars');
     const periodKey = qzGoalClaimKey(g);
     let out = null;
 
     await window._fsRunTxn(db, async (txn)=>{
-      const [pSnap, aSnap] = await Promise.all([txn.get(progRef), txn.get(avRef)]);
-      const all = pSnap.exists() ? (pSnap.data().value || {}) : {};
+      // 내 기록은 학생 문서에서, 반 전체 달성 여부는 반 요약에서 다시 계산한다
+      const qctx = await qs.open(txn, myStudentNum, {cls:true});
+      const aSnap = await txn.get(avRef);
+      const all = qctx.all;
       // 달성 여부를 서버 데이터로 다시 계산 (클라이언트 화면만 믿지 않음)
       const pr = qzGoalProgress(all, g);
       if(pr.total < Math.max(1, Number(g.target||0))) throw new Error('NOT_REACHED');
@@ -7500,7 +7521,7 @@ async function qzClaimGoal(goalId){
         studentName: myStudentName || '', accountUid: myAccountUid || '',
         updatedAt: new Date().toISOString()
       });
-      txn.set(progRef, {value: all, updatedAt:new Date().toISOString()});
+      qs.save(qctx, {[myStudentNum]: all[myStudentNum]});
 
       // 한정 아이템을 무료로 지급 (돈이 오가지 않으므로 잔액은 건드리지 않음)
       let itemGiven = '';
@@ -7784,37 +7805,47 @@ async function rpgAnswer(idx,typed){
 // 한 공격 기회는 트랜잭션에서 한 번만 소비한다. 보상/피해가 이중 적용되지 않는다.
 async function rpgMutateProgress(change){
   if(!window._fbReady || !window._db || !window._fsRunTxn) throw new Error('CONNECTION_REQUIRED');
-  const db=window._db,ref=window._fsDoc(db,'classrooms',roomId,'data','pesk-quiz-progress');
+  const db=window._db,qs=quizStore();
   const bossRef=window._fsDoc(db,'classrooms',roomId,'data','pesk-class-boss');
   let result;
   await runLearningTransaction(db,async txn=>{
-    const [snap,bs]=await Promise.all([txn.get(ref),txn.get(bossRef)]);
-    const all=snap.exists() ? (snap.data().value||{}) : {};
+    // 보스 진행은 반 전체 피해를 알아야 하므로 반 요약도 함께 연다 (내 칸만 전체 기록)
+    const [qctx,bs]=await Promise.all([qs.open(txn,myStudentNum,{cls:true}),txn.get(bossRef)]);
+    const all=qctx.all;
     const current=all[myStudentNum] || {};
     const cfg=window.RPG.normalizeBoss(bs.exists() ? bs.data().value : null);
     const before=JSON.stringify(current);
+    const bossBefore=JSON.stringify((window.PeskQuizStore.summaryOf(current)||{}).boss);
     const updated=change(current,all,cfg);
     const changed=before!==JSON.stringify(updated);
     if(changed)all[myStudentNum]={...updated,studentName:myStudentName||'',accountUid:myAccountUid||'',updatedAt:new Date().toISOString()};
-    let settlement = null;
+    // 보스 피해·칭호가 바뀌면 반 요약도 바로 고친다 (보스 체력은 모두가 같이 봐야 한다). 그 밖의 변화는 나중에 모아 올린다.
+    const bossChanged=changed && JSON.stringify((window.PeskQuizStore.summaryOf(all[myStudentNum])||{}).boss)!==bossBefore;
+    let settled = null;
     if(window.PeskBossQuest && window.RPG.bossState(cfg,all,students).on && window.RPG.bossState(cfg,all,students).cleared){
       const shopRef=window._fsDoc(db,'classrooms',roomId,'data','tesk-shop');
       const purchasesRef=window._fsDoc(db,'classrooms',roomId,'data','pesk-purchases');
       const [ss,ps]=await Promise.all([txn.get(shopRef),txn.get(purchasesRef)]);
-      settlement=window.PeskBossQuest.plan(cfg,all,ss.exists()?ss.data().value:[],ps.exists()?ps.data().value:[]);
-      if(settlement.granted)txn.set(purchasesRef,{value:settlement.buys,updatedAt:new Date().toISOString()});
+      settled=await window.PeskBossQuest.settleInTxn(qs,qctx,cfg,ss.exists()?ss.data().value:[],ps.exists()?ps.data().value:[]);
+      if(settled && settled.result.granted)txn.set(purchasesRef,{value:settled.result.buys,updatedAt:new Date().toISOString()});
     }
-    const next=settlement?settlement.all:all;
-    if(changed || settlement?.changed)txn.set(ref,{value:next,updatedAt:new Date().toISOString()});
-    result={all:next,cfg,settlement};
+    const records=settled ? {...settled.records} : {};
+    if(changed || records[myStudentNum])records[myStudentNum]=records[myStudentNum] || all[myStudentNum];
+    let summary=null;
+    if(Object.keys(records).length)summary=qs.save(qctx,records,(settled||bossChanged)?{summary:true,ledger:settled?settled.ledger:undefined}:{});
+    const next={...(summary||all)};
+    next[myStudentNum]=records[myStudentNum] || all[myStudentNum];
+    result={all:next,cfg,settlement:settled?settled.result:null,dirty:changed && !(settled||bossChanged),summaryWritten:!!(settled||bossChanged)};
   });
+  if(result.summaryWritten)_quizSummaryDirty=false;
+  if(result.dirty)markQuizSummaryDirty();
   _applyQuizProgress(result.all);_applyBossCfg(result.cfg);
   if(result.settlement){applyClassBossPurchases(result.settlement.buys);myPurchases=result.settlement.buys.filter(recordBelongsToMe);if(result.settlement.changed)showFeedbackNotice('🎉 보스 처치! 참여자 개인 보상과 학급 전체 보상을 지급했어요.');}
 }
 async function rpgReloadProgress(){
   try{
-    const [snap,boss,config]=await Promise.all(['pesk-quiz-progress','pesk-class-boss','pesk-quiz-config'].map(key=>window._fsGetDoc(window._fsDoc(window._db,'classrooms',roomId,'data',key))));
-    _applyQuizProgress(snap.exists() ? snap.data().value : {});
+    const [all,boss,config]=await Promise.all([loadQuizProgressView(),...['pesk-class-boss','pesk-quiz-config'].map(key=>window._fsGetDoc(window._fsDoc(window._db,'classrooms',roomId,'data',key)))]);
+    _applyQuizProgress(all);
     _applyBossCfg(boss.exists() ? boss.data().value : null);
     if(config.exists())_applyQuizConfig(config.data().value);
   }catch(e){console.warn('모험 기록 새로고침 실패',e);}
@@ -8460,19 +8491,20 @@ async function qzCommit(q, right, battleInput){
     return;
   }
   const db = window._db;
-  const progRef  = window._fsDoc(db,'classrooms',roomId,'data','pesk-quiz-progress');
+  const qs = quizStore();
   const studRef  = window._fsDoc(db,'classrooms',roomId,'data','tesk-students');
   const configRef = window._fsDoc(db,'classrooms',roomId,'data','pesk-quiz-config');
   let out = null;
 
   await runLearningTransaction(db, async (txn)=>{
-    const [progSnap, studSnap, configSnap] = await Promise.all([txn.get(progRef), txn.get(studRef), txn.get(configRef)]);
+    // 내 학생 문서만 읽고 쓴다 — 친구들이 동시에 풀어도 서로 기다리지 않는다
+    const [qctx, studSnap, configSnap] = await Promise.all([qs.open(txn, myStudentNum), txn.get(studRef), txn.get(configRef)]);
     const c=Object.assign({},QZ_DEFAULT,configSnap.exists() ? configSnap.data().value : qzCfg());
     const units=q.subject==='math'?c.mathUnits:c.subjectUnits?.[q.subject];
     const selectedUnits=Array.isArray(units)?units.map(Number):[];
     if(battleInput && (Number(q.grade)!==Number(c.grade) || (q.subject!=='english' && (Number(q.term)!==Number(c.term) || (selectedUnits.length && !selectedUnits.includes(Number(q.unitNo)))))))throw new Error('STALE_QUESTION');
-    const all  = progSnap.exists() ? (progSnap.data().value || {}) : {};
-    const prevRaw = all[myStudentNum] || all[String(myStudentNum)] || {};
+    const all  = qctx.all;
+    const prevRaw = all[myStudentNum] || {};
     const prev = {
       xp: Number(prevRaw.xp||0), tried: Number(prevRaw.tried||0), correct: Number(prevRaw.correct||0),
       daily: (prevRaw.daily && typeof prevRaw.daily==='object') ? prevRaw.daily : {},
@@ -8561,14 +8593,15 @@ async function qzCommit(q, right, battleInput){
         out = {students: allStudents};
       }
     }
-    txn.set(progRef, {value: all, updatedAt:new Date().toISOString()});
-    out = Object.assign(out||{}, {gainXp, gainCoin, before, after, all, unitKey,guarded:!!combat?.guarded, fragGain, graduated});
+    qs.save(qctx, {[myStudentNum]: all[myStudentNum]});
+    out = Object.assign(out||{}, {gainXp, gainCoin, before, after, mine: all[myStudentNum], unitKey,guarded:!!combat?.guarded, fragGain, graduated});
   });
 
   if(!out) return;
   if(out.students) students = out.students;
-  allQuizProgress = out.all;
-  myQuiz = out.all[myStudentNum];
+  allQuizProgress = withMyQuiz(allQuizProgress);
+  allQuizProgress[myStudentNum] = myQuiz = out.mine;
+  markQuizSummaryDirty();   // 일별 푼 수는 반 요약에 나중에 모아 올린다
 
   // 정답 PET_QUIZ_PER_CARE 개마다 펫 친밀도 +1 (서버에 저장된 누적 정답 수 기준)
   if(right){
@@ -8657,7 +8690,7 @@ function petTick(on){
    · 선생님이 승인한 지문만, 공개일부터 '놓친 회차 기간'까지 풀 수 있다.
    · 처음 채점한 정답 수를 먼저 저장한다 → 새로고침해도 첫 점수는 바뀌지 않는다.
    · 4문항을 모두 맞히면 완료. 보상은 서버 문서의 설정과 첫 점수로 한 번만 계산한다.
-   · 기록: pesk-quiz-progress[내 번호].literacy[날짜] = {first, done, coin, essay, essayOk}
+   · 기록: 내 모험 기록(pesk-quiz-progress/students/{번호}).literacy[날짜] = {first, done, coin, essay, essayOk}
 ───────────────────────────────────────── */
 let litDoc = {cfg: null, sheets: {}};
 let litView = null;   // {date, answers:{blanks, choice}, marks, msg}
@@ -8849,19 +8882,19 @@ async function litSendEssay(){
 async function litCommit(date, kind, arg){
   if(!window._fbReady || !window._db || !roomId || !window._fsRunTxn) throw new Error('CONNECTION_REQUIRED');
   const db = window._db;
-  const progRef = window._fsDoc(db,'classrooms',roomId,'data','pesk-quiz-progress');
+  const qs = quizStore();
   const studRef = window._fsDoc(db,'classrooms',roomId,'data','tesk-students');
   const litRef  = window._fsDoc(db,'classrooms',roomId,'data','pesk-literacy');
   let out = null;
   await runLearningTransaction(db, async (txn) => {
-    const [progSnap, studSnap, litSnap] = await Promise.all([txn.get(progRef), txn.get(studRef), txn.get(litRef)]);
+    const [qctx, studSnap, litSnap] = await Promise.all([qs.open(txn, myStudentNum), txn.get(studRef), txn.get(litRef)]);
     const lv = litSnap.exists() ? (litSnap.data().value || {}) : {};
     const cfg = LiteracyCore.normalizeCfg(lv.cfg);
     const sheet = lv.sheets && lv.sheets[date];
     const today = todayISO();
     if(!sheet || sheet.status !== 'approved' || LiteracyCore.stateOn(date, today, cfg.graceDays) !== 'open') throw new Error('LIT_CLOSED');
-    const all = progSnap.exists() ? (progSnap.data().value || {}) : {};
-    const key = all[myStudentNum] ? myStudentNum : String(myStudentNum);
+    const all = qctx.all;
+    const key = myStudentNum;
     const me = Object.assign({}, all[key] || {});
     const lit = Object.assign({}, me.literacy || {});
     const rec = Object.assign({}, lit[date] || {});
@@ -8902,10 +8935,10 @@ async function litCommit(date, kind, arg){
     const keep = LiteracyCore.addDays(today, -150);
     Object.keys(lit).forEach(d => { if(d < keep) delete lit[d]; });
     all[key] = Object.assign(me, {literacy: lit, studentName: myStudentName || '', accountUid: myAccountUid || '', updatedAt: now});
-    txn.set(progRef, {value: all, updatedAt: now});
-    out = Object.assign(out || {}, {all, gain, before, after, first: rec.first, tickets: ticketsOut});
+    qs.save(qctx, {[key]: all[key]});
+    out = Object.assign(out || {}, {mine: all[key], gain, before, after, first: rec.first, tickets: ticketsOut});
   });
-  if(out && out.all){ _applyQuizProgress(out.all); }
+  if(out && out.mine){ const view = withMyQuiz(allQuizProgress); view[myStudentNum] = out.mine; _applyQuizProgress(view); markQuizSummaryDirty(); }
   if(out && out.students) students = out.students;
   return out;
 }
@@ -9097,23 +9130,24 @@ async function avGrantItem(id, cost, message){
   if(_avBusy) return;
   if(!window._fbReady || !window._db || !roomId || !window._fsRunTxn) return showFeedbackNotice('인터넷에 연결된 뒤 다시 시도해 주세요.');
   const db = window._db, now = new Date().toISOString();
-  const progRef = window._fsDoc(db,'classrooms',roomId,'data','pesk-quiz-progress');
+  const qs = quizStore();
   const avRef = window._fsDoc(db,'classrooms',roomId,'data','pesk-avatars');
   _avBusy = true;
   try{
     let out = null;
     await runLearningTransaction(db, async txn => {
-      const [ps, as] = await Promise.all([txn.get(progRef), txn.get(avRef)]);
-      const all = ps.exists() ? (ps.data().value || {}) : {}, allAv = as.exists() ? (as.data().value || {}) : {};
+      const [qctx, as] = await Promise.all([qs.open(txn, myStudentNum), txn.get(avRef)]);
+      const all = withMyQuiz(allQuizProgress), allAv = as.exists() ? (as.data().value || {}) : {};
+      all[myStudentNum] = qctx.mine;
       const prevAv = allAv[myStudentNum] || allAv[String(myStudentNum)] || {};
       const owned = new Set(Array.isArray(prevAv.owned) ? prevAv.owned : []);
       if(owned.has(id)){ out = {all, allAv}; return; }
       if(cost){
-        const key = all[myStudentNum] ? myStudentNum : String(myStudentNum);
+        const key = myStudentNum;
         const me = {...(all[key] || {})};
         me.frags = PG().spend(me.frags, cost);   // 부족하면 NOT_ENOUGH 로 멈춘다
         all[key] = {...me, studentName: myStudentName || '', accountUid: myAccountUid || '', updatedAt: now};
-        txn.set(progRef, {value: all, updatedAt: now});
+        qs.save(qctx, {[key]: all[key]});
       }
       owned.add(id);
       const a = avState();
@@ -9176,6 +9210,7 @@ async function logout(){
   if(_loggingOut) return;
   _loggingOut = true;
   captureWritingDraftFromDom();
+  try{ await pullQuizProgress(true); }catch(_e){}   // 반 요약에 밀린 내 기록을 올리고 나간다
   try{
     if(window._auth && window._signOut) await window._signOut(window._auth);
   }catch(e){
@@ -9580,10 +9615,13 @@ function subscribeToUpdates(){
   // 반 전체 모험 기록은 실시간으로 받지 않는다 — 한 명이 저장할 때마다 접속한 모두가 다시 읽어
   // 무료 읽기 한도를 넘겼다. 내 기록은 저장할 때 바로 반영되고, 친구 기록은 화면을 열 때·3분마다 받는다.
   _quizPullAt = Date.now();   // 첫 화면은 시작할 때 이미 읽었다
-  const quizTimer = setInterval(()=>{ if(avAnyVisible() && recentlyActive()) pullQuizProgress(); }, 180000);
-  const quizVisible = ()=>{ if(!document.hidden && avAnyVisible()) pullQuizProgress(); };
+  // 밀린 내 요약은 3분마다 올린다(받기도 함께). 화면을 떠날 때도 올린다. 쓰기 한도(하루 2만)를 아끼려고 문제마다 올리지 않는다.
+  const quizTimer = setInterval(()=>{ if(_quizSummaryDirty || (avAnyVisible() && recentlyActive())) pullQuizProgress(); }, 180000);
+  const quizVisible = ()=>{ if(document.hidden) pullQuizProgress(true); else if(avAnyVisible()) pullQuizProgress(); };
+  const quizLeave = ()=>pullQuizProgress(true);
   document.addEventListener('visibilitychange', quizVisible);
-  _unsubs.push(()=>{ clearInterval(quizTimer); document.removeEventListener('visibilitychange', quizVisible); });
+  window.addEventListener('pagehide', quizLeave);
+  _unsubs.push(()=>{ clearInterval(quizTimer); document.removeEventListener('visibilitychange', quizVisible); window.removeEventListener('pagehide', quizLeave); });
 
   // 상담 신청 상태
   _unsubs.push(window._fsOnSnapshot(

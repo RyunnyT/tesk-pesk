@@ -79,9 +79,45 @@
     Object.assign(row, {usedQty:1, status:'used_all', completedAt:at, completedBy:'teacher'});
     return rows;
   }
-  async function settle({db, ref, runTransaction}){
+  /* 학생별 문서(PeskQuizStore) 트랜잭션 안에서 정산한다.
+     ctx.all 은 반 요약 + (있으면) 내 전체 기록. 보상을 받는 참여자는 전체 기록을 따로 읽어 와서 고친다.
+     쓰기는 하지 않는다 — 부르는 쪽이 store.save(ctx, out.records, {summary:true, ledger:out.ledger}) 로 저장한다. */
+  async function settleInTxn(store, ctx, cfg, items, purchases, at = new Date().toISOString()){
+    const state = RPG.bossState(cfg, ctx.all, []);
+    if(!state.on || !state.cleared) return null;
+    const rounds = (ctx.all.__classBossQuest || {}).rounds || {};
+    if(own(rounds, state.cfg.roundId)) return null;
+    const map = {...ctx.all};
+    for(const [k, rec] of Object.entries(ctx.all)){
+      if(!/^\d+$/.test(k) || Number(k) <= 0 || (ctx.num != null && Number(k) === Number(ctx.num))) continue;
+      if(RPG.bossTier(rec && rec.boss, state.cfg) <= 0) continue;
+      map[k] = await store.loadFull(ctx, k);
+    }
+    const result = plan(cfg, map, items, purchases, at);
+    if(!result.changed) return null;
+    const records = {};
+    result.participants.forEach(k => { records[k] = result.all[k]; });
+    return {result, records, ledger: result.all.__classBossQuest};
+  }
+  async function settle({db, ref, runTransaction, store, num = null}){
     let output;
-    await runTransaction(db, async txn => {
+    if(store) await runTransaction(db, async txn => {
+      const ctx = await store.open(txn, num, {cls:true});
+      const snaps = await Promise.all(['pesk-class-boss','tesk-shop','pesk-purchases'].map(key => txn.get(ref(key))));
+      const [cfgRaw, items, buys] = snaps.map(s => s.exists() ? s.data().value : undefined);
+      const at = new Date().toISOString();
+      const out = await settleInTxn(store, ctx, cfgRaw, items, buys, at);
+      output = out ? out.result : {all:ctx.all, buys:Array.isArray(buys) ? buys : [], changed:false, granted:0, participants:[], tiers:{}};
+      output.cfg = RPG.normalizeBoss(cfgRaw);
+      if(out){
+        const summary = store.save(ctx, out.records, {summary:true, ledger:out.ledger});
+        if(out.result.granted) txn.set(ref('pesk-purchases'), {value:out.result.buys, updatedAt:at});
+        // 화면용: 반 요약 + 내 전체 기록
+        output.all = {...summary};
+        if(num != null) output.all[num] = out.records[num] || ctx.mine;
+      }
+    });
+    else await runTransaction(db, async txn => {
       const keys = ['pesk-class-boss','pesk-quiz-progress','tesk-shop','pesk-purchases'];
       const snaps = await Promise.all(keys.map(key => txn.get(ref(key))));
       const values = snaps.map(s => s.exists() ? s.data().value : undefined);
@@ -95,5 +131,5 @@
     });
     return output;
   }
-  return {GOAL_ID, rewards, awardId, plan, complete, settle};
+  return {GOAL_ID, rewards, awardId, plan, complete, settle, settleInTxn};
 });

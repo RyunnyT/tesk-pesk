@@ -50,6 +50,6 @@ test('a slow secondary economy log cannot hold a committed answer in saving stat
   f.run('rpgEnsureQuestion();rpgQ.responseMode="short";rpgQ.inputKind="number";rpgQ.answer=12');
   f.elements['rpg-short-answer']={value:'12',focus(){}};
   await f.c.rpgSubmitShort();
-  assert.equal(f.docs['pesk-quiz-progress'][1].correct,1);
+  assert.equal(f.rec(1).correct,1);
   assert.equal(f.run('rpgBusy'),false);assert.equal(f.run('qzBusy'),false);
 });

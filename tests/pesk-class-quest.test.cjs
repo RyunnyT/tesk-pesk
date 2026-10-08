@@ -46,10 +46,10 @@ test('actual final attack saves XP and separate inventories atomically without d
   const f=fixture();Object.assign(f.docs,{'pesk-class-boss':{...cfg,rewardXp:75,rewardItemId:'pencil',rewardItemQty:1},'tesk-shop':items,'pesk-purchases':[]});
   f.docs['pesk-quiz-progress']=structuredClone(progress);f.docs['pesk-quiz-progress'][1].boss.dmg=59;
   await f.c.rpgMutateProgress(current=>({...current,boss:{roundId:'round1',dmg:60}}));
-  assert.equal(f.docs['pesk-quiz-progress'][1].xp,95);assert.equal(f.docs['pesk-quiz-progress'][2].xp,105);
+  assert.equal(f.rec(1).xp,95);assert.equal(f.rec(2).xp,105);
   assert.equal(f.docs['pesk-purchases'].length,3);
   await f.c.rpgMutateProgress(current=>current);
-  assert.equal(f.docs['pesk-quiz-progress'][1].xp,95);assert.equal(f.docs['pesk-purchases'].length,3);
+  assert.equal(f.rec(1).xp,95);assert.equal(f.docs['pesk-purchases'].length,3);
   assert.equal(f.run('myPurchases.length'),1);assert.equal(f.run('classBossRewards.length'),1);
 });
 

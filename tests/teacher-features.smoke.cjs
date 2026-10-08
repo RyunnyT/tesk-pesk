@@ -249,13 +249,15 @@ const JSZip=require('jszip');
         const snap=r=>{const v=store.get(key(r));return {id:r.id,exists:()=>v!==undefined,data:()=>v};};
         window._fsGetDoc=async r=>{if(window._failKeys.has(r.id))throw new Error('read fail '+r.id);return snap(r);};
         window._fsSetDoc=async(r,d)=>{if(window._failKeys.has(r.id))throw new Error('write fail '+r.id);store.set(key(r),JSON.parse(JSON.stringify(d)));};
-        window._fsRunTxn=async(db,fn)=>{const staged=[];const txn={get:async r=>{if(window._failKeys.has(r.id))throw new Error('txn fail '+r.id);return snap(r);},set:(r,d)=>staged.push([key(r),JSON.parse(JSON.stringify(d))])};
-          const out=await fn(txn);if(window._txnDelay)await new Promise(res=>setTimeout(res,window._txnDelay));staged.forEach(([k,d])=>store.set(k,d));return out;};
+        window._fsRunTxn=async(db,fn)=>{const staged=[];const txn={get:async r=>{if(window._failKeys.has(r.id))throw new Error('txn fail '+r.id);return snap(r);},set:(r,d)=>staged.push([key(r),JSON.parse(JSON.stringify(d))]),delete:r=>staged.push([key(r),undefined])};
+          const out=await fn(txn);if(window._txnDelay)await new Promise(res=>setTimeout(res,window._txnDelay));staged.forEach(([k,d])=>d===undefined?store.delete(k):store.set(k,d));return out;};
         const put=(k,v)=>store.set('classrooms/'+TESK_ROOM+'/data/'+k,{value:v});
         const roster=students.map(s=>({...s}));
         put('tesk-students',[...roster,{num:30,name:'다른기기학생',points:5}]);
         put('pesk-checklists',{'2026-09-01':{c1:{1:{checked:true},2:{checked:true}}}});
         put('pesk-quiz-progress',{1:{xp:3},2:{xp:4}});
+        put('pesk-quiz-progress/students/1',{xp:5});put('pesk-quiz-progress/students/2',{xp:6});
+        put('pesk-quiz-summary',{1:{daily:{}},2:{daily:{}}});
         put('pesk-purchase-log',[{studentNum:1,type:'shop_buy',delta:-5},{studentNum:2,type:'shop_buy',delta:-3}]);
         put('pesk-deposits',{1:[{amount:10}],2:[{amount:20}]});
         records[1]={fields:{comprehensive:'삭제될 기록임.'},notes:[],year:RecordCheck.schoolYear(),name:students[0].name};
@@ -267,10 +269,10 @@ const JSZip=require('jszip');
       const del1=frame.evaluate(()=>deleteStudent(1));await confirmNext();await del1;
       const after=await frame.evaluate(()=>{const g=k=>window._memStore.get('classrooms/'+TESK_ROOM+'/data/'+k)?.value;
         const ex=examResults.find(e=>e.id==='exdel');
-        return {roster:g('tesk-students').map(s=>s.num),check:Object.keys(g('pesk-checklists')['2026-09-01'].c1),quiz:Object.keys(g('pesk-quiz-progress')),log:g('pesk-purchase-log').length,dep:Object.keys(g('pesk-deposits')),
+        return {roster:g('tesk-students').map(s=>s.num),check:Object.keys(g('pesk-checklists')['2026-09-01'].c1),quiz:Object.keys(g('pesk-quiz-progress')),quizDocs:[1,2].filter(n=>g('pesk-quiz-progress/students/'+n)),quizSummary:Object.keys(g('pesk-quiz-summary')),log:g('pesk-purchase-log').length,dep:Object.keys(g('pesk-deposits')),
           rec:!!records[1],exNums:ex.results.map(r=>r.num),avg:ex.avgScore,aw:Object.keys(challengeAwards).filter(k=>k.startsWith('manual:ch1')),local:students.some(s=>Number(s.num)===1)};});
       assert.ok(!after.roster.includes(1));assert.ok(after.roster.includes(30));assert.ok(!after.local);
-      assert.deepEqual(after.check,['2']);assert.deepEqual(after.quiz,['2']);assert.equal(after.log,1);assert.deepEqual(after.dep,['2']);
+      assert.deepEqual(after.check,['2']);assert.deepEqual(after.quiz,['2']);assert.deepEqual(after.quizDocs,[2]);assert.deepEqual(after.quizSummary,['2']);assert.equal(after.log,1);assert.deepEqual(after.dep,['2']);
       assert.equal(after.rec,false);assert.deepEqual(after.exNums,[2]);assert.equal(after.avg,100);assert.deepEqual(after.aw,['manual:ch1:11']);
       // 2) 한 단계라도 실패하면 학생을 명단에서 빼지 않습니다.
       await frame.evaluate(()=>window._failKeys.add('pesk-deposits'));

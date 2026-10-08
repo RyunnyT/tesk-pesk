@@ -8,7 +8,7 @@ function fixture(){
     localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
     document:{getElementById:el,querySelector:()=>null,querySelectorAll:()=>[],addEventListener(){},documentElement:{style:{setProperty(){}}}},
     setTimeout(){},setInterval(){},clearInterval(){},clearTimeout(){},requestAnimationFrame(){},cancelAnimationFrame(){},addEventListener(){},alert(){}};
-  context.window=context;context.RPG=G;context.PeskBossQuest=require('../shared/pesk-boss-quest.js');vm.createContext(context);
+  context.window=context;context.RPG=G;context.PeskBossQuest=require('../shared/pesk-boss-quest.js');context.PeskQuizStore=require('../shared/pesk-quiz-store.js');vm.createContext(context);
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../shared/pesk-class-quest-ui.js'),'utf8'),context);
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../shared/economy-ownership.js'),'utf8'),context);
   for(const name of ['quiz-bank.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',name),'utf8'),context);
@@ -24,6 +24,7 @@ function fixture(){
   context.incoming=structuredClone(docs['pesk-quiz-progress']);context._applyQuizProgress(context.incoming);
   context._applyBossCfg(docs['pesk-class-boss']);
   vm.runInContext('students=[{num:1,name:"학생",points:0}]; myAvatar={equipped:{},owned:[]};',context);
-  return {c:context,docs,date,storage,elements,fail:()=>{fail=true;},run:code=>vm.runInContext(code,context)};
+  return {c:context,docs,date,storage,elements,fail:()=>{fail=true;},run:code=>vm.runInContext(code,context),
+    rec:n=>docs[String(n)]||docs['pesk-quiz-progress'][n]};   // 학생별 문서(fake ref = 마지막 경로 조각)가 있으면 그것, 없으면 옛 묶음 문서
 }
 module.exports=fixture;
