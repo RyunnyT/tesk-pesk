@@ -22,13 +22,13 @@
 <script src="quiz-bank.js?v=20261005map1"></script>
 <!-- 학습 RPG: 실력 레이팅·유형별 생성기 / 몬스터·경험치 -->
 <script src="quiz-rating.js?v=20260912mixed1"></script>
-<script src="rpg-monsters.js?v=20261005map1"></script>
+<script src="rpg-monsters.js?v=20261009fail1"></script>
 <script src="boss-sprites.js"></script>
 <script src="shared/pesk-writing-store.js?v=20261006quota1"></script>
 <script src="shared/pesk-quiz-store.js?v=20261006split1"></script>
-<script src="shared/econ-core.js?v=20261009econ2"></script>
+<script src="shared/econ-core.js?v=20261009seat3"></script>
 <script src="shared/pesk-econ-ui.js?v=20261009econ2"></script>
-<script src="shared/pesk-seat-auction.js?v=20261009seat1"></script>
+<script src="shared/pesk-seat-auction.js?v=20261009seat3"></script>
 <script src="shared/writing-proofread.js?v=20260928wr1"></script>
 <script src="shared/pesk-learning-sync.js?v=20260918"></script>
 <script src="shared/peer-survey.js?v=20260920"></script>
@@ -41,7 +41,7 @@
 <script src="shared/economy-ownership.js?v=20260930bank1"></script>
 <script src="shared/pesk-boss-catalog.js?v=20260910rpg2"></script>
 <script src="shared/pesk-boss-quest.js?v=20261006split1"></script>
-<script src="shared/pesk-class-quest-ui.js?v=20261006split1"></script>
+<script src="shared/pesk-class-quest-ui.js?v=20261009fail1"></script>
 <link rel="stylesheet" href="shared/pesk-combat.css?v=20260918tablet1">
 <!-- Firebase SDK -->
 <script type="module">
@@ -2228,7 +2228,7 @@ function buildTodayTasks(me){
   }
   // 우리 반 보스
   try{
-    if(window.RPG && bossOn() && !bossNow().cleared && todoOn('adventure')){
+    if(window.RPG && bossOn() && !bossNow().cleared && !bossNow().failed && todoOn('adventure')){
       const e = bossEntry();
       if(e.usedToday) tasks.push({icon:'🤝', done:true, go:"openAdventure('boss')", title:'오늘 보스 도전 완료', desc:'보스는 하루에 한 번 도전할 수 있어요.'});
       else if(e.pending || e.ok) tasks.push({icon:'🤝', go:"openAdventure('boss')", hot:true, title:'우리 반 보스에 도전할 수 있어요!', desc:'친구들과 함께 보스를 쓰러뜨려요. 지금 ' + bossNow().pct + '% 진행됐어요.'});
@@ -6299,6 +6299,11 @@ function buildBossPanel(me){
   const wrap = action => '<div class="boss-panel">' + bossStageHtml() + action + bossMyTierHtml() + card + bossRankingHtml() + roster + '</div>';
 
   if(b.cleared) return wrap('');
+  // 목표 날짜까지 못 쓰러뜨렸다 — 그날 안에 시작해 둔 보스전만 마저 저장할 수 있다
+  const startedInTime = e.pending && String(window.RPG.normalizeBossRec(qzState().boss).day || '') <= b.cfg.deadline;
+  if(b.failed && !startedInTime)
+    return wrap('<div class="boss-lock">⏰ <b>목표 날짜(' + escHtml(b.cfg.deadline) + ')까지 보스를 쓰러뜨리지 못했어요.</b>'
+      + '<br>이번 보스는 실패예요. 남은 체력 ' + b.remainText + ' · 보상은 없어요. 선생님이 새 보스를 내면 다시 함께 도전해요!</div>');
   if(rpgBusy) return wrap('<div class="combat-action" role="status" data-learning-save>보스전 기록을 저장하고 있어요…</div>');
   if(e.pending) return wrap(bossActionHtml(e.pending));
   if(e.usedToday)
@@ -6356,7 +6361,7 @@ function bossRankingHtml(){
 /* 모험 화면 위쪽 한 줄 안내 — 보스 도전 자격이 생기면 보스 탭으로 보낸다 */
 function bossNudgeHtml(){
   const b = bossNow();
-  if(!b || !b.on || b.cleared) return '';
+  if(!b || !b.on || b.cleared || b.failed) return '';
   const e = bossEntry();
   if(e.pending || e.ok)
     return '<div class="boss-nudge ready">🤝 <b>오늘 우리 반 보스에 도전할 수 있어요!</b>'
@@ -6386,7 +6391,7 @@ async function bossStartFight(){
     try{
       await rpgMutateProgress((current,all,cfg)=>{
         const G = window.RPG, state = G.bossState(cfg,all,students);
-        if(!state.on || state.cleared) throw new Error('BOSS_UNAVAILABLE');
+        if(!state.on || state.cleared || state.failed) throw new Error('BOSS_UNAVAILABLE');   // 기간이 지나 실패한 보스에는 새로 도전할 수 없다
         const e = G.bossChallenge(cfg, current, qzToday());
         if(e.pending) return current;            // 다른 창에서 이미 시작했다 — 이어서 싸운다
         if(!e.unlocked || e.usedToday) throw new Error('BOSS_UNAVAILABLE');
@@ -6434,7 +6439,8 @@ async function bossFinishFight(options={}){
     await rpgMutateProgress((current,all,cfg)=>{
       const G = window.RPG, rec = G.normalizeBossRec(current.boss), ticket = rec.pending;
       if(!ticket || ticket.id!==t.id) throw new Error('ATTACK_ALREADY_USED');
-      if(!cfg.enabled || cfg.roundId!==ticket.bossRound || G.bossState(cfg,all,students).cleared){
+      const st = G.bossState(cfg,all,students);
+      if(!cfg.enabled || cfg.roundId!==ticket.bossRound || st.cleared || (st.failed && !(rec.day && rec.day <= cfg.deadline))){
         outcome = {expired:true}; return {...current, boss:{...rec, pending:null}};
       }
       const g = G.normalizeGame(current.game);
@@ -6448,7 +6454,7 @@ async function bossFinishFight(options={}){
           return {...base, dmg:base.dmg + r.damage, days, pending:null};})()};
     });
     saved = true; bossShooterReport = null;
-    if(outcome.expired) bossFx = '보스전이 이미 끝났어요. 공동 보상을 확인해보세요!';
+    if(outcome.expired) bossFx = bossNow()?.failed ? '목표 날짜가 지나 이번 보스는 끝났어요.' : '보스전이 이미 끝났어요. 공동 보상을 확인해보세요!';
     else{
       rpgAnim = {kind:'hit', dmg:outcome.damage, prevPct:beforePct, weapon:t.weaponStyle};
       bossFx = (options.skip ? '📚 기본 공격 · ' : '⚔️ 보스에게 ') + outcome.damage.toLocaleString() + ' 피해!'
@@ -8016,7 +8022,8 @@ async function rpgReleaseAttack(automatic=false,position=0,options={}){
   try{
     await rpgMutateProgress((current,all,cfg)=>{
       const g=window.RPG.normalizeGame(current.game);
-      if(ticket.monsterId==='__boss__' && (!cfg.enabled || cfg.roundId!==ticket.bossRound || window.RPG.bossState(cfg,all,students).cleared)){
+      const bst=window.RPG.bossState(cfg,all,students),bday=window.RPG.normalizeBossRec(current.boss).day;
+      if(ticket.monsterId==='__boss__' && (!cfg.enabled || cfg.roundId!==ticket.bossRound || bst.cleared || (bst.failed && !(bday && bday <= cfg.deadline)))){
         if(!g.pendingAttack || g.pendingAttack.id!==ticket.id)throw new Error('ATTACK_ALREADY_USED');
         g.pendingAttack=null;g.monsterId=window.RPG.MONSTERS[0].id;g.hp=window.RPG.MONSTERS[0].hp;
         outcome={expired:true};return {...current,game:g};
@@ -8090,7 +8097,7 @@ function bossStageHtml(){
           + '<div class="rpg-hp-num">' + b.remainText + ' / ' + b.maxHp.toLocaleString() + '</div>')
     + (bossFx ? '<div class="rpg-fx">' + escHtml(bossFx) + '</div>' : '')
     + '<div class="boss-meta">👥 ' + b.joined + '명이 함께 · 내 기여 <b>' + me.dmg.toLocaleString() + '</b>'
-    + (b.cfg.deadline ? ' · ~' + escHtml(b.cfg.deadline) : '') + '</div>'
+    + (b.cfg.deadline ? ' · ~' + escHtml(b.cfg.deadline) + (b.cleared ? '' : b.failed ? ' <b>(기간 종료 · 실패)</b>' : b.daysLeft === 0 ? ' <b>(오늘 마감!)</b>' : b.daysLeft > 0 ? ' (D-' + b.daysLeft + ')' : '') : '') + '</div>'
     + (b.cfg.note ? '<div class="boss-note">' + escHtml(b.cfg.note) + '</div>' : '')
     + '</div>';
 }

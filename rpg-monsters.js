@@ -302,9 +302,9 @@ function nextTitle(gxp) {
    체력은 읽어서 합산한다. 실시간 구독도 이미 걸려 있어 친구가 때리면
    내 화면 체력바가 같이 내려간다.
 
-   못 깨면? 보스는 사라지지 않고 그대로 남는다. 주가 바뀌어도 체력이
-   유지되므로 "이번 주에 못 깼다"로 끝나지 않는다. 선생님이 새 보스를
-   낼 때 roundId 가 바뀌고 그때 데미지가 초기화된다.
+   못 깨면? 목표 날짜가 없으면 보스는 그대로 남는다. 목표 날짜가 있으면 그날(포함)까지
+   못 깼을 때 실패 — 새 도전을 막고 보상도 없다(그날 안에 시작한 보스전은 다음 날 저장돼도 인정).
+   선생님이 새 보스를 낼 때 roundId 가 바뀌고 그때 데미지가 초기화된다.
    ───────────────────────────────────────────────────────── */
 function normalizeBoss(raw) {
   const b = (raw && typeof raw === 'object') ? raw : {};
@@ -425,7 +425,7 @@ function bossChallenge(cfg, record, today) {
 }
 /* 전체 진행도에서 이번 판의 보스 상태를 계산한다.
    progressMap 은 pesk-quiz-progress 의 value 그대로. */
-function bossState(cfg, progressMap, students) {
+function bossState(cfg, progressMap, students, today) {
   const c = normalizeBoss(cfg);
   const src = (progressMap && typeof progressMap === 'object') ? progressMap : {};
   let total = 0;
@@ -438,6 +438,10 @@ function bossState(cfg, progressMap, students) {
     byNum[k] = rec.dmg;
   });
   const hp = Math.max(0, c.maxHp - total);
+  // 목표 날짜(포함)까지 쓰러뜨리지 못하면 실패 — 한국 시간 날짜로 비교한다
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(String(today || '')) ? String(today) : new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+  const failed = !!(c.enabled && c.roundId && c.deadline && hp > 0 && day > c.deadline);
+  const daysLeft = c.deadline && !failed ? Math.round((Date.parse(c.deadline) - Date.parse(day)) / 86400000) : null;
   const joined = Object.keys(byNum).length;
   const roster = Array.isArray(students) ? students : [];
   const contributors = roster
@@ -449,6 +453,7 @@ function bossState(cfg, progressMap, students) {
     maxHp: c.maxHp, hp, total,
     pct: Math.max(0, Math.min(100, Math.round(hp / c.maxHp * 100))),
     cleared: hp <= 0,
+    failed, daysLeft,
     joined, contributors,
     remainText: hp > 0 ? hp.toLocaleString() : '0'
   };

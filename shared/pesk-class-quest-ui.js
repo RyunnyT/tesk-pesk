@@ -27,7 +27,7 @@ function buildClassBossQuestCard(inQuest){
   const eligible=settlement?.participants?settlement.participants.includes(Number(myStudentNum)):mine>0;
   return '<div class="qz-goal' + (b?.cleared && b?.on ? ' done' : '') + '">'
     + '<div class="qz-goal-top"><b>🗿 우리 반 보스 무찌르기</b></div>'
-    + '<p class="qz-goal-note">' + (b?.on ? escHtml(b.cfg.name) + (b.cleared ? ' 처치 완료!' : ' · 남은 체력 ' + b.remainText + ' / ' + b.maxHp.toLocaleString()) : '선생님이 보스를 준비하고 있어요.') + '</p>'
+    + '<p class="qz-goal-note">' + (b?.on ? escHtml(b.cfg.name) + (b.cleared ? ' 처치 완료!' : b.failed ? ' · 목표 날짜가 지나 실패했어요' : ' · 남은 체력 ' + b.remainText + ' / ' + b.maxHp.toLocaleString()) : '선생님이 보스를 준비하고 있어요.') + '</p>'
     + (b?.on ? '<div class="qz-goal-bar"><i style="width:' + (100-b.pct) + '%"></i></div>' : '')
     + (b?.on?'<div class="qz-goal-sub"><span>함께 도전한 친구 '+b.joined+'명</span><span class="qz-goal-mine">내 기여 '+mine.toLocaleString()+' 데미지</span></div>':'')
     + '<p class="qz-goal-reward">👤 참여자 개인 보상 · ' + (personalNames || '설정된 보상 없음') + '</p>'
@@ -37,8 +37,8 @@ function buildClassBossQuestCard(inQuest){
         : '이번 보스에 1 이상의 데미지를 준 학생에게 처치 시 1회 자동 지급해요.'+(settlement?.participants?(eligible?' 나는 참여 보상 대상이에요.':' 나는 이번 판 참여 기록이 없어요.'):''))+'</p>'
     + '<p class="qz-goal-reward">🤝 학급 전체 보상 · ' + (rewardNames || '설정된 활동 없음') + '</p>'
     + '<p class="rpg-hint">체육 시간 등 공동 활동은 참여 여부와 관계없이 우리 반 모두가 함께 누려요.</p>'
-    + (inQuest && b?.on && !b.cleared ? '' : '<button class="qz-goal-claim" onclick="' + (b?.on && !b.cleared ? 'openClassBossQuest()' : 'openClassBossRewards()') + '">'
-    + (b?.on && !b.cleared ? '⚔️ 보스 잡으러 가기' : '🤝 우리 반 공동 보상 보기') + '</button>') + '</div>';
+    + (inQuest && b?.on && !b.cleared && !b.failed ? '' : '<button class="qz-goal-claim" onclick="' + (b?.on && !b.cleared && !b.failed ? 'openClassBossQuest()' : 'openClassBossRewards()') + '">'
+    + (b?.on && !b.cleared && !b.failed ? '⚔️ 보스 잡으러 가기' : '🤝 우리 반 공동 보상 보기') + '</button>') + '</div>';
 }
 function buildClassRewardInventory(){
   const rows = classBossRewards.slice().reverse();

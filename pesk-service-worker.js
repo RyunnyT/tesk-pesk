@@ -1,4 +1,4 @@
-const PESK_CACHE = 'pesk-shell-v59-economy';
+const PESK_CACHE = 'pesk-shell-v60-boss-deadline';
 const PESK_ASSETS = [
   './landing.html',
   './pesk.html',
@@ -9,14 +9,14 @@ const PESK_ASSETS = [
   './pet-sprites.js',
   './quiz-bank.js?v=20261005map1',
   './quiz-rating.js?v=20260912mixed1',
-  './rpg-monsters.js?v=20261005map1',
+  './rpg-monsters.js?v=20261009fail1',
   './shared/pesk-boss-quest.js?v=20261006split1',
-  './shared/pesk-class-quest-ui.js?v=20261006split1',
+  './shared/pesk-class-quest-ui.js?v=20261009fail1',
   './shared/pesk-writing-store.js?v=20261006quota1',
   './shared/pesk-quiz-store.js?v=20261006split1',
-  './shared/econ-core.js?v=20261009econ2',
+  './shared/econ-core.js?v=20261009seat3',
   './shared/pesk-econ-ui.js?v=20261009econ2',
-  './shared/pesk-seat-auction.js?v=20261009seat1',
+  './shared/pesk-seat-auction.js?v=20261009seat3',
   './shared/pesk-learning-sync.js?v=20260918',
   './shared/peer-survey.js?v=20260920',
   './shared/pesk-combat.js?v=20261005arena1',

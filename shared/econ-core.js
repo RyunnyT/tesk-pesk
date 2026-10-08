@@ -197,7 +197,8 @@ function seatAuctionState(a){
   const rows = Math.max(1, Math.min(10, int(layout.rows, 4))), cols = Math.max(1, Math.min(12, int(layout.cols, 6)));
   const lots = (Array.isArray(x.lots) ? x.lots : []).filter(l => l && Number.isInteger(Number(l.seat)) && Number(l.seat) >= 0 && Number(l.seat) < rows * cols)
     .map(l => ({seat: Number(l.seat), top: l.top && l.top.num != null ? {num: l.top.num, amount: int(l.top.amount), at: l.top.at} : null, bids: Number(l.bids) || 0, winner: l.winner != null ? l.winner : null}));
-  return {...x, kind: 'seats', layout: {rows, cols, pairDesks: layout.pairDesks !== false}, lots};
+  const voids = [...new Set((Array.isArray(layout.voids) ? layout.voids : []).map(Number).filter(i => Number.isInteger(i) && i >= 0 && i < rows * cols))].sort((p, q) => p - q);
+  return {...x, kind: 'seats', layout: {rows, cols, pairDesks: layout.pairDesks !== false, voids}, lots: lots.filter(l => !voids.includes(l.seat))};
 }
 function seatMinBid(a, seat){ const s = seatAuctionState(a), lot = s.lots.find(l => l.seat === Number(seat)); return lot && lot.top ? lot.top.amount + s.step : s.startPrice; }
 function placeSeatBid(raw, {num: who, seat, amount, cash, now = Date.now()}){
@@ -228,8 +229,9 @@ function closeSeatAuction(raw, {cancel = false, now = Date.now()} = {}){
 }
 /* 낙찰 결과를 자리표에 넣는다. 낙찰자는 낙찰 자리로, 그 자리에 있던 학생과 자리표에 없던 학생은 빈자리로.
    (남은 학생 배치는 선생님이 자리 두 개를 눌러 바꾼다) */
-function applySeatWinners(grid, rows, cols, winners, rosterNums){
-  const n = rows * cols, g = Array.from({length: n}, (_, i) => (Array.isArray(grid) && grid.length === n && grid[i] != null) ? Number(grid[i]) : null);
+function applySeatWinners(grid, rows, cols, winners, rosterNums, voids){
+  const n = rows * cols, blocked = new Set((voids || []).map(Number));
+  const g = Array.from({length: n}, (_, i) => (!blocked.has(i) && Array.isArray(grid) && grid.length === n && grid[i] != null) ? Number(grid[i]) : null);
   const won = Object.entries(winners || {}).map(([seat, who]) => [Number(seat), Number(who)]).filter(([s]) => s >= 0 && s < n);
   const winnerSet = new Set(won.map(([, w]) => w)), wonSeats = new Set(won.map(([s]) => s));
   for(let i = 0; i < n; i++) if(winnerSet.has(g[i])) g[i] = null;          // 낙찰자를 원래 자리에서 뺀다
@@ -237,7 +239,22 @@ function applySeatWinners(grid, rows, cols, winners, rosterNums){
   won.forEach(([s, w]) => { if(g[s] != null) displaced.push(g[s]); g[s] = w; });
   const placed = new Set(g.filter(x => x != null));
   (rosterNums || []).map(Number).forEach(x => { if(!placed.has(x) && !displaced.includes(x)) displaced.push(x); });
-  displaced.forEach(x => { const i = g.findIndex((v, k) => v == null && !wonSeats.has(k)); if(i >= 0) g[i] = x; });
+  displaced.forEach(x => { const i = g.findIndex((v, k) => v == null && !wonSeats.has(k) && !blocked.has(k)); if(i >= 0) g[i] = x; });
+  return g;
+}
+/* 자리표 모양 바꾸기 — 같은 줄·칸 위치는 그대로 두고, 새 모양 밖으로 나간 칸만 버린다 */
+function reshapeSeats({grid, voids, rows, cols}, nextRows, nextCols){
+  const n = nextRows * nextCols, g = Array(n).fill(null), v = [];
+  (grid || []).forEach((who, i) => { const r = Math.floor(i / cols), c = i % cols; if(who != null && r < nextRows && c < nextCols) g[r * nextCols + c] = Number(who); });
+  (voids || []).forEach(i => { const r = Math.floor(i / cols), c = i % cols; if(r < nextRows && c < nextCols) v.push(r * nextCols + c); });
+  return {grid: g, voids: v};
+}
+/* 자리표에 없는 학생을 번호순으로 빈 책상에 앉힌다 */
+function fillSeats(grid, rows, cols, rosterNums, voids){
+  const n = rows * cols, blocked = new Set((voids || []).map(Number));
+  const g = Array.from({length: n}, (_, i) => (!blocked.has(i) && Array.isArray(grid) && grid[i] != null) ? Number(grid[i]) : null);
+  const placed = new Set(g.filter(x => x != null));
+  (rosterNums || []).map(Number).sort((p, q) => p - q).forEach(x => { if(placed.has(x)) return; const i = g.findIndex((v, k) => v == null && !blocked.has(k)); if(i >= 0){ g[i] = x; placed.add(x); } });
   return g;
 }
 
@@ -307,7 +324,7 @@ const FEATURES = {fund: false, classIndex: false};
 
 const API = {FEATURES, gini, indicators, giniLabel, BANK_DEFAULTS, BANK_RECOMMENDED, RECOMMENDED_PLANS, bankSettings, depositEarlyPct, depositValueAt, depositRoom,
   WEALTH_DEFAULT, wealthSettings, wealthTax, payTax, fundState, donate, addToFund, allocate,
-  auctionState, minBid, placeBid, closeAuction, seatAuctionState, seatMinBid, placeSeatBid, closeSeatAuction, applySeatWinners, upsertLog, isPendingUse, logTime, weekKey, compactQuizRewards, splitForArchive, bytesOf,
+  auctionState, minBid, placeBid, closeAuction, seatAuctionState, seatMinBid, placeSeatBid, closeSeatAuction, applySeatWinners, reshapeSeats, fillSeats, upsertLog, isPendingUse, logTime, weekKey, compactQuizRewards, splitForArchive, bytesOf,
   INDEX_CODE, INDEX_NAME, INDEX_BASE_VALUE, indexPrice};
 if(typeof module === 'object' && module.exports) module.exports = API;
 root.EconCore = API;

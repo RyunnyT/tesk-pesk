@@ -103,3 +103,17 @@ test('seat auction: one top seat per student, escrow/refund per seat, close and 
   assert.equal(g[0],2);assert.equal(g[2],1);
   assert.deepEqual([...g].sort(),[1,2,3,4,5,6],'모두 한 번씩 앉는다');
 });
+
+test('seat chart: no-desk cells are skipped by winners, filling, reshaping and the planner',()=>{
+  const SP=require('../shared/seat-planner.js');
+  // 2줄×3칸, 1번 칸(0줄 1칸)은 책상 없음
+  assert.deepEqual(E.fillSeats([null,null,null,null,null,null],2,3,[3,1,2],[1]),[1,null,2,3,null,null]);
+  const g=E.applySeatWinners([1,null,2,3,4,5],2,3,{4:1},[1,2,3,4,5],[1]);
+  assert.equal(g[1],null,'책상 없는 칸에는 앉히지 않는다');assert.equal(g[4],1);assert.deepEqual(g.filter(x=>x!=null).sort(),[1,2,3,4,5]);
+  const r=E.reshapeSeats({grid:[1,null,2,3,4,5],voids:[1],rows:2,cols:3},3,2);
+  assert.deepEqual(r.voids,[1]);assert.deepEqual(r.grid,[1,null,3,4,null,null],'같은 줄·칸 위치를 유지하고 밖으로 나간 칸은 버린다');
+  assert.deepEqual(E.seatAuctionState({kind:'seats',layout:{rows:2,cols:3,voids:[1]},lots:[{seat:0},{seat:1}]}).lots.map(l=>l.seat),[0]);
+  const p=SP.plan({students:[1,2,3,4,5].map(num=>({num})),rows:2,cols:3,voids:[1],seed:3});
+  assert.equal(p.grid[1],null);assert.deepEqual(p.grid.filter(x=>x!=null).sort(),[1,2,3,4,5]);
+  assert.throws(()=>SP.plan({students:[1,2,3,4,5,6].map(num=>({num})),rows:2,cols:3,voids:[1]}),/자리 수\(5\)/);
+});

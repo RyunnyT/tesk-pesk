@@ -293,7 +293,9 @@
  /* ── 자리배치 ── */
  function seatState(){
   const raw=load('tesk-seats',{});
-  return {rows:Number(raw.rows)||4,cols:Number(raw.cols)||6,pairDesks:raw.pairDesks!==false,front:Array.isArray(raw.front)?raw.front.map(Number):[],
+  const rows=Number(raw.rows)||4,cols=Number(raw.cols)||6;
+  return {rows,cols,pairDesks:raw.pairDesks!==false,front:Array.isArray(raw.front)?raw.front.map(Number):[],
+   voids:Array.isArray(raw.voids)?raw.voids.map(Number).filter(i=>i>=0&&i<rows*cols):[],   // 책상 없는 칸 (자리 경매 화면에서 만든다)
    apart:Array.isArray(raw.apart)?raw.apart.filter(p=>Array.isArray(p)&&p.length===2).map(p=>p.map(Number)):[],grid:Array.isArray(raw.grid)?raw.grid:null,seed:Number(raw.seed)||1,createdAt:raw.createdAt||''};
  }
  function seatRelations(st){
@@ -315,7 +317,7 @@
   const sources=['교사 관찰 갈등 '+rel.conflict.length+'쌍','마음거리 먼 쌍 '+rel.distant.length+' · 가까운 쌍 '+rel.close.length,'설문 불편 지명 '+rel.discomfort.length+'건','교사 지정 떨어뜨리기 '+st.apart.length+'쌍'];
   let plan=null;
   if(st.grid&&st.grid.length===st.rows*st.cols){
-   const cost=root.SeatPlanner.pairCost(rel);plan={grid:st.grid,rows:st.rows,cols:st.cols,pairDesks:st.pairDesks,notes:[]};
+   const cost=root.SeatPlanner.pairCost(rel);plan={grid:st.grid,rows:st.rows,cols:st.cols,pairDesks:st.pairDesks,voids:st.voids,notes:[]};
    for(let r=0;r<st.rows;r++)for(let c=0;c<st.cols;c++){const i=r*st.cols+c;
     [[i,c+1<st.cols?i+1:-1,st.pairDesks?(c%2===0?1:.45):1],[i,r+1<st.rows?i+st.cols:-1,.25]].forEach(([x,y,w])=>{if(y<0)return;const a=st.grid[x],b=st.grid[y];if(a==null||b==null)return;const k=cost.get(a,b);if(k.why.length&&k.cost)plan.notes.push({a,b,why:k.why,kind:k.cost>0?'watch':'good',desk:w===1});});}
   }
@@ -336,6 +338,7 @@
  function seatGrid(p){
   let html='<div class="su-board">교탁</div><div class="su-seats" style="grid-template-columns:repeat('+p.cols+',minmax(0,1fr))">';
   for(let r=0;r<p.rows;r++)for(let c=0;c<p.cols;c++){const i=r*p.cols+c,n=p.grid[i];
+   if((p.voids||[]).includes(i)){html+='<div class="su-seat empty" style="visibility:hidden" aria-hidden="true"></div>';continue;}   // 책상 없는 칸
    const watch=p.notes.some(x=>x.kind==='watch'&&(x.a===n||x.b===n));
    html+='<button type="button" class="su-seat'+(n==null?' empty':'')+(watch?' watch':'')+(seatPick===i?' picked':'')+(p.pairDesks&&c%2===0?' left':'')+(p.pairDesks&&c%2===1?' right':'')+'" data-seat-i="'+i+'">'+(n==null?'빈자리':'<b>'+E(nameOf(n))+'</b><small>'+n+'번</small>')+'</button>';}
   return html+'</div>';
@@ -356,8 +359,9 @@
   const rows=Math.max(1,Math.min(10,Number(box?.querySelector('[data-seat=rows]')?.value)||st.rows)),cols=Math.max(1,Math.min(12,Number(box?.querySelector('[data-seat=cols]')?.value)||st.cols));
   const pairDesks=box?.querySelector('[data-seat=pair]')?.checked??st.pairDesks;
   try{
-   const p=root.SeatPlanner.plan({students:roster(),rows,cols,pairDesks,relations:seatRelations({...st,rows,cols}),seed});
-   saveSeats({...st,rows,cols,pairDesks,grid:p.grid,seed,createdAt:new Date().toISOString()});seatPick=null;redrawSeats();
+   const voids=rows===st.rows&&cols===st.cols?st.voids:[];   // 줄·칸을 바꾸면 책상 없는 칸 표시는 지운다
+   const p=root.SeatPlanner.plan({students:roster(),rows,cols,pairDesks,relations:seatRelations({...st,rows,cols}),seed,voids});
+   saveSeats({...st,rows,cols,pairDesks,voids,grid:p.grid,seed,createdAt:new Date().toISOString()});seatPick=null;redrawSeats();
   }catch(err){showToast('⚠️ '+err.message);}
  }
  function bindSeats(box){

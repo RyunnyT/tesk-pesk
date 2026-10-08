@@ -28,10 +28,11 @@
   }
   return out;
  }
- function plan({students,rows,cols,pairDesks=true,relations={},seed=1,iterations=4000}){
+ function plan({students,rows,cols,pairDesks=true,relations={},seed=1,iterations=4000,voids=[]}){
   const nums=students.map(s=>Number(s.num));
-  const seats=rows*cols;
-  if(nums.length>seats)throw new Error('자리 수('+seats+')가 학생 수('+nums.length+')보다 적어요. 줄이나 칸을 늘려주세요.');
+  const seats=rows*cols,blocked=new Set((voids||[]).map(Number));
+  const open=[...Array(seats).keys()].filter(i=>!blocked.has(i));   // 책상 없는 칸은 빼고 앉힌다
+  if(nums.length>open.length)throw new Error('자리 수('+open.length+')가 학생 수('+nums.length+')보다 적어요. 줄·칸을 늘리거나 책상 없는 칸을 줄여주세요.');
   const cost=pairCost(relations),edges=neighbors(rows,cols,pairDesks),front=new Set(relations.front||[]);
   const frontLimit=pairDesks?cols:cols;   // 첫 줄 자리 수
   const total=g=>{let t=0;for(const [i,j,w] of edges){const a=g[i],b=g[j];if(a!=null&&b!=null)t+=w*cost.get(a,b).cost;}
@@ -43,10 +44,10 @@
    const order=nums.slice();for(let i=order.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
    // 앞자리 학생을 먼저 앞줄에
    order.sort((a,b)=>(front.has(b)?1:0)-(front.has(a)?1:0));
-   order.forEach((n,i)=>{g[i]=n;});
+   order.forEach((n,i)=>{g[open[i]]=n;});
    let score=total(g);
    for(let it=0;it<iterations;it++){
-    const i=Math.floor(rand()*seats),j=Math.floor(rand()*seats);if(i===j||(g[i]==null&&g[j]==null))continue;
+    const i=open[Math.floor(rand()*open.length)],j=open[Math.floor(rand()*open.length)];if(i===j||(g[i]==null&&g[j]==null))continue;
     [g[i],g[j]]=[g[j],g[i]];const s=total(g);
     if(s<=score)score=s;else [g[i],g[j]]=[g[j],g[i]];
    }

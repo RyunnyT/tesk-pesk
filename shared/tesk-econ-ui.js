@@ -458,43 +458,116 @@ async function listClassIndex(){
   showToast('🧺 우리반 펀드를 상장했어요');
 }
 
-/* ── 자리 경매 (교사) ── 자리배치 화면의 자리표(줄·칸·짝 책상)를 바탕으로 경매할 자리를 고른다.
+/* ── 자리 경매 (교사) ── 자리표는 하나다: 친구관계 분석 → 자리배치(tesk-seats)와 같은 자리표를 여기서도 고친다.
+   · 🪑 경매 자리 고르기 · 🔄 자리 바꾸기(두 자리를 차례로 누르면 서로 바뀜) · ⬜ 책상 놓기/빼기(책상 없는 칸)
+   · 줄·칸·짝 책상·학생 위치·책상 없는 칸을 바꾸면 자리배치에 바로 저장된다.
    학생 화면에는 자리표 모양과 금액만 보이고, 누가 어디 앉아 있는지·배치 근거는 보이지 않는다. */
 let seatDraft = null;
 function seatChartNow(){
   const raw = load('tesk-seats', {}) || {};
   const rows = Math.max(1, Math.min(10, Number(raw.rows) || 4)), cols = Math.max(1, Math.min(12, Number(raw.cols) || 6));
-  const grid = Array.isArray(raw.grid) && raw.grid.length === rows * cols ? raw.grid : null;
-  return {raw, rows, cols, pairDesks: raw.pairDesks !== false, grid};
+  const grid = Array.isArray(raw.grid) && raw.grid.length === rows * cols ? raw.grid.map(x => x == null ? null : Number(x)) : null;
+  const voids = Array.isArray(raw.voids) ? raw.voids.map(Number).filter(i => i >= 0 && i < rows * cols) : [];
+  return {raw, rows, cols, pairDesks: raw.pairDesks !== false, grid, voids};
 }
 function seatNameOf(n){ const s = (students || []).find(x => String(x.num) === String(n)); return s ? s.name : (n != null ? n + '번' : ''); }
+/* 편집기의 자리표를 자리배치에 저장한다 (자리배치 화면과 같은 문서) */
+function saveSeatDraftToChart(){
+  const d = seatDraft, c = seatChartNow();
+  if(!d) return;
+  save('tesk-seats', {...c.raw, rows: d.rows, cols: d.cols, pairDesks: d.pairDesks, grid: d.grid, voids: [...d.voids].sort((p, q) => p - q)});
+}
 function openSeatAuctionEditor(){
   const c = seatChartNow();
-  seatDraft = {rows: c.rows, cols: c.cols, pairDesks: c.pairDesks, grid: c.grid, picked: new Set()};
+  seatDraft = {rows: c.rows, cols: c.cols, pairDesks: c.pairDesks, grid: c.grid || Array(c.rows * c.cols).fill(null), voids: new Set(c.voids), picked: new Set(), mode: 'pick', swapFrom: null};
   renderSeatAuctionEditor();
 }
 function renderSeatAuctionEditor(){
   const box = document.getElementById('econ-auction-body');
   if(!box || !seatDraft) return;
-  const d = seatDraft;
+  const d = seatDraft, n = d.rows * d.cols, desks = n - d.voids.size;
+  const seated = new Set(d.grid.filter(x => x != null)), missing = (students || []).filter(s => !seated.has(Number(s.num)));
+  const modeBtn = (m, label) => '<button class="btn btn-sm ' + (d.mode === m ? 'btn-primary' : 'btn-secondary') + '" onclick="seatDraftMode(\'' + m + '\')">' + label + '</button>';
   let cells = '';
-  for(let i = 0; i < d.rows * d.cols; i++){
-    const c = i % d.cols, on = d.picked.has(i), who = d.grid ? d.grid[i] : null, gap = d.pairDesks && c > 0 && c % 2 === 0 ? 'margin-left:10px;' : '';
-    cells += '<button type="button" onclick="toggleSeatLot(' + i + ')" style="' + gap + 'min-height:52px;border-radius:10px;border:' + (on ? '2px solid #ea580c' : '1px solid var(--border)') + ';background:' + (on ? '#fff7ed' : 'var(--surface)') + ';font:inherit;font-size:11px;cursor:pointer;">'
-      + (on ? '🪑 경매<br>' : '') + '<span style="color:var(--sub);">' + (who != null ? escHtml(seatNameOf(who)) : (Math.floor(i / d.cols) + 1) + '-' + (c + 1)) + '</span></button>';
+  for(let i = 0; i < n; i++){
+    const c = i % d.cols, gap = d.pairDesks && c > 0 && c % 2 === 0 ? 'margin-left:10px;' : '';
+    if(d.voids.has(i)){
+      cells += '<button type="button" onclick="seatDraftClick(' + i + ')" title="책상 없는 칸" style="' + gap + 'min-height:52px;border-radius:10px;border:1px dashed ' + (d.mode === 'void' ? '#94a3b8' : 'transparent') + ';background:transparent;font:inherit;font-size:11px;color:#94a3b8;cursor:' + (d.mode === 'void' ? 'pointer' : 'default') + ';">' + (d.mode === 'void' ? '＋ 책상 놓기' : '') + '</button>';
+      continue;
+    }
+    const on = d.picked.has(i), who = d.grid[i], from = d.mode === 'swap' && d.swapFrom === i;
+    cells += '<button type="button" onclick="seatDraftClick(' + i + ')" style="' + gap + 'min-height:52px;border-radius:10px;border:' + (from ? '2px solid #2563eb' : on ? '2px solid #ea580c' : '1px solid var(--border)') + ';background:' + (from ? '#eff6ff' : on ? '#fff7ed' : 'var(--surface)') + ';font:inherit;font-size:11px;cursor:pointer;">'
+      + (on ? '🪑 경매<br>' : '') + '<span style="color:' + (who != null ? 'var(--text)' : 'var(--hint)') + ';">' + (who != null ? escHtml(seatNameOf(who)) : '빈자리') + '</span></button>';
   }
-  box.innerHTML = '<div style="font-size:12px;color:var(--sub);margin-bottom:8px;">경매에 올릴 자리를 눌러 고르세요 (주황색). 자리표는 자리배치 화면의 줄·칸을 그대로 써요' + (d.grid ? ' — 지금 앉은 학생 이름은 선생님 화면에만 보여요.' : '. 아직 자리배치가 없어 자리 번호로 보여요.') + '</div>'
+  const help = d.mode === 'pick' ? '경매에 올릴 자리를 눌러 고르세요 (주황색).'
+    : d.mode === 'swap' ? '두 자리를 차례로 누르면 앉은 학생이 서로 바뀌어요. 빈자리를 누르면 그 학생이 빈자리로 옮겨요.'
+    : '칸을 누르면 책상을 빼거나 다시 놓아요. 책상 없는 칸에는 아무도 앉지 않고, 학생 자리표에도 비어 보여요.';
+  box.innerHTML = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">' + modeBtn('pick', '🪑 경매 자리 고르기') + modeBtn('swap', '🔄 자리 바꾸기') + modeBtn('void', '⬜ 책상 놓기/빼기') + '</div>'
+    + '<div style="font-size:12px;color:var(--sub);margin-bottom:8px;">' + help + ' 자리표는 친구관계 분석 → 자리배치와 같은 자리표라 바꾸면 바로 저장돼요. 학생 이름은 선생님 화면에만 보여요.</div>'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">'
+    + '<label class="form-label" style="margin:0;">줄<input class="form-input" type="number" min="1" max="10" id="sa-rows" value="' + d.rows + '" style="width:70px;" onchange="setSeatDraftShape()"></label>'
+    + '<label class="form-label" style="margin:0;">칸<input class="form-input" type="number" min="1" max="12" id="sa-cols" value="' + d.cols + '" style="width:70px;" onchange="setSeatDraftShape()"></label>'
+    + '<label style="font-size:12px;display:flex;gap:6px;align-items:center;"><input type="checkbox" id="sa-pair" ' + (d.pairDesks ? 'checked' : '') + ' onchange="setSeatDraftShape()"> 두 명씩 짝 책상</label>'
+    + '<span style="font-size:12px;color:var(--sub);">책상 ' + desks + '개 · 경매 ' + d.picked.size + '자리 · 학생 ' + (students || []).length + '명' + (missing.length ? ' · <b style="color:var(--coral);">자리 없는 학생 ' + missing.length + '명</b>' : '') + '</span>'
+    + (missing.length ? '<button class="btn btn-sm btn-secondary" onclick="fillSeatDraft()">번호순으로 빈자리에 채우기</button>' : '') + '</div>'
     + '<div style="text-align:center;font-size:11px;font-weight:800;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px;margin-bottom:6px;max-width:720px;">교탁</div>'
     + '<div style="display:grid;grid-template-columns:repeat(' + d.cols + ',minmax(0,1fr));gap:6px;max-width:720px;">' + cells + '</div>'
+    + (missing.length ? '<div style="font-size:11.5px;color:var(--sub);margin-top:6px;">자리 없는 학생: ' + missing.map(s => escHtml(s.name || s.num + '번')).join(', ') + '</div>' : '')
     + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:12px;">'
-    + '<label class="form-label" style="margin:0;">제목<input class="form-input" id="sa-title" value="자리 경매" style="width:160px;"></label>'
-    + '<label class="form-label" style="margin:0;">시작 가격<input class="form-input" type="number" min="1" id="sa-start" value="500" style="width:100px;"></label>'
-    + '<label class="form-label" style="margin:0;">호가 단위<input class="form-input" type="number" min="1" id="sa-step" value="100" style="width:90px;"></label>'
-    + '<label class="form-label" style="margin:0;">입찰 기간(시간)<input class="form-input" type="number" min="1" id="sa-hours" value="24" style="width:90px;"></label></div>'
-    + '<div style="display:flex;gap:8px;margin-top:10px;"><button class="btn btn-sm btn-primary" onclick="createSeatAuction()">자리 경매 열기 (' + d.picked.size + '자리)</button><button class="btn btn-sm btn-secondary" onclick="seatDraft=null;renderAuctionPanel()">취소</button></div>'
-    + '<p style="font-size:11px;color:var(--sub);margin-top:8px;">학생은 한 번에 한 자리에서만 최고 입찰자가 될 수 있고, 금액만 보여요(이름은 보이지 않아요). 끝나면 낙찰자만 자리표에 넣고 나머지는 선생님이 자리를 눌러 바꿔요.</p>';
+    + '<label class="form-label" style="margin:0;">제목<input class="form-input" id="sa-title" value="' + escHtml(d.title || '자리 경매') + '" style="width:160px;" onchange="seatDraft.title=this.value"></label>'
+    + '<label class="form-label" style="margin:0;">시작 가격<input class="form-input" type="number" min="1" id="sa-start" value="' + (d.start || 500) + '" style="width:100px;" onchange="seatDraft.start=this.value"></label>'
+    + '<label class="form-label" style="margin:0;">호가 단위<input class="form-input" type="number" min="1" id="sa-step" value="' + (d.step || 100) + '" style="width:90px;" onchange="seatDraft.step=this.value"></label>'
+    + '<label class="form-label" style="margin:0;">입찰 기간(시간)<input class="form-input" type="number" min="1" id="sa-hours" value="' + (d.hours || 24) + '" style="width:90px;" onchange="seatDraft.hours=this.value"></label></div>'
+    + '<div style="display:flex;gap:8px;margin-top:10px;"><button class="btn btn-sm btn-primary" onclick="createSeatAuction()">자리 경매 열기 (' + d.picked.size + '자리)</button><button class="btn btn-sm btn-secondary" onclick="seatDraft=null;renderAuctionPanel()">닫기</button></div>'
+    + '<p style="font-size:11px;color:var(--sub);margin-top:8px;">학생은 한 번에 한 자리에서만 최고 입찰자가 될 수 있고, 금액만 보여요(이름은 보이지 않아요). 끝나면 [자리표에 반영]으로 낙찰자를 그 자리에 앉히고, 나머지는 🔄 자리 바꾸기로 정리해요.</p>';
 }
-function toggleSeatLot(i){ if(!seatDraft) return; seatDraft.picked.has(i) ? seatDraft.picked.delete(i) : seatDraft.picked.add(i); renderSeatAuctionEditor(); }
+function seatDraftMode(m){ if(!seatDraft) return; seatDraft.mode = m; seatDraft.swapFrom = null; renderSeatAuctionEditor(); }
+function seatDraftClick(i){
+  const d = seatDraft;
+  if(!d) return;
+  if(d.mode === 'void'){
+    if(d.voids.has(i)) d.voids.delete(i);
+    else{
+      if(d.grid[i] != null) showToast(seatNameOf(d.grid[i]) + ' 자리의 책상을 뺐어요. 「번호순으로 빈자리에 채우기」나 🔄 자리 바꾸기로 다시 앉혀 주세요');
+      d.voids.add(i); d.grid[i] = null; d.picked.delete(i);
+    }
+    saveSeatDraftToChart();
+  }else if(d.mode === 'swap'){
+    if(d.voids.has(i)) return;
+    if(d.swapFrom == null){ d.swapFrom = i; }
+    else{
+      if(d.swapFrom !== i){ [d.grid[d.swapFrom], d.grid[i]] = [d.grid[i], d.grid[d.swapFrom]]; saveSeatDraftToChart(); }
+      d.swapFrom = null;
+    }
+  }else{
+    if(d.voids.has(i)) return;
+    d.picked.has(i) ? d.picked.delete(i) : d.picked.add(i);
+  }
+  renderSeatAuctionEditor();
+}
+function fillSeatDraft(){
+  const d = seatDraft;
+  if(!d) return;
+  d.grid = EC().fillSeats(d.grid, d.rows, d.cols, (students || []).map(s => Number(s.num)), [...d.voids]);
+  saveSeatDraftToChart();
+  renderSeatAuctionEditor();
+}
+/* 줄·칸·짝 책상 바꾸기 — 학생·책상 없는 칸·고른 자리는 같은 줄·칸 위치를 유지하고, 새 모양 밖으로 나간 칸만 빠진다 */
+function setSeatDraftShape(){
+  const d = seatDraft;
+  if(!d) return;
+  const rows = Math.max(1, Math.min(10, Math.round(Number(document.getElementById('sa-rows')?.value) || d.rows)));
+  const cols = Math.max(1, Math.min(12, Math.round(Number(document.getElementById('sa-cols')?.value) || d.cols)));
+  const pairDesks = !!document.getElementById('sa-pair')?.checked;
+  const moved = EC().reshapeSeats({grid: d.grid, voids: [...d.voids], rows: d.rows, cols: d.cols}, rows, cols);
+  const picked = new Set();
+  d.picked.forEach(i => { const r = Math.floor(i / d.cols), c = i % d.cols; if(r < rows && c < cols) picked.add(r * cols + c); });
+  Object.assign(d, {rows, cols, pairDesks, grid: moved.grid, voids: new Set(moved.voids), picked, swapFrom: null});
+  const desks = rows * cols - d.voids.size;
+  if(desks < (students || []).length) showToast('⚠️ 책상(' + desks + ')이 학생 수(' + (students || []).length + ')보다 적어요.');
+  saveSeatDraftToChart();
+  renderSeatAuctionEditor();
+}
 async function createSeatAuction(){
   const d = seatDraft;
   if(!d || !d.picked.size) return showToast('⚠️ 경매에 올릴 자리를 하나 이상 고르세요');
@@ -502,7 +575,9 @@ async function createSeatAuction(){
   if(!(start >= 1) || !(step >= 1) || !(hours > 0)) return showToast('⚠️ 가격과 기간을 확인하세요');
   const a = {id: 'auc_' + uid(), kind: 'seats', title: String(document.getElementById('sa-title').value || '자리 경매').slice(0, 40), icon: '🪑',
     startPrice: start, step, endsAt: new Date(Date.now() + hours * 3600000).toISOString(), status: 'open',
-    layout: {rows: d.rows, cols: d.cols, pairDesks: d.pairDesks}, lots: [...d.picked].sort((x, y) => x - y).map(seat => ({seat, top: null, bids: 0})), createdAt: new Date().toISOString()};
+    layout: {rows: d.rows, cols: d.cols, pairDesks: d.pairDesks, voids: [...d.voids].sort((p, q) => p - q)},
+    lots: [...d.picked].filter(i => !d.voids.has(i)).sort((x, y) => x - y).map(seat => ({seat, top: null, bids: 0})), createdAt: new Date().toISOString()};
+  saveSeatDraftToChart();
   await window._fsRunTxn(window._db, async txn => {
     const sn = await txn.get(econRef('pesk-auctions'));
     const list = (sn.exists() ? (sn.data().value || []) : []).slice(-29);
@@ -515,10 +590,11 @@ async function createSeatAuction(){
   renderAuctionPanel();
 }
 function seatAuctionTeacherCard(a, name){
-  const L = a.layout, lots = new Map(a.lots.map(l => [l.seat, l])), ended = a.endsAt && new Date(a.endsAt).getTime() <= Date.now();
+  const L = a.layout, lots = new Map(a.lots.map(l => [l.seat, l])), voids = new Set(L.voids || []), ended = a.endsAt && new Date(a.endsAt).getTime() <= Date.now();
   let cells = '';
   for(let i = 0; i < L.rows * L.cols; i++){
     const c = i % L.cols, lot = lots.get(i), gap = L.pairDesks && c > 0 && c % 2 === 0 ? 'margin-left:8px;' : '';
+    if(voids.has(i)){ cells += '<div style="' + gap + 'min-height:40px;"></div>'; continue; }
     if(!lot){ cells += '<div style="' + gap + 'min-height:40px;border-radius:8px;background:var(--surface);border:1px dashed var(--border);"></div>'; continue; }
     const who = a.status === 'closed' ? lot.winner : (lot.top ? lot.top.num : null);
     cells += '<div style="' + gap + 'min-height:40px;border-radius:8px;background:#fff7ed;border:1px solid #fdba74;font-size:10.5px;text-align:center;padding:2px;">🪑 '
@@ -543,16 +619,16 @@ async function applySeatAuctionToChart(id){
   if(!Object.keys(winners).length) return showToast('낙찰된 자리가 없어요');
   const c = seatChartNow(), L = a.layout;
   const sameShape = c.rows === L.rows && c.cols === L.cols;
-  if(!await openAppConfirmModal({title: '자리표에 반영', message: '낙찰자 ' + Object.keys(winners).length + '명을 낙찰 자리에 앉힐까요?\n그 자리에 있던 학생은 빈자리로 옮겨요. 나머지 학생은 친구관계 분석 → 자리배치에서 자리 두 개를 눌러 바꾸면 돼요.'
+  if(!await openAppConfirmModal({title: '자리표에 반영', message: '낙찰자 ' + Object.keys(winners).length + '명을 낙찰 자리에 앉힐까요?\n그 자리에 있던 학생은 빈자리로 옮겨요. 나머지는 경매 탭의 🔄 자리 바꾸기나 친구관계 분석 → 자리배치에서 바꾸면 돼요.'
     + (sameShape ? '' : '\n지금 자리배치(' + c.rows + '줄×' + c.cols + '칸)와 경매 때 자리표(' + L.rows + '줄×' + L.cols + '칸)가 달라서, 경매 때 자리표 모양으로 새로 만들어요.'), submitText: '반영'})) return;
-  const grid = EC().applySeatWinners(sameShape ? c.grid : null, L.rows, L.cols, winners, (students || []).map(s => Number(s.num)));
-  save('tesk-seats', {...c.raw, rows: L.rows, cols: L.cols, pairDesks: L.pairDesks, grid, createdAt: new Date().toISOString()});
+  const grid = EC().applySeatWinners(sameShape ? c.grid : null, L.rows, L.cols, winners, (students || []).map(s => Number(s.num)), L.voids);
+  save('tesk-seats', {...c.raw, rows: L.rows, cols: L.cols, pairDesks: L.pairDesks, voids: L.voids, grid, createdAt: new Date().toISOString()});
   await window._fsRunTxn(window._db, async txn => {
     const sn = await txn.get(econRef('pesk-auctions'));
     const list = sn.exists() ? (sn.data().value || []) : [], i = list.findIndex(x => x && x.id === id);
     if(i >= 0){ list[i] = {...list[i], appliedAt: new Date().toISOString()}; txn.set(econRef('pesk-auctions'), {value: list, updatedAt: new Date().toISOString()}); auctionsT = list; }
   });
   addActivity('🪑 자리 경매 결과를 자리표에 반영');
-  showToast('🪑 자리표에 반영했어요. 친구관계 분석 → 🪑 자리배치에서 나머지 자리를 바꿔 보세요');
+  showToast('🪑 자리표에 반영했어요. 나머지 자리는 🔄 자리 바꾸기로 정리해 보세요');
   renderAuctionPanel();
 }

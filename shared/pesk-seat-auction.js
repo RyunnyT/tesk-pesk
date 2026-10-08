@@ -11,6 +11,7 @@ function buildSeatAuctionCard(raw){
   let cells = '';
   for(let i = 0; i < L.rows * L.cols; i++){
     const c = i % L.cols, lot = lots.get(i), gap = L.pairDesks && c > 0 && c % 2 === 0 ? 'margin-left:8px;' : '';
+    if((L.voids || []).includes(i)){ cells += '<div style="' + gap + 'min-height:46px;"></div>'; continue; }   // 책상 없는 칸 (통로 등)
     if(!lot){ cells += '<div style="' + gap + 'min-height:46px;border-radius:8px;background:#f1f5f9;border:1px dashed #e2e8f0;"></div>'; continue; }
     const mine = lot.top && String(lot.top.num) === myNum, won = lot.winner != null, wonMine = won && String(lot.winner) === myNum;
     const text = a.status === 'closed' ? (wonMine ? '🎉 내 자리' : won ? '낙찰' : '유찰') : a.status === 'cancelled' ? '취소' : (lot.top ? lot.top.amount.toLocaleString() : '시작 ' + a.startPrice.toLocaleString());

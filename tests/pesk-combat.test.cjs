@@ -311,3 +311,17 @@ test('students left on a stage monster from the map release return to random mon
   p.game.hp=0;await f.c.rpgReloadProgress();await f.c.rpgNext();
   assert.match(f.rec(1).game.monsterId,/^m_/);
 });
+
+test('boss fails after its target date: no new fight, but a fight started in time still counts',async()=>{
+  const day=ms=>new Date(Date.now()+9*3600000+ms).toISOString().slice(0,10),yesterday=day(-86400000);
+  // 목표 날짜가 어제였고 아직 체력이 남았다 → 실패, 새 도전 불가
+  let f=fixture();f.docs['pesk-class-boss'].deadline=yesterday;f.c._applyBossCfg(f.docs['pesk-class-boss']);
+  f.run('rpgEnsureQuestion()');await f.c.rpgAnswer(f.run('rpgQ.options.findIndex(x=>String(x)===String(rpgQ.answer))'));
+  assert.equal(f.c.bossNow().failed,true);
+  await f.c.bossStartFight();assert.ok(!f.rec(1).boss.pending,'실패한 보스에는 새로 도전할 수 없다');
+  assert.match(f.c.buildBossPanel({num:1}),/쓰러뜨리지 못했어요/);
+  // 목표 날짜 안(어제)에 시작해 둔 보스전은 오늘 저장해도 인정
+  f=fixture();f.rec(1).boss={roundId:'round1',dmg:10,titles:[],day:yesterday,pending:{id:'t1',monsterId:'__boss__',bossRound:'round1',ammo:6,baseDamage:72,mode:'shooter'}};
+  f.docs['pesk-class-boss'].deadline=yesterday;f.c._applyBossCfg(f.docs['pesk-class-boss']);await f.c.rpgReloadProgress();
+  await f.c.bossSkipFight();assert.equal(f.rec(1).boss.dmg,82);assert.equal(f.rec(1).boss.pending,null);
+});
