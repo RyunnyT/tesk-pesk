@@ -39,7 +39,7 @@
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence, doc, setDoc, getDoc, getDocs, onSnapshot, collection, updateDoc, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, getDocs, onSnapshot, collection, updateDoc, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { firebaseConfig, MASTER_EMAILS } from "./shared/firebase-config.js";
 
@@ -48,7 +48,7 @@ const app = initializeApp(firebaseConfig);
 let db;
 try{ db = initializeFirestore(app, {localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})}); }
 catch(e){ console.warn('Firestore 캐시 사용 불가 — 기본 방식으로 연결', e); db = getFirestore(app); }
-window._fsClearCache = async()=>{ try{ await terminate(db); await clearIndexedDbPersistence(db); }catch(e){ console.warn('캐시 정리 실패', e); } };
+// 로그아웃 때 캐시를 지우지 않는다 — 다른 탭이 잠들어 있으면 지우기가 '대기'에 걸려 다음 접속이 멈출 수 있다 (2026-10-08 학생 앱에서 발생)
 const auth = getAuth(app);
 
 window._db = db;
@@ -2540,7 +2540,6 @@ async function teacherLogout(){
   localStorage.removeItem('tesk-teacher-role');
   localStorage.removeItem('tesk-teacher-approved');
   sessionStorage.removeItem('tesk-room-sync-reloaded');
-  if(window._fsClearCache) await window._fsClearCache();
   window.location.replace('landing.html');
 }
 

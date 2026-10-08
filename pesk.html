@@ -42,18 +42,16 @@
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence, doc, getDoc, getDocs, setDoc, onSnapshot, collection, query, where, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, setDoc, onSnapshot, collection, query, where, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { firebaseConfig } from "./shared/firebase-config.js";
 // 학생 앱은 교사 Google 로그인과 다른 Firebase 앱 이름을 쓴다 (shared/pesk-student-auth-free.js 의 STUDENT_APP).
 // 같은 브라우저에서 교사 화면을 열어도 학생 로그인이 풀리지 않고, 교사 화면도 학생 계정으로 바뀌지 않는다.
 const app = initializeApp(firebaseConfig, 'pesk-student');
-// 무료 요금제 읽기 한도(하루 5만) 절약 — 기기에 캐시를 두면 새로고침해도 바뀐 문서만 다시 읽는다.
-// 학교 공용 기기에 반 기록이 남지 않게 로그아웃할 때 캐시를 지운다 (_fsClearCache).
-let db;
-try{ db = initializeFirestore(app, {localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})}); }
-catch(e){ console.warn('Firestore 캐시 사용 불가 — 기본 방식으로 연결', e); db = getFirestore(app); }
-window._fsClearCache = async()=>{ try{ await terminate(db); await clearIndexedDbPersistence(db); }catch(e){ console.warn('캐시 정리 실패', e); } };
+// 학생 앱은 기기 저장(IndexedDB 캐시)을 쓰지 않는다 (2026-10-08).
+// 캐시를 켜고 로그아웃 때 지우게 했더니, 같은 브라우저에 잠든 다른 탭이 있으면 지우기가 '대기'에 걸려
+// 다음에 연 앱이 문구 없이 로딩만 도는 일이 생겼다. 학교 태블릿·크롬북에서는 캐시보다 안정성이 우선.
+const db = getFirestore(app);
 window._fsQuery=query; window._fsWhere=where;
 window._auth = getAuth(app); window._signOut = signOut;
 // signOut 이 실패해도 학생이 공용 기기에서 빠져나갈 수 있게, 이 기기에 남은 학생 로그인 기록만 직접 지운다.
@@ -9201,7 +9199,6 @@ async function logout(){
   localStorage.removeItem('pesk-class-name');
   localStorage.removeItem('pesk-class-code');
   renderNoAccess();
-  if(window._fsClearCache) await window._fsClearCache();
   window.location.replace('landing.html');
 }
 
@@ -9630,6 +9627,13 @@ function escHtml(str){
 /* ─────────────────────────────────────────
    시작
 ───────────────────────────────────────── */
+// 시작이 오래 걸리면 로딩만 돌지 않게 안내한다 (연결·기기 저장소 문제로 응답이 오지 않는 경우)
+let _appStarted = false;
+setTimeout(()=>{
+  if(_appStarted || _sessionInvalidating || _loggingOut || !roomId || !myStudentNum) return;
+  document.getElementById('app').innerHTML='<div class="loading">불러오는 데 너무 오래 걸려요.<br>화면을 새로고침해 주세요. 계속 안 되면 열린 Pesk 창을 모두 닫고 다시 열어 주세요.'
+    +'<br><br><button type="button" class="pesk-btn primary" style="width:auto;padding:10px 18px;" onclick="location.reload()">새로고침</button></div>';
+}, 20000);
 waitFirebase(async()=>{
   if(!roomId || !myStudentNum){ renderNoAccess(); return; }
   const sessionOk = await ensureActiveStudentSession(false);
@@ -9638,6 +9642,7 @@ waitFirebase(async()=>{
     return;
   }
   await Promise.all([loadData(), _loadQuotes(), avPreload()]);
+  _appStarted = true;
   if(students.find(s=>s.num===myStudentNum)){
     renderDashboard();
   } else {
