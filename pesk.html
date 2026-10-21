@@ -5186,7 +5186,7 @@ function buildChecklistPanel(){
     + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;">'
     + '<div><div style="font-size:16px;font-weight:900;color:var(--text);">✅ 명렬표 체크리스트</div>'
     + '<div style="font-size:12px;color:var(--sub);margin-top:3px;">학생 이름과 날짜를 기준으로 활동 여부를 확인해요.</div></div>'
-    + '<input id="checklist-date" type="date" value="' + date + '" onchange="renderChecklistBody()" style="width:142px;border:1.5px solid var(--border);border-radius:10px;padding:8px 10px;font-family:inherit;font-size:12px;">'
+    + '<input id="checklist-date" type="date" value="' + date + '" min="' + (()=>{ const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01'; })() + '" title="지난 달 1일부터 고를 수 있어요 (더 오래된 기록은 선생님 앱에 보관돼요)" onchange="renderChecklistBody()" style="width:142px;border:1.5px solid var(--border);border-radius:10px;padding:8px 10px;font-family:inherit;font-size:12px;">'
     + '</div>'
     + (!allowed
       ? '<div style="padding:18px;border-radius:14px;background:var(--bg);border:1px solid var(--border);font-size:13px;color:var(--sub);line-height:1.6;"><b style="color:var(--text);">아직 사용할 수 없어요.</b><br>선생님이 체크리스트 권한이 있는 직업을 배정하면 이 탭에서 명렬표를 체크할 수 있어요.</div>'

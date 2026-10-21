@@ -67,7 +67,7 @@ const path=require('node:path');
     await page.screenshot({path:path.join(output,'adventure.png')});
     // A real-time checklist callback must refresh its relocated page.
     const source=fs.readFileSync(path.resolve('tesk_teacher_v2.html'),'utf8');
-    assert.equal((source.match(/page-checklist'\)\?\.classList.contains\('active'\)/g)||[]).length,3);
+    assert.equal((source.match(/page-checklist'\)\?\.classList.contains\('active'\)/g)||[]).length,4);   // 실시간 구독 2곳 + 다리 이벤트 + 체크 보관 기록 읽은 뒤
     const duplicateIds=await frame.locator('[id]').evaluateAll(nodes=>nodes.map(n=>n.id).filter((id,index,all)=>all.indexOf(id)!==index));
     assert.deepEqual(duplicateIds,[]);
     assert.deepEqual(errors,[]);

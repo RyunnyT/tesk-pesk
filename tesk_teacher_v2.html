@@ -1001,6 +1001,8 @@ input, textarea, select, [contenteditable] {
 </style>
 <script src="shared/tesk-jszip.min.js"></script>
 <script src="shared/tesk-xlsx.js?v=20261021"></script>
+<script src="shared/tesk-data-health.js?v=20261021"></script>
+<script src="shared/checklist-archive.js?v=20261021"></script>
 <script>
 window.addEventListener('error', function(e){
   console.error('[TESK ERR]', e.message, 'at', e.filename+':'+e.lineno+':'+e.colno, e.error && e.error.stack);
@@ -1345,6 +1347,16 @@ window.addEventListener('error', function(e){
           <button class="btn btn-sm btn-secondary" onclick="document.getElementById('backup-restore-file').click()">⬆ 백업 파일로 복원</button>
           <input type="file" id="backup-restore-file" accept=".json,application/json" style="display:none;" onchange="importClassBackup(this.files[0]);this.value='';">
         </div>
+      </div>
+      <div class="card" id="data-health-card" style="margin-top:16px;">
+        <div class="card-header">
+          <div class="card-title">📏 데이터 용량</div>
+          <button class="btn btn-sm btn-secondary" onclick="measureDataHealth()">지금 용량 재기</button>
+        </div>
+        <div style="font-size:12px;color:var(--sub);margin-bottom:10px;">
+          상담·누가기록·체크리스트처럼 반 전체가 한 묶음으로 저장되는 자료는 하나당 1MB까지만 서버에 저장돼요. 70%를 넘으면 첫 화면에 알려 드려요.
+        </div>
+        <div id="data-health-body"></div>
       </div></div>
 </section>
     <!-- ── 학생 관리 ── -->
@@ -2418,13 +2430,177 @@ async function saveFirebase(k,v){
       window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',k),
       {value:v, updatedAt:new Date().toISOString()}
     );
-    setSyncStatus('online');return true;
+    markSaveOk(k, v);
+    setSyncStatus(Object.keys(_saveFailures).length ? 'error' : 'online');return true;
   }catch(e){
     console.warn('[Tesk Teacher] Firebase 저장 실패:',e);
     setSyncStatus('error');
     if(k==='tesk-accounts')showToast('⚠️ 계정 저장 실패: '+e.message);
+    else markSaveFailed(k, e);
     return false;
   }
+}
+
+/* ── 저장 실패·용량 알림 (shared/tesk-data-health.js) ──
+   예전에는 서버 저장이 실패해도 상단 점 색만 바뀌어 아무도 몰랐다. 반 전체를 한 문서에 담는 자료
+   (상담·누가기록·관찰·체크리스트 등)가 1MB를 넘으면 그 컴퓨터에만 남는다. 실패한 자료는 화면 위
+   경고 띠로 계속 보여 주고, [다시 시도]로 이 컴퓨터에 남은 내용을 다시 올린다. */
+const _saveFailures = {};      // key → {at, size:boolean, text}
+const _sizeWarned = {};        // 한 번 켤 때 문서마다 한 번만 경고
+function markSaveFailed(k, e){
+  const H = window.TeskDataHealth;
+  const first = !_saveFailures[k];
+  _saveFailures[k] = {at:new Date().toISOString(), size:!!H?.isSizeError(e), text:H ? H.failureText(k, e) : ('서버 저장 실패: '+k)};
+  if(first) showToast('⚠️ ' + _saveFailures[k].text + ' 이 컴퓨터에는 남아 있어요.');
+  renderSaveFailureBar();
+}
+function markSaveOk(k, v){
+  if(_saveFailures[k]){ delete _saveFailures[k]; renderSaveFailureBar(); }
+  const H = window.TeskDataHealth;
+  if(!H || _sizeWarned[k]) return;
+  const bytes = H.docBytes(v);
+  if(H.level(bytes) === 'danger'){
+    _sizeWarned[k] = true;
+    showToast('⚠️ \'' + H.label(k) + '\' 저장 공간을 ' + Math.round(bytes / H.LIMIT * 100) + '% 썼어요. 설정 → 데이터 용량을 확인해 주세요.');
+  }
+}
+function notifyLocalSaveFailure(k){
+  if(_saveFailures['local:'+k]) return;
+  _saveFailures['local:'+k] = {at:new Date().toISOString(), local:true,
+    text:'이 컴퓨터의 브라우저 저장 공간이 가득 차서 \'' + (window.TeskDataHealth?.label(k) || k) + '\'을(를) 기기에 저장하지 못했어요. 서버 저장은 계속돼요.'};
+  renderSaveFailureBar();
+}
+function renderSaveFailureBar(){
+  const host = document.getElementById('main-content');
+  if(!host) return;
+  let bar = document.getElementById('save-failure-bar');
+  const keys = Object.keys(_saveFailures);
+  if(!keys.length){ if(bar) bar.remove(); if(document.getElementById('page-home')?.classList.contains('active')) renderHome(); return; }
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'save-failure-bar';
+    bar.setAttribute('role', 'alert');
+    bar.style.cssText = 'position:sticky;top:0;z-index:50;margin:0 0 10px;padding:10px 14px;border-radius:12px;background:#fff1ee;border:1px solid #f5b5a6;color:#9a3412;font-size:12.5px;line-height:1.55;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;';
+    host.prepend(bar);
+  }
+  const serverKeys = keys.filter(k=>!_saveFailures[k].local);
+  const sizeFull = serverKeys.some(k=>_saveFailures[k].size);
+  bar.innerHTML = '<div style="flex:1 1 280px;min-width:0;"><b>⚠️ 서버에 저장되지 않은 자료가 있어요</b><br>'
+    + keys.map(k=>escHtml(_saveFailures[k].text)).join('<br>')
+    + (serverKeys.length ? '<br><span style="color:#7c2d12;">지금 내용은 이 컴퓨터에만 있어요. [다시 시도]를 누르거나, [이 컴퓨터 내용 저장]으로 파일을 받아 두세요. 백업 파일은 서버 내용이라 여기에는 들어가지 않아요.'
+        + (sizeFull ? ' 저장 공간이 가득 찬 자료는 오래된 기록을 정리해야 저장돼요.' : '') + '</span>' : '')
+    + '</div><div style="display:flex;gap:6px;flex-wrap:wrap;">'
+    + (serverKeys.length ? '<button class="btn btn-sm btn-primary" onclick="retryFailedSaves()">다시 시도</button>'
+        + '<button class="btn btn-sm btn-secondary" onclick="downloadUnsavedLocal()">이 컴퓨터 내용 저장</button>' : '')
+    + '<button class="btn btn-sm btn-secondary" onclick="goPage(\'workspace\');setTimeout(()=>document.getElementById(\'data-health-card\')?.scrollIntoView({block:\'center\'}),80)">데이터 용량 보기</button>'
+    + '</div>';
+  if(document.getElementById('page-home')?.classList.contains('active')) renderHome();
+}
+// 서버에 못 올린 자료를 이 컴퓨터에 있는 그대로 파일로 남긴다(안전용 사본).
+function downloadUnsavedLocal(){
+  const keys = Object.keys(_saveFailures).filter(k=>!_saveFailures[k].local);
+  const docs = {};
+  keys.forEach(k=>{ const v = load(k, undefined); if(v !== undefined) docs[k] = v; });
+  const blob = new Blob([JSON.stringify({format:'tesk-unsaved-local', roomId:TESK_ROOM, savedAt:new Date().toISOString(), docs})], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '서버미저장자료_' + String(settings.className||TESK_ROOM).replace(/[\/:*?"<>|\s]+/g,'_') + '_' + today() + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+  showToast('💾 이 컴퓨터에 있는 ' + Object.keys(docs).length + '개 자료를 파일로 저장했어요');
+}
+async function retryFailedSaves(){
+  const keys = Object.keys(_saveFailures).filter(k=>!_saveFailures[k].local);
+  if(!keys.length) return;
+  showToast('⏳ 다시 저장하는 중…');
+  let ok = 0;
+  for(const k of keys){
+    const v = load(k, undefined);
+    if(v === undefined){ continue; }
+    if(await saveFirebase(k, v)) ok++;
+  }
+  showToast(ok === keys.length ? '✅ 모두 서버에 저장했어요' : '⚠️ ' + (keys.length - ok) + '개 자료는 아직 저장하지 못했어요');
+}
+
+/* ── 백업 기록·용량 기록 (서버 문서 tesk-backup-meta: 어느 기기에서 봐도 같은 날짜) ── */
+let _backupMeta = null, _backupMetaLoading = false;
+async function loadBackupMeta(force){
+  if((_backupMeta && !force) || _backupMetaLoading || !window._fbReady || !window._db) return _backupMeta;
+  _backupMetaLoading = true;
+  try{
+    const snap = await window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','tesk-backup-meta'));
+    _backupMeta = snap.exists() ? (snap.data().value || {}) : {};
+  }catch(e){ console.warn('백업 기록 읽기 실패', e); _backupMeta = _backupMeta || {}; }
+  finally{ _backupMetaLoading = false; }
+  if(document.getElementById('page-home')?.classList.contains('active')) renderHome();
+  renderDataHealthCard();
+  return _backupMeta;
+}
+async function saveBackupMeta(change){
+  const next = {...(_backupMeta || {}), ...change};
+  _backupMeta = next;
+  try{
+    await window._fsSetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','tesk-backup-meta'), {value:next, updatedAt:new Date().toISOString()});
+  }catch(e){ console.warn('백업 기록 저장 실패', e); }
+  renderDataHealthCard();
+}
+/* 첫 화면 '먼저 처리할 일'에 붙는 항목: 저장 실패 · 용량 거의 참 · 백업 오래됨 */
+function buildDataHealthRows(){
+  const H = window.TeskDataHealth;
+  if(!H) return [];
+  const rows = [];
+  const failed = Object.keys(_saveFailures).filter(k=>!_saveFailures[k].local);
+  if(failed.length) rows.push({page:'workspace', icon:'settings', title:'서버에 저장되지 않은 자료',
+    desc:failed.map(k=>H.label(k)).join(', ') + ' · 이 컴퓨터에만 있어요. 화면 위 [다시 시도]를 눌러 주세요.', count:failed.length, unit:'개'});
+  if(!_backupMeta){ loadBackupMeta(); return rows; }
+  const full = H.fromSizes(_backupMeta.sizes).filter(r=>r.level !== 'ok');
+  if(full.length) rows.push({page:'workspace', icon:'settings', title:'저장 공간이 차 가는 자료',
+    desc:full.slice(0,3).map(r=>r.label + ' ' + r.pct + '%').join(', ') + ' · 1MB를 넘으면 서버에 저장되지 않아요.', count:full.length, unit:'개'});
+  const due = H.backupDue(_backupMeta.lastBackupAt, new Date());
+  if(due) rows.push({page:'workspace', icon:'settings', title:'학급 데이터 백업하기',
+    desc:due.never ? '아직 백업 기록이 없어요. 설정에서 백업 파일을 내려받아 두세요.' : '마지막 백업 후 ' + due.days + '일 지났어요. 설정에서 새로 내려받아 두세요.',
+    count:due.never ? null : due.days, unit:'일'});
+  return rows;
+}
+
+/* ── 설정 → 📏 데이터 용량 카드 ── */
+function renderDataHealthCard(){
+  const box = document.getElementById('data-health-body');
+  const H = window.TeskDataHealth;
+  if(!box || !H) return;
+  const meta = _backupMeta || {};
+  const rows = H.fromSizes(meta.sizes);
+  const last = meta.lastBackupAt ? new Date(meta.lastBackupAt).toLocaleString('ko-KR') : '';
+  const st = document.getElementById('backup-status');
+  if(st && !st.dataset.busy) st.textContent = last ? '마지막 백업: ' + last : (_backupMeta ? '백업 기록 없음' : '');
+  if(!rows.length){
+    box.innerHTML = '<div style="font-size:12px;color:var(--hint);">아직 잰 적이 없어요. [지금 용량 재기]를 누르거나 백업을 내려받으면 함께 재요.</div>';
+    return;
+  }
+  const color = l=>l==='danger' ? 'var(--coral,#d94f2a)' : l==='warn' ? '#c9921a' : 'var(--tesk)';
+  const kb = b=>b >= 1024*1024 ? (b/1024/1024).toFixed(2) + 'MB' : Math.max(1, Math.round(b/1024)) + 'KB';
+  const show = rows.slice(0, 8);
+  box.innerHTML = '<div style="font-size:11px;color:var(--sub);margin-bottom:8px;">' + (meta.sizesAt ? new Date(meta.sizesAt).toLocaleString('ko-KR') + ' 기준 · ' : '') + '자료 하나당 최대 1MB · 큰 순서</div>'
+    + show.map(r=>'<div style="display:grid;grid-template-columns:minmax(90px,150px) 1fr 92px;gap:8px;align-items:center;font-size:12px;margin-bottom:6px;">'
+      + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(r.key) + (r.auto ? ' · 81%쯤에서 오래된 것부터 자동 정리' : '') + '">' + escHtml(r.label) + (r.auto ? ' <span style="font-size:10px;color:var(--hint);">자동 정리</span>' : '') + '</span>'
+      + '<span style="height:8px;border-radius:99px;background:var(--border,#e5e7eb);overflow:hidden;" role="img" aria-label="' + escHtml(r.label) + ' ' + r.pct + '%"><span style="display:block;height:100%;width:' + Math.min(100, Math.max(1, r.pct)) + '%;background:' + color(r.level) + ';border-radius:99px;"></span></span>'
+      + '<span style="text-align:right;color:' + (r.level==='ok' ? 'var(--sub)' : color(r.level)) + ';font-weight:' + (r.level==='ok' ? 600 : 800) + ';">' + r.pct + '% · ' + kb(r.bytes) + '</span></div>').join('')
+    + (rows.length > show.length ? '<div style="font-size:11px;color:var(--hint);">나머지 ' + (rows.length - show.length) + '개 자료는 모두 ' + (rows[show.length].pct ? rows[show.length].pct + '% 이하' : '1% 미만') + '예요.</div>' : '')
+    + (rows.some(r=>r.level!=='ok') ? '<div style="font-size:12px;color:#9a3412;margin-top:8px;">⚠️ 70%를 넘은 자료가 있어요. 1MB를 넘으면 서버 저장이 거부돼요. 백업을 받아 두고 오래된 기록을 정리하거나 나눠 저장하도록 바꿔야 해요.</div>' : '');
+}
+async function measureDataHealth(){
+  if(!window._fbReady||!window._db) return showToast('⚠️ Firebase 미연결');
+  showToast('⏳ 자료 용량을 재는 중…');
+  try{
+    const {docs} = await readClassBackupDocs();
+    await saveBackupMeta(dataHealthSizes(docs));
+    showToast('📏 용량을 쟀어요');
+  }catch(e){ showToast('⚠️ 용량 재기 실패: ' + e.message); }
+}
+// 학생별로 나눠 저장한 자료(글쓰기·모험 기록·보관 로그)는 문서 하나가 아니라 재지 않는다.
+function dataHealthSizes(docs){
+  const skip = Object.keys(docs).filter(k=>k==='pesk-writings' || k==='pesk-quiz-progress' || k.startsWith('pesk-econ-archive') || k.startsWith('pesk-checklist-archive'));
+  return {sizes:window.TeskDataHealth.toSizes(window.TeskDataHealth.report(docs, skip)), sizesAt:new Date().toISOString()};
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -2562,7 +2738,8 @@ async function teacherLogout(){
 }
 
 function save(k,v){
-  saveLocal(k,v);
+  try{ saveLocal(k,v); }
+  catch(e){ console.warn('[Tesk Teacher] 이 기기 저장 실패:',k,e); notifyLocalSaveFailure(k); }
   // Firebase가 준비되어 있으면 항상 동기화 (학생 앱 pesk가 읽을 수 있도록)
   if(window._fbReady && window._db){
     saveFirebase(k,v);
@@ -2710,19 +2887,48 @@ const BACKUP_DOC_KEYS = [...new Set([
   'pesk-writings','pesk-purchases','pesk-purchase-log','pesk-portfolios',
   'pesk-peer-survey','tesk-teacher-notif','tesk-stock-raw-prices',
   'pesk-avatars','pesk-avatar-prices','pesk-writing-topic','pesk-writing-duty','pesk-class-boss','pesk-quiz-config','pesk-quiz-progress',
-  'pesk-class-fund','pesk-auctions','pesk-econ-archive-index'
+  'pesk-class-fund','pesk-auctions','pesk-econ-archive-index','pesk-checklist-archive-index'
 ])];
 // 백업: 한 항목이라도 읽지 못하면 파일을 만들지 않습니다(빠진 백업을 성공으로 알리지 않기 위해).
 async function exportClassBackup(opts={}){
   if(!window._fbReady||!window._db){ showToast('⚠️ Firebase 미연결'); return false; }
   const st=document.getElementById('backup-status');
-  if(st) st.textContent=opts.label||'내보내는 중...';
+  if(st){ st.textContent=opts.label||'내보내는 중...'; st.dataset.busy='1'; }
   try{
+    const {docs} = await readClassBackupDocs();
+    const payload={format:'tesk-class-backup',version:1,roomId:TESK_ROOM,className:settings.className||'',exportedAt:new Date().toISOString(),docs};
+    const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=(opts.prefix||'학급백업')+'_'+String(settings.className||TESK_ROOM).replace(/[\\/:*?"<>|\s]+/g,'_')+'_'+today()+'.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+    if(st){ delete st.dataset.busy; st.textContent='마지막 백업: '+new Date().toLocaleString('ko-KR'); }
+    addActivity(opts.activity||'💾 학급 데이터 백업 내려받음');
+    if(!opts.quiet) showToast('💾 백업 파일 저장됨 ('+Object.keys(docs).length+'개 항목)');
+    // 어느 기기에서 봐도 같은 '마지막 백업'과 용량이 보이도록 서버에 남긴다(백업 파일에는 들어가지 않음)
+    saveBackupMeta({lastBackupAt:new Date().toISOString(), ...dataHealthSizes(docs)}).then(()=>renderHome());
+    return true;
+  }catch(e){
+    if(st){ delete st.dataset.busy; st.textContent=''; }
+    showToast('⚠️ 백업 실패: '+e.message);
+    return false;
+  }
+}
+// 백업·용량 재기 공용: 한 항목이라도 못 읽으면 실패로 본다.
+async function readClassBackupDocs(){
     const docs={}, failed=[];
     for(const k of BACKUP_DOC_KEYS){
       try{
         if(k==='pesk-writings'){ docs[k]=await writingStore().load(); continue; }
         if(k==='pesk-quiz-progress'){ docs[k]=await quizStoreT().loadAllFull(); continue; }   // 학생별 문서를 합친 전체 기록
+        if(k==='pesk-checklist-archive-index'){   // 보관된 생활 체크 기록(월 단위 문서)도 함께 담는다
+          const snap=await window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',k));
+          const months=snap.exists()?(snap.data().value||[]):[];
+          if(months.length) docs[k]=months;
+          for(const m of months){ const ms=await window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','pesk-checklist-archive-'+m)); if(ms.exists()) docs['pesk-checklist-archive-'+m]=ms.data().value; }
+          continue;
+        }
         if(k==='pesk-econ-archive-index'){   // 보관된 거래 로그(주 단위 문서)도 함께 담는다
           const snap=await window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',k));
           const weeks=snap.exists()?(snap.data().value||[]):[];
@@ -2735,22 +2941,7 @@ async function exportClassBackup(opts={}){
       }catch(e){ console.warn('백업 읽기 실패:',k,e); failed.push(k); }
     }
     if(failed.length) throw new Error(`${failed.length}개 항목(${failed.slice(0,4).join(', ')}${failed.length>4?' 외':''})을 읽지 못해 백업 파일을 만들지 않았어요. 연결을 확인하고 다시 시도해 주세요.`);
-    const payload={format:'tesk-class-backup',version:1,roomId:TESK_ROOM,className:settings.className||'',exportedAt:new Date().toISOString(),docs};
-    const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download=(opts.prefix||'학급백업')+'_'+String(settings.className||TESK_ROOM).replace(/[\\/:*?"<>|\s]+/g,'_')+'_'+today()+'.json';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(a.href),3000);
-    if(st) st.textContent='마지막 백업: '+new Date().toLocaleString('ko-KR');
-    addActivity(opts.activity||'💾 학급 데이터 백업 내려받음');
-    if(!opts.quiet) showToast('💾 백업 파일 저장됨 ('+Object.keys(docs).length+'개 항목)');
-    return true;
-  }catch(e){
-    if(st) st.textContent='';
-    showToast('⚠️ 백업 실패: '+e.message);
-    return false;
-  }
+    return {docs};
 }
 // 복원: 지금 상태를 먼저 자동 백업하고, 모든 항목을 한 트랜잭션으로 씁니다(중간 실패 시 아무것도 바뀌지 않음).
 async function importClassBackup(file){
@@ -2762,7 +2953,7 @@ async function importClassBackup(file){
     return showToast('⚠️ 올바른 학급 백업 파일이 아니에요');
   }
   const allowed=new Set(BACKUP_DOC_KEYS);
-  const isAllowed=k=>allowed.has(k) || /^pesk-econ-archive-\d{4}-W\d{2}$/.test(k);   // 보관된 거래 로그(주 단위)
+  const isAllowed=k=>allowed.has(k) || /^pesk-econ-archive-\d{4}-W\d{2}$/.test(k) || /^pesk-checklist-archive-\d{4}-\d{2}$/.test(k);   // 보관된 거래 로그(주 단위)·생활 체크(월 단위)
   const keys=Object.keys(payload.docs).filter(k=>isAllowed(k) && payload.docs[k]!==undefined);
   const unknown=Object.keys(payload.docs).filter(k=>!isAllowed(k));
   if(!keys.length) return showToast('⚠️ 백업 파일에 복원할 데이터가 없어요');
@@ -2895,7 +3086,63 @@ let econLogKindFilter = 'all';
 let econLogCollapsed = false;
 let pointSelectedNums = new Set();
 let _peskPurchasesCache = [];
-let checklistRecords = load('pesk-checklists', {}); // Pesk 명렬표 체크 기록
+let checklistRecords = load('pesk-checklists', {}); // Pesk 명렬표 체크 기록 (이번 달·지난 달)
+/* 지난 달보다 오래된 기록은 월별 보관 문서(pesk-checklist-archive-YYYY-MM)에 있다 — shared/checklist-archive.js.
+   보고서·통계처럼 지난 기록 전체가 필요한 곳은 checklistHistory(), 날짜 하나는 checklistDay(날짜)로 읽는다. */
+let checklistArchive = {};            // 보관된 달을 합친 기록 {날짜: ...}
+let checklistArchiveMonths = [];      // 보관된 달 목록 ['2026-05', ...]
+function checklistHistory(){ return window.ChecklistArchive ? ChecklistArchive.history(checklistRecords, checklistArchive) : (checklistRecords||{}); }
+function checklistDay(date){
+  const main = checklistRecords?.[date], old = checklistArchive?.[date];
+  return main && old ? ChecklistArchive.mergeDay(old, main) : (main || old);
+}
+async function loadChecklistArchive(){
+  if(!window._fbReady || !window._db || !window.ChecklistArchive) return;
+  const ref = k=>window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',k);
+  const idx = await window._fsGetDoc(ref(ChecklistArchive.INDEX_KEY));
+  const months = idx.exists() ? ChecklistArchive.indexWith(idx.data().value, []) : [];
+  let merged = {};
+  for(const m of months){
+    const snap = await window._fsGetDoc(ref(ChecklistArchive.archiveKey(m)));
+    if(snap.exists()) merged = ChecklistArchive.mergeRecords(merged, snap.data().value || {});
+  }
+  checklistArchive = merged; checklistArchiveMonths = months;
+}
+/* 지난 달보다 오래된 날짜를 보관 문서로 옮긴다. 원래 문서·보관 문서·목록을 한 트랜잭션으로 쓰므로
+   학생이 동시에 체크해도(학생도 트랜잭션) 어느 쪽 기록도 잃지 않는다. 여러 기기에서 돌려도 결과가 같다. */
+async function archiveOldChecklists(){
+  if(!window._fbReady || !window._db || !window._fsRunTxn || !window.ChecklistArchive) return [];
+  const ref = k=>window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',k);
+  const at = new Date().toISOString();
+  return window._fsRunTxn(window._db, async txn=>{
+    const mainSnap = await txn.get(ref('pesk-checklists'));
+    const main = mainSnap.exists() ? (mainSnap.data().value || {}) : {};
+    const {keep, byMonth} = ChecklistArchive.split(main, new Date());
+    const months = Object.keys(byMonth).sort();
+    if(!months.length) return [];
+    const idxSnap = await txn.get(ref(ChecklistArchive.INDEX_KEY));
+    const olds = [];
+    for(const m of months) olds.push(await txn.get(ref(ChecklistArchive.archiveKey(m))));   // 읽기를 모두 마친 뒤 쓴다
+    months.forEach((m, i)=>{
+      const prev = olds[i].exists() ? (olds[i].data().value || {}) : {};
+      txn.set(ref(ChecklistArchive.archiveKey(m)), {value:ChecklistArchive.mergeRecords(prev, byMonth[m]), updatedAt:at});
+    });
+    txn.set(ref(ChecklistArchive.INDEX_KEY), {value:ChecklistArchive.indexWith(idxSnap.exists() ? idxSnap.data().value : [], months), updatedAt:at});
+    txn.set(ref('pesk-checklists'), {value:keep, updatedAt:at});
+    return months;
+  });
+}
+let _checklistArchiveStarted = false;
+async function startChecklistArchive(){
+  if(_checklistArchiveStarted) return;
+  _checklistArchiveStarted = true;
+  try{
+    const moved = await archiveOldChecklists();
+    if(moved.length) addActivity('🗂️ 생활 체크 기록 보관: ' + moved.join(', '));
+  }catch(e){ console.warn('체크리스트 보관 실패(다음에 다시 시도)', e); _checklistArchiveStarted = false; }
+  try{ await loadChecklistArchive(); }catch(e){ console.warn('체크리스트 보관 기록 읽기 실패', e); }
+  if(document.getElementById('page-checklist')?.classList.contains('active')) renderTeacherChecklistPanel();
+}
 let challengeSubmissions = load('pesk-challenge-submissions', {});
 let writingRubricReports = load('tesk-writing-rubric-reports', {});
 let economyRestrictions = load('tesk-economy-restrictions', {});
@@ -3021,6 +3268,8 @@ function subscribePeskData(){
     }
   ));
 
+  // 지난 달보다 오래된 체크 기록을 월별 보관 문서로 옮기고 읽어 둔다(시작 직후 부담을 피해 조금 뒤에)
+  setTimeout(startChecklistArchive, 3000);
   // Pesk 체크리스트 기록 실시간 구독
   _peskUnsubs.push(window._fsOnSnapshot(
     window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','pesk-checklists'),
@@ -5154,7 +5403,7 @@ function renderHome(){
   const pointSubEl=document.getElementById('home-points-shortcut-sub');
   if(pointSubEl) pointSubEl.textContent=`총 ${totalPts.toLocaleString()} ${C()} · 지급 화면으로`;
 
-  window.TeskUI?.renderAttention({rows:buildHomeTodoRows({unreadWritings,pendingCounsels}),studentCount:students.length});
+  window.TeskUI?.renderAttention({rows:[...buildDataHealthRows(), ...buildHomeTodoRows({unreadWritings,pendingCounsels})],studentCount:students.length});
   _homeLoadQuizProgress();
 
   // 달력 렌더링
@@ -5820,7 +6069,8 @@ function _formatSchoolWeekLabel(week=_currentSchoolWeek()){
   return `${s[1]}월 ${s[2]}일(월) ~ ${e[1]}월 ${e[2]}일(금)`;
 }
 function studentHasChecklistOnDate(stuNum,itemId,dateStr){
-  const rec=checklistRecords?.[dateStr]?.[itemId]?.[stuNum] || checklistRecords?.[dateStr]?.[itemId]?.[String(stuNum)];
+  const day=checklistDay(dateStr);
+  const rec=day?.[itemId]?.[stuNum] || day?.[itemId]?.[String(stuNum)];
   return !!rec?.checked;
 }
 function studentChecklistWeekCount(stuNum,itemId,week=_currentSchoolWeek()){
@@ -9652,7 +9902,7 @@ function renderTeacherChecklistPanel(){
     </div>`).join('');
   const rows=students.slice().sort((a,b)=>Number(a.num)-Number(b.num)).map(s=>{
     const cells=activeItems.map(item=>{
-      const rec=checklistRecords?.[date]?.[item.id]?.[s.num] || checklistRecords?.[date]?.[item.id]?.[String(s.num)];
+      const rec=checklistDay(date)?.[item.id]?.[s.num] || checklistDay(date)?.[item.id]?.[String(s.num)];
       return `<td onclick="teacherToggleChecklist('${item.id}',${s.num})" style="cursor:pointer;" title="클릭하면 교사가 직접 확인/해제합니다">${rec?.checked
         ? `<span style="display:inline-block;padding:3px 8px;border-radius:99px;background:var(--tesk-l);color:var(--tesk);font-weight:800;font-size:11px;">완료</span><div style="font-size:10px;color:var(--sub);margin-top:3px;">${escHtml(rec.checkerName||'확인자')} · ${rec.checkedAt?new Date(rec.checkedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):''}</div>`
         : '<span style="color:var(--hint);font-size:11px;">미체크 <span style="opacity:.45;">✎</span></span>'}</td>`;
@@ -9686,8 +9936,9 @@ async function teacherToggleChecklist(itemId, stuNum){
   const date = document.getElementById('teacher-checklist-date')?.value || _todayISO();
   const teacherName = (settings && settings.teacherName) ? settings.teacherName : '교사';
   const key = String(stuNum);
-  const cur = checklistRecords?.[date]?.[itemId]?.[key] || checklistRecords?.[date]?.[itemId]?.[stuNum];
-  const want = !(cur && cur.checked); // 원하는 최종 상태(토글). 재시도에도 동일하게 적용되도록 명시
+  const cur = checklistDay(date)?.[itemId]?.[key] || checklistDay(date)?.[itemId]?.[stuNum];
+  const want = !(cur && cur.checked);
+  const archivedMonth = window.ChecklistArchive && checklistArchiveMonths.includes(ChecklistArchive.monthOf(date)) ? ChecklistArchive.monthOf(date) : ''; // 원하는 최종 상태(토글). 재시도에도 동일하게 적용되도록 명시
   const apply = (recs)=>{
     recs[date] = recs[date] || {};
     recs[date][itemId] = recs[date][itemId] || {};
@@ -9700,16 +9951,27 @@ async function teacherToggleChecklist(itemId, stuNum){
     return recs;
   };
   // 낙관적 로컬 반영
-  apply(checklistRecords);
+  if(archivedMonth){
+    // 보관된 날짜: 화면은 보관 기록에서 읽으므로, 원래 문서에 같은 날짜가 남아 있으면 그것도 같이 맞춘다
+    apply(checklistArchive);
+    if(checklistRecords?.[date]) apply(checklistRecords);
+  } else apply(checklistRecords);
   renderTeacherChecklistPanel();
   try{
     if(window._fbReady && window._db && window._fsRunTxn){
-      const ref = window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','pesk-checklists');
+      const ref = window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',archivedMonth ? ChecklistArchive.archiveKey(archivedMonth) : 'pesk-checklists');
+      const mainRef = window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','pesk-checklists');
       await window._fsRunTxn(window._db, async (txn)=>{
         const snap = await txn.get(ref);
+        // 보관된 날짜인데 원래 문서에도 같은 날짜가 남아 있으면(학생이 지난 날짜에 체크) 둘 다 맞춘다.
+        // 안 그러면 다음 보관 때 원래 문서 쪽이 이겨서 교사 수정이 되돌아간다.
+        const mainSnap = archivedMonth ? await txn.get(mainRef) : null;
         const recs = snap.exists() ? (snap.data().value||{}) : {};
         apply(recs); // 서버 최신본에 동일한 최종 상태 적용 → 학생 체크와 충돌 없이 병합
-        txn.set(ref, { value:recs, updatedAt:new Date().toISOString() });
+        const at = new Date().toISOString();
+        txn.set(ref, { value:recs, updatedAt:at });
+        const main = mainSnap?.exists() ? (mainSnap.data().value||{}) : null;
+        if(main && main[date]){ apply(main); txn.set(mainRef, { value:main, updatedAt:at }); }
       });
     } else {
       save('pesk-checklists', checklistRecords);
@@ -10511,7 +10773,7 @@ function collectStudentSignals(stuNum){
   const counsels=(counselRecords||[]).filter(c=>_recordBelongsToStudent(c,student));
   if(counsels.length){lines.push(`상담 기록 ${counsels.length}회`);fullCtx.push('[상담에서 관찰한 내용: 민감한 개인 사정은 기록 문장에 포함하지 말 것]',...counsels.slice(-4).map(c=>`- ${c.date||''} ${(c.content||c.summary||'').slice(0,400)}`));}
   if(rec.notes.length){lines.push(`관찰 메모 ${rec.notes.length}개`);fullCtx.push('[교사 관찰 메모]',...rec.notes.map(n=>`- ${n.date||''} [${(n.areaTags||[]).join(',')}] ${n.text}`));}
-  let checked=0;Object.values(checklistRecords||{}).forEach(items=>Object.values(items||{}).forEach(students=>{if(students?.[num]?.checked)checked++;}));
+  let checked=0;Object.values(checklistHistory()).forEach(items=>Object.values(items||{}).forEach(students=>{if(students?.[num]?.checked)checked++;}));
   if(checked){lines.push(`생활 체크 ${checked}회`);fullCtx.push(`생활 체크리스트에서 확인된 활동 ${checked}회. 이것만으로 성격이나 태도를 단정하지 말 것.`);}
   // AI로 나가는 자료에서 학생 이름을 가립니다.
   return {lines,fullCtx:fullCtx.map(t=>_maskForAi(t,student)),student};
@@ -14308,7 +14570,7 @@ async function renderReport(){
 
   const context={friend:analyzeFriends(),rounds:[{id:'all',label:'누적'},..._friendRoundOptions()].map(r=>({...r,analysis:analyzeFriends(r.id)}))};
   const checklistCount={};
-  Object.values(checklistRecords||{}).forEach(byItem=>Object.values(byItem||{}).forEach(byStu=>Object.entries(byStu||{}).forEach(([k,v])=>{ if(v&&v.checked){ const n=Number(k); checklistCount[n]=(checklistCount[n]||0)+1; } })));
+  Object.values(checklistHistory()).forEach(byItem=>Object.values(byItem||{}).forEach(byStu=>Object.entries(byStu||{}).forEach(([k,v])=>{ if(v&&v.checked){ const n=Number(k); checklistCount[n]=(checklistCount[n]||0)+1; } })));
 
   const reports=students.map(s=>{
     const base=getStudentReport(s,context);
@@ -14594,7 +14856,7 @@ function getStudentReport(s,context){
 function buildReportOpinionInput(student, report){
   const r = report || getStudentReport(student);
   let checklistCount = 0;
-  Object.values(checklistRecords||{}).forEach(byItem=>Object.values(byItem||{}).forEach(byStu=>{
+  Object.values(checklistHistory()).forEach(byItem=>Object.values(byItem||{}).forEach(byStu=>{
     const rec = byStu?.[student.num] ?? byStu?.[String(student.num)];
     if(rec && rec.checked) checklistCount++;
   }));
@@ -16117,6 +16379,18 @@ async function deleteStudent(num){
       return out;
     });
     if(next!==undefined){ checklistRecords=next; saveLocal('pesk-checklists', checklistRecords); }
+    for(const m of checklistArchiveMonths){
+      await _mutateServerDoc(ChecklistArchive.archiveKey(m), v=>{
+        const out={...(v||{})};
+        Object.keys(out).forEach(date=>{
+          const items={...(out[date]||{})};
+          Object.keys(items).forEach(id=>{ items[id]=_dropStudentKeys(items[id]||{},num); });
+          out[date]=items;
+        });
+        return out;
+      });
+    }
+    if(checklistArchiveMonths.length) await loadChecklistArchive();
   });
   await step('챌린지 제출', async ()=>{
     const next = await _mutateServerDoc('pesk-challenge-submissions', v=>{
