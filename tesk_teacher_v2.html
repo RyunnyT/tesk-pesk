@@ -11723,7 +11723,7 @@ function writingStatusBadge(w){
   return '<span style="padding:2px 6px;border-radius:99px;font-size:10px;font-weight:700;background:var(--purple-l);color:var(--purple);margin-left:4px;">확인 대기</span>';
 }
 function getWritingExportRows(){
-  const peskRows = (peskWritingsAll||[]).map(w=>({
+  const peskRows = (peskWritingsAll||[]).filter(w=>writingInRange(getPeskWritingDateKey(w))).map(w=>({
     source:'학생 제출',
     studentNum:w.studentNum ?? '',
     studentName:w.studentName || '',
@@ -11756,7 +11756,7 @@ function getWritingExportRows(){
     time:0
   }));
   // 표시용 날짜('2026. 10. 1.')를 글자로 비교하면 10월이 9월 뒤로 간다 → YYYY-MM-DD 키로 정렬
-  return [...peskRows, ...teacherRows].sort((a,b)=>String(b.dateKey).localeCompare(String(a.dateKey)) || (Number(a.studentNum)||999999)-(Number(b.studentNum)||999999) || b.time-a.time);
+  return [...peskRows, ...teacherRows.filter(r=>writingInRange(r.dateKey))].sort((a,b)=>String(b.dateKey).localeCompare(String(a.dateKey)) || (Number(a.studentNum)||999999)-(Number(b.studentNum)||999999) || b.time-a.time);
 }
 function _excelCell(v){
   return String(v??'')
@@ -11774,7 +11774,7 @@ function _writingExportGroups(){
 function _writingFileStamp(){ return today().replace(/[\s.]+/g,'-').replace(/^-+|-+$/g,''); }
 async function downloadWritingExcel(){
   const rows = getWritingExportRows();
-  if(!rows.length) return showToast('⚠️ 내보낼 글이 없어요');
+  if(!rows.length) return showToast(writingRangeText() ? '⚠️ 이 기간에 내보낼 글이 없어요' : '⚠️ 내보낼 글이 없어요');
   try{
     await _ensureJSZipForForm();
     const sheets = [{
@@ -11786,41 +11786,123 @@ async function downloadWritingExcel(){
       name:_writingGroupLabel(g.student).replace('. ','번 '),
       headers:STUDENT_WRITING_XLSX_HEADERS, widths:STUDENT_WRITING_XLSX_WIDTHS, rows:_studentWritingXlsxRows(g.rows)
     }))];
-    _saveBlob(await TeskXlsx.build(sheets), '글쓰기_학생별_' + _writingFileStamp() + '.xlsx');
+    _saveBlob(await TeskXlsx.build(sheets), '글쓰기_학생별_' + _writingFileStamp() + writingRangeFileTag() + '.xlsx');
     showToast('📊 글쓰기 Excel을 내려받았어요 (학생별 시트 ' + (sheets.length-1) + '개)');
   }catch(e){ console.warn('글쓰기 Excel 실패', e); showToast('❌ Excel 내려받기 실패: ' + (e?.message||e)); }
 }
 async function downloadWritingHwpx(){
   const groups = _writingExportGroups();
-  if(!groups.length) return showToast('⚠️ 내보낼 글이 없어요');
+  if(!groups.length) return showToast(writingRangeText() ? '⚠️ 이 기간에 내보낼 글이 없어요' : '⚠️ 내보낼 글이 없어요');
   showToast('⏳ 학생별 HWPX를 만드는 중이에요…');
   try{
     await _ensureJSZipForForm();
     const zip = new JSZip();
     const used = new Set();
     for(const g of groups){
-      const base = _studentWritingFileBase(g.student);
+      const base = _studentWritingFileBase(g.student) + writingRangeFileTag();
       let name = base, n = 2;
       while(used.has(name)) name = base + '_' + n++;
       used.add(name);
-      zip.file(name + '.hwpx', await _createPlainHwpxBlob(_studentWritingHwpxText(g.student, g.rows), name));
+      zip.file(name + '.hwpx', await _createPlainHwpxBlob(_studentWritingHwpxText(g.student, g.rows, writingRangeText()), name));
     }
-    _saveBlob(await zip.generateAsync({type:'blob'}), '글쓰기_학생별_' + _writingFileStamp() + '.zip');
+    _saveBlob(await zip.generateAsync({type:'blob'}), '글쓰기_학생별_' + _writingFileStamp() + writingRangeFileTag() + '.zip');
     showToast('⬇ 학생 ' + groups.length + '명의 HWPX를 ZIP으로 내려받았어요');
   }catch(e){ console.warn('글쓰기 HWPX 실패', e); showToast('❌ HWPX 내려받기 실패: ' + (e?.message||e)); }
 }
 // 미확인(아직 피드백·읽음 처리 안 한) 글만 모아보기 토글
-let writingPendingOnly = false;
-function toggleWritingPendingOnly(){ writingPendingOnly = !writingPendingOnly; renderWriting(); }
+/* 보던 방식(미확인만·일별/월별/학생별·고른 학생)과 내려받기 기간을 이 기기에 기억한다.
+   새로고침하거나 다시 들어와도 같은 화면에서 이어 본다. 학급마다 따로 저장. */
+const WRITING_VIEW_KEY = ()=>'tesk-writing-view-' + (typeof TESK_ROOM!=='undefined' && TESK_ROOM ? TESK_ROOM : 'default');
+function _loadWritingView(){
+  try{ return JSON.parse(localStorage.getItem(WRITING_VIEW_KEY()) || '{}') || {}; }catch(e){ return {}; }
+}
+function saveWritingView(){
+  try{
+    localStorage.setItem(WRITING_VIEW_KEY(), JSON.stringify({
+      pendingOnly:writingPendingOnly, mode:writingGroupMode, student:writingStudentTab, range:writingRange
+    }));
+  }catch(e){}
+}
+const _savedWritingView = _loadWritingView();
+let writingPendingOnly = _savedWritingView.pendingOnly === true;
+function toggleWritingPendingOnly(){ writingPendingOnly = !writingPendingOnly; saveWritingView(); renderWriting(); }
+
+/* 📆 기간 — 학생별 보기와 모든 내려받기(반 전체·학생별)에 적용. 날짜는 YYYY-MM-DD 키로 비교. */
+let writingRange = (_savedWritingView.range && typeof _savedWritingView.range==='object')
+  ? {preset:String(_savedWritingView.range.preset||'all'), from:String(_savedWritingView.range.from||''), to:String(_savedWritingView.range.to||'')}
+  : {preset:'all', from:'', to:''};
+function _ymd(d){ return d.getFullYear()+'-'+_pad2(d.getMonth()+1)+'-'+_pad2(d.getDate()); }
+function writingRangeBounds(range, now){
+  range = range || writingRange; now = now || new Date();
+  const y = now.getFullYear(), m = now.getMonth()+1;
+  if(range.preset==='month') return {from:_ymd(new Date(y, m-1, 1)), to:_ymd(new Date(y, m, 0))};
+  if(range.preset==='semester'){
+    // 1학기 3월~8월, 2학기 9월~다음 해 2월 말
+    if(m>=3 && m<=8) return {from:y+'-03-01', to:y+'-08-31'};
+    const sy = m>=9 ? y : y-1;
+    return {from:sy+'-09-01', to:_ymd(new Date(sy+1, 2, 0))};
+  }
+  if(range.preset==='custom'){
+    let from = /^\d{4}-\d{2}-\d{2}$/.test(range.from) ? range.from : '';
+    let to = /^\d{4}-\d{2}-\d{2}$/.test(range.to) ? range.to : '';
+    if(from && to && from > to) [from, to] = [to, from];
+    return (from || to) ? {from, to} : null;
+  }
+  return null;
+}
+function writingInRange(dateKey, range){
+  const b = writingRangeBounds(range);
+  if(!b) return true;
+  const k = String(dateKey||'');
+  return (!b.from || k >= b.from) && (!b.to || k <= b.to);
+}
+function writingRangeText(){
+  const b = writingRangeBounds();
+  if(!b) return '';
+  const f = d=>d ? formatPeskWritingDateLabel(d) : '';
+  return (b.from ? f(b.from) : '처음') + ' ~ ' + (b.to ? f(b.to) : '지금');
+}
+function writingRangeFileTag(){
+  const b = writingRangeBounds();
+  return b ? '_' + (b.from || '처음') + '~' + (b.to || '지금') : '';
+}
+function setWritingRangePreset(preset){
+  writingRange = {...writingRange, preset};
+  if(preset==='custom' && !writingRange.from && !writingRange.to){
+    const b = writingRangeBounds({preset:'month'});
+    writingRange.from = b.from; writingRange.to = b.to;
+  }
+  saveWritingView(); renderWriting();
+}
+function setWritingRangeDate(which, value){
+  writingRange = {...writingRange, preset:'custom', [which]:String(value||'')};
+  saveWritingView(); renderWriting();
+}
+function writingRangeControlHtml(){
+  const opt = (v, label)=>'<option value="' + v + '"' + (writingRange.preset===v ? ' selected' : '') + '>' + label + '</option>';
+  const custom = writingRange.preset==='custom'
+    ? '<input type="date" class="form-input" style="width:auto;padding:4px 6px;font-size:12px;" aria-label="시작 날짜" value="' + escHtml(writingRange.from) + '" onchange="setWritingRangeDate(\'from\',this.value)">'
+      + '<span style="font-size:12px;color:var(--sub);">~</span>'
+      + '<input type="date" class="form-input" style="width:auto;padding:4px 6px;font-size:12px;" aria-label="끝 날짜" value="' + escHtml(writingRange.to) + '" onchange="setWritingRangeDate(\'to\',this.value)">'
+    : '';
+  const text = writingRangeText();
+  return '<span style="display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;" title="학생별 보기와 Excel·HWPX 내려받기에 적용돼요">'
+    + '<span style="font-size:12px;font-weight:800;color:var(--sub);">📆 기간</span>'
+    + '<select class="form-input" style="width:auto;padding:4px 8px;font-size:12px;" aria-label="내려받기 기간" onchange="setWritingRangePreset(this.value)">'
+    + opt('all','전체') + opt('semester','이번 학기') + opt('month','이번 달') + opt('custom','직접 선택') + '</select>'
+    + custom
+    + (text && writingRange.preset!=='custom' ? '<span style="font-size:11px;color:var(--sub);">' + escHtml(text) + '</span>' : '')
+    + '</span>';
+}
 
 // 일별 / 월별 보기 전환
-let writingGroupMode = 'day'; // 'day' | 'month' | 'student'
-function setWritingGroupMode(mode){ writingGroupMode = mode; writingDateTab = ''; renderWriting(); }
+let writingGroupMode = ['day','month','student'].includes(_savedWritingView.mode) ? _savedWritingView.mode : 'day';
+function setWritingGroupMode(mode){ writingGroupMode = mode; writingDateTab = ''; saveWritingView(); renderWriting(); }
 function toggleWritingGroupMode(){ setWritingGroupMode(writingGroupMode==='month' ? 'day' : 'month'); }
 
 /* 👤 학생별 보기 — 한 학생이 그동안 쓴 글을 모아 보고, 그 학생 글만 파일로 내려받는다.
    명단 학생 + 명단에 없는 이름으로 낸 글(전학·이름 변경 등)도 따로 묶어 빠지지 않게 한다. */
-let writingStudentTab = '';
+let writingStudentTab = String(_savedWritingView.student || '');
 function _writingStudentSort(a,b){
   const an = Number(a?.num), bn = Number(b?.num);
   const sa = (a?.num!=null && a?.num!=='' && Number.isFinite(an)) ? an : 999999;
@@ -11830,13 +11912,14 @@ function _writingStudentSort(a,b){
 function writingStudentGroups(){
   const newestFirst = rows=>rows.slice().sort((a,b)=>getPeskWritingTime(b)-getPeskWritingTime(a));
   const claimed = new Set();
+  const all = (peskWritingsAll||[]).filter(w=>writingInRange(getPeskWritingDateKey(w)));
   const groups = students.slice().sort(_writingStudentSort).map(st=>{
-    const rows = (peskWritingsAll||[]).filter(w=>_recordBelongsToStudent(w, st));
+    const rows = all.filter(w=>_recordBelongsToStudent(w, st));
     rows.forEach(w=>claimed.add(w.id));
     return {key:'n'+st.num, student:st, rows:newestFirst(rows)};
   });
   const extra = new Map();
-  (peskWritingsAll||[]).forEach(w=>{
+  all.forEach(w=>{
     if(claimed.has(w.id)) return;
     const n = Number(w.studentNum);
     const name = String(w.studentName||'').trim() || '이름 없음';
@@ -11854,18 +11937,18 @@ function currentWritingStudentGroup(groups){
   return g;
 }
 let _writingStudentKeys = [];
-function selectWritingStudent(idx){ writingStudentTab = _writingStudentKeys[idx] || ''; renderWriting(); }
+function selectWritingStudent(idx){ writingStudentTab = _writingStudentKeys[idx] || ''; saveWritingView(); renderWriting(); }
 function _writingGroupLabel(st){ return (st.num!=null && st.num!=='' ? st.num + '. ' : '') + (st.name || '이름 없음'); }
 // 교사 등록 글까지 포함한 내보내기용 행. 명단에 없는 학생은 그 학생 이름으로 낸 글만.
 function _writingGroupExportRows(g){
   const ids = new Set(g.rows.map(w=>w.id));
-  const rows = getStudentWritingRows(g.student);
+  const rows = getStudentWritingRows(g.student).filter(r=>writingInRange(r.dateKey));
   return g.extra ? rows.filter(r=>r.sourceType!=='pesk' || ids.has(r.id)) : rows;
 }
 function downloadWritingStudent(format){
   const g = currentWritingStudentGroup();
   if(!g) return showToast('⚠️ 학생을 먼저 골라주세요');
-  return _downloadStudentWritingFile(g.student, _writingGroupExportRows(g), format);
+  return _downloadStudentWritingFile(g.student, _writingGroupExportRows(g), format, {tag:writingRangeFileTag(), period:writingRangeText()});
 }
 function renderWritingStudentView(toolbar){
   const groups = writingStudentGroups();
@@ -11890,18 +11973,90 @@ function renderWritingStudentView(toolbar){
     const dis = exportCount ? '' : 'disabled ';
     body = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 4px;border-bottom:2px solid var(--purple-l);margin-bottom:8px;">'
       + '<div style="font-size:14px;font-weight:900;color:var(--purple);">👤 ' + escHtml(_writingGroupLabel(g.student)) + '</div>'
-      + '<div style="font-size:12px;color:var(--sub);">제출 ' + g.rows.length + '편' + (pend ? ' · <span style="color:var(--coral);font-weight:800;">미확인 ' + pend + '</span>' : '') + '</div>'
+      + '<div style="font-size:12px;color:var(--sub);">' + (writingRangeText() ? escHtml(writingRangeText()) + ' · ' : '') + '제출 ' + g.rows.length + '편' + (pend ? ' · <span style="color:var(--coral);font-weight:800;">미확인 ' + pend + '</span>' : '') + '</div>'
       + '<div style="margin-left:auto;display:flex;gap:6px;">'
       + '<button class="btn btn-sm btn-secondary" ' + dis + 'onclick="downloadWritingStudent(\'excel\')">📊 이 학생 Excel</button>'
       + '<button class="btn btn-sm btn-secondary" ' + dis + 'onclick="downloadWritingStudent(\'hwpx\')">⬇ 이 학생 HWPX</button>'
       + '</div></div>'
+      + writingGrowthHtml(g.rows)
       + (g.rows.length
         ? '<div class="exam-step-list">' + g.rows.map(peskWritingRowHtml).join('') + '</div>'
-        : '<div style="text-align:center;padding:24px;color:var(--hint);">아직 제출한 글이 없어요.</div>');
+        : '<div style="text-align:center;padding:24px;color:var(--hint);">' + (writingRangeText() ? '이 기간에 제출한 글이 없어요.' : '아직 제출한 글이 없어요.') + '</div>');
   }
   return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">' + toolbar + '</div>'
     + '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;max-height:150px;overflow:auto;">' + chips + '</div>'
     + body;
+}
+/* 📈 성장 흐름 — 글자 수와 루브릭 총점은 단위가 달라 차트를 나눈다(한 차트에 축 두 개 금지).
+   글 하나 = 막대/점 하나, 오래된 글 → 최근 글 순. 막대·점에 마우스를 올리면 날짜·제목·값. */
+function _writingLen(w){ return String(w?.content||'').replace(/\s+/g,' ').trim().length; }
+function _writingScore(w){
+  const r = w?.rubric;
+  if(!r || w.rubricStale || r.fallback || r.blocked || r.failed) return null;
+  const t = Number(r.total);
+  return Number.isFinite(t) && t > 0 ? t : null;
+}
+function _avg(a){ return a.length ? Math.round(a.reduce((x,y)=>x+y,0)/a.length) : 0; }
+function _writingTrendText(vals, unit){
+  if(vals.length < 2) return '';
+  const k = Math.min(3, Math.floor(vals.length/2));
+  const first = _avg(vals.slice(0,k)), last = _avg(vals.slice(-k));
+  const diff = last - first;
+  const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '→';
+  return '처음 ' + k + '편 평균 ' + first + unit + ' → 최근 ' + k + '편 ' + last + unit + ' <b>' + arrow + ' ' + Math.abs(diff) + unit + '</b>';
+}
+function _writingBarsSvg(items, maxV, label){
+  const W = 300, H = 64, n = items.length, gap = 2;
+  const bw = Math.max(2, (W - gap*(n-1)) / n);
+  const top = Math.max(1, maxV);
+  return '<svg viewBox="0 0 ' + W + ' ' + (H+2) + '" width="100%" height="' + (H+2) + '" preserveAspectRatio="none" role="img" aria-label="' + escHtml(label) + '" style="display:block;overflow:visible;">'
+    + '<line x1="0" y1="' + H + '" x2="' + W + '" y2="' + H + '" stroke="var(--border,#ddd)" stroke-width="1"/>'
+    + items.map((it,i)=>{
+        const h = Math.max(2, Math.round(it.v / top * (H-4)));
+        const x = i*(bw+gap);
+        return '<g><title>' + escHtml(it.tip) + '</title>'
+          + '<rect x="' + x + '" y="0" width="' + (bw+gap) + '" height="' + H + '" fill="transparent"/>'
+          + '<rect x="' + x + '" y="' + (H-h) + '" width="' + bw + '" height="' + h + '" rx="' + Math.min(2, bw/2) + '" fill="var(--purple)" opacity="' + (i===n-1 ? 1 : .55) + '"/></g>';
+      }).join('')
+    + '</svg>';
+}
+function _writingDotsSvg(items, label){
+  const W = 300, H = 64, n = items.length, pad = 6;
+  const x = i=>n===1 ? W/2 : pad + i*(W-2*pad)/(n-1);
+  const y = v=>H - 2 - (v/100)*(H-8);
+  const path = items.map((it,i)=>(i?'L':'M') + x(i).toFixed(1) + ' ' + y(it.v).toFixed(1)).join(' ');
+  return '<svg viewBox="0 0 ' + W + ' ' + (H+2) + '" width="100%" height="' + (H+2) + '" preserveAspectRatio="none" role="img" aria-label="' + escHtml(label) + '" style="display:block;overflow:visible;">'
+    + '<line x1="0" y1="' + y(50) + '" x2="' + W + '" y2="' + y(50) + '" stroke="var(--border,#ddd)" stroke-width="1" stroke-dasharray="3 3"/>'
+    + '<line x1="0" y1="' + H + '" x2="' + W + '" y2="' + H + '" stroke="var(--border,#ddd)" stroke-width="1"/>'
+    + (n>1 ? '<path d="' + path + '" fill="none" stroke="var(--tesk)" stroke-width="2" vector-effect="non-scaling-stroke"/>' : '')
+    + items.map((it,i)=>'<g><title>' + escHtml(it.tip) + '</title>'
+        + '<rect x="' + (x(i)-8) + '" y="0" width="16" height="' + H + '" fill="transparent"/>'
+        + '<circle cx="' + x(i) + '" cy="' + y(it.v) + '" r="4" fill="var(--tesk)" stroke="var(--surface,#fff)" stroke-width="2" vector-effect="non-scaling-stroke"/></g>').join('')
+    + '</svg>';
+}
+function writingGrowthHtml(rows){
+  const list = (rows||[]).slice().sort((a,b)=>getPeskWritingTime(a)-getPeskWritingTime(b));
+  if(list.length < 2) return '';
+  const MAX = 40;
+  const shown = list.slice(-MAX);
+  const day = w=>formatPeskWritingDateLabel(getPeskWritingDateKey(w));
+  const lens = shown.map(w=>({v:_writingLen(w), tip:day(w) + ' · ' + (w.title||'(제목 없음)') + ' · ' + _writingLen(w) + '자'}));
+  const scored = shown.filter(w=>_writingScore(w)!=null).map(w=>({v:_writingScore(w), tip:day(w) + ' · ' + (w.title||'(제목 없음)') + ' · ' + _writingScore(w) + '점'}));
+  const lenVals = lens.map(x=>x.v);
+  const card = (title, sub, chart, foot)=>'<div style="flex:1 1 240px;min-width:0;background:var(--surface);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:10px 12px;">'
+    + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:6px;"><span style="font-size:12px;font-weight:900;color:var(--text,inherit);">' + title + '</span><span style="font-size:11px;color:var(--sub);">' + sub + '</span></div>'
+    + chart
+    + '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--hint);margin-top:2px;"><span>' + escHtml(day(shown[0])) + '</span><span>' + escHtml(day(shown[shown.length-1])) + '</span></div>'
+    + (foot ? '<div style="font-size:11px;color:var(--sub);margin-top:4px;">' + foot + '</div>' : '')
+    + '</div>';
+  const lenCard = card('글자 수', '평균 ' + _avg(lenVals) + '자 · 최대 ' + Math.max(...lenVals) + '자',
+    _writingBarsSvg(lens, Math.max(...lenVals), '글마다 글자 수, 오래된 글부터'), _writingTrendText(lenVals, '자'));
+  const scoreCard = scored.length
+    ? card('루브릭 총점', '평균 ' + _avg(scored.map(x=>x.v)) + '점 · ' + scored.length + '편 평가', _writingDotsSvg(scored, '평가한 글마다 루브릭 총점(100점), 오래된 글부터'),
+        scored.length>=2 ? _writingTrendText(scored.map(x=>x.v), '점') : '평가가 2편 이상 쌓이면 변화가 보여요.')
+    : card('루브릭 총점', '평가한 글 없음', '<div style="height:66px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--hint);">첨삭 화면에서 루브릭 평가를 하면 점수 흐름이 나와요</div>', '');
+  return '<details class="wr-growth" open style="margin-bottom:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:800;color:var(--purple);padding:2px 4px 6px;">📈 성장 흐름' + (list.length>MAX ? ' (최근 ' + MAX + '편)' : '') + '</summary>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">' + lenCard + scoreCard + '</div></details>';
 }
 function writingGroupModeButtons(){
   const b = (mode, label)=>'<button class="btn btn-sm ' + (writingGroupMode===mode ? 'btn-purple' : 'btn-secondary') + '" style="white-space:nowrap;" onclick="setWritingGroupMode(\'' + mode + '\')">' + label + '</button>';
@@ -12150,6 +12305,7 @@ function renderWriting(){
     + (window.TeskWritingReview ? '<button class="btn btn-sm btn-secondary" style="white-space:nowrap;" onclick="TeskWritingReview.openAnthology()">📚 우리 반 글 모음집 (' + peskWritingsAll.filter(w=>w.anthology?.status==='published').length + ')</button>' : '')
     + '<button class="btn btn-sm ' + peskBtnClass + '" onclick="writingViewMode=\'pesk\';renderWriting();">Pesk 제출</button>'
     + '<button class="btn btn-sm ' + teacherBtnClass + '" onclick="writingViewMode=\'teacher\';renderWriting();">직접 등록</button>'
+    + writingRangeControlHtml()
     + '<button class="btn btn-sm btn-secondary" title="전체 시트 + 학생마다 시트 하나" onclick="downloadWritingExcel()">📊 Excel (학생별 시트)</button>'
     + '<button class="btn btn-sm btn-secondary" title="학생마다 HWPX 파일 하나씩, ZIP으로 묶음" onclick="downloadWritingHwpx()">⬇ HWPX (학생별 ZIP)</button>'
     + '</div></div>'
@@ -13935,22 +14091,17 @@ function _studentWritingFileBase(student){
   const label = (student.num!=null && student.num!=='' ? student.num + '번_' : '') + (student.name || '이름없음');
   return (label + '_글쓰기_' + _writingFileStamp()).replace(/[\\\/:*?"<>|]/g,'_').replace(/\s+/g,'');
 }
-function _studentWritingHwpxText(student, rows){
-  const text = _groupWritingsByDate(rows).map(g=>[
-    `■ ${g.date}`,
-    ...g.rows.map((w,i)=>[
-      `${i+1}. ${w.title || '(제목 없음)'}`,
-      `구분: ${w.source} · 장르: ${w.genre || '-'} · 상태: ${w.status}${w.score!=null ? ' · 점수: '+w.score : ''}`,
-      '',
-      '[글 내용]',
-      w.content || '',
-      '',
-      w.rubric ? '[루브릭 평가]\n'+_writingRubricExportText(w.rubric) : '',
-      '',
-      w.feedback ? '[피드백]\n'+w.feedback : ''
-    ].join('\n'))
-  ].join('\n\n')).join('\n\n────────────────────────\n\n');
-  return `${student.num!=null && student.num!=='' ? student.num+'번 ' : ''}${student.name || ''} 글쓰기 모음\n생성일: ${today()}\n총 ${rows.length}편\n\n${text}`;
+function _studentWritingHwpxText(student, rows, period){
+  // 내용이 있는 칸만 넣는다(루브릭·피드백이 없는 글에 빈 줄이 몰리지 않게). 칸 사이는 빈 줄 하나.
+  const one = (w,i)=>[
+    `${i+1}. ${w.title || '(제목 없음)'}\n구분: ${w.source} · 장르: ${w.genre || '-'} · 상태: ${w.status}${w.score!=null ? ' · 점수: '+w.score : ''}`,
+    '[글 내용]\n' + (String(w.content||'').trim() || '(내용 없음)'),
+    w.rubric ? '[루브릭 평가]\n'+_writingRubricExportText(w.rubric) : '',
+    String(w.feedback||'').trim() ? '[피드백]\n'+String(w.feedback).trim() : ''
+  ].filter(Boolean).join('\n\n');
+  const text = _groupWritingsByDate(rows).map(g=>`■ ${g.date}\n\n` + g.rows.map(one).join('\n\n')).join('\n\n────────────────────────\n\n');
+  const head = [`${student.num!=null && student.num!=='' ? student.num+'번 ' : ''}${student.name || ''} 글쓰기 모음`, `생성일: ${today()}`, period ? `기간: ${period}` : '', `총 ${rows.length}편`].filter(Boolean).join('\n');
+  return `${head}\n\n${text}`;
 }
 function _saveBlob(blob, filename){
   const url = URL.createObjectURL(blob);
@@ -13959,9 +14110,9 @@ function _saveBlob(blob, filename){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url), 4000);
 }
-async function _downloadStudentWritingFile(student, rows, format){
-  if(!rows.length) return showToast('⚠️ 내보낼 글이 없어요');
-  const baseName = _studentWritingFileBase(student);
+async function _downloadStudentWritingFile(student, rows, format, opt={}){
+  if(!rows.length) return showToast(opt.period ? '⚠️ 이 기간에 내보낼 글이 없어요' : '⚠️ 내보낼 글이 없어요');
+  const baseName = _studentWritingFileBase(student) + (opt.tag || '');
   try{
     await _ensureJSZipForForm();
     if(format === 'excel'){
@@ -13969,7 +14120,7 @@ async function _downloadStudentWritingFile(student, rows, format){
       _saveBlob(blob, baseName + '.xlsx');
       showToast('📊 ' + (student.name||'학생') + ' 글쓰기 Excel을 내려받았어요');
     } else {
-      const blob = await _createPlainHwpxBlob(_studentWritingHwpxText(student, rows), baseName);
+      const blob = await _createPlainHwpxBlob(_studentWritingHwpxText(student, rows, opt.period), baseName);
       _saveBlob(blob, baseName + '.hwpx');
       showToast('⬇ ' + (student.name||'학생') + ' 글쓰기 HWPX를 내려받았어요');
     }
