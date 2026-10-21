@@ -1000,6 +1000,7 @@ input, textarea, select, [contenteditable] {
 ::-webkit-scrollbar-thumb:hover{background:rgba(26,71,42,0.22);}
 </style>
 <script src="shared/tesk-jszip.min.js"></script>
+<script src="shared/tesk-xlsx.js?v=20261021"></script>
 <script>
 window.addEventListener('error', function(e){
   console.error('[TESK ERR]', e.message, 'at', e.filename+':'+e.lineno+':'+e.colno, e.error && e.error.stack);
@@ -11680,6 +11681,7 @@ function groupPeskWritingsByDate(){
   return grouped;
 }
 function getCurrentPeskWritingRows(){
+  if(writingGroupMode==='student') return currentWritingStudentGroup()?.rows || [];
   const grouped = groupPeskWritingsByDate();
   const dateKeys = Object.keys(grouped).sort((a,b)=>b.localeCompare(a));
   if(!dateKeys.includes(writingDateTab)) writingDateTab = dateKeys[0] || '';
@@ -11733,7 +11735,9 @@ function getWritingExportRows(){
     feedback:w.feedback || '',
     feedbackDate:w.feedbackDate || '',
     score:w?.rubric?.total ?? w?.score ?? '',
-    readAt:w.readAt || ''
+    readAt:w.readAt || '',
+    dateKey:getPeskWritingDateKey(w),
+    time:getPeskWritingTime(w)
   }));
   const teacherRows = (writings||[]).map(w=>({
     source:'교사 등록',
@@ -11747,9 +11751,12 @@ function getWritingExportRows(){
     feedback:w?.eval?.feedback || '',
     feedbackDate:'',
     score:w?.eval?.total ?? '',
-    readAt:''
+    readAt:'',
+    dateKey:getPeskWritingDateKey({date:w.date}),
+    time:0
   }));
-  return [...peskRows, ...teacherRows].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')) || String(a.studentNum).localeCompare(String(b.studentNum)));
+  // 표시용 날짜('2026. 10. 1.')를 글자로 비교하면 10월이 9월 뒤로 간다 → YYYY-MM-DD 키로 정렬
+  return [...peskRows, ...teacherRows].sort((a,b)=>String(b.dateKey).localeCompare(String(a.dateKey)) || (Number(a.studentNum)||999999)-(Number(b.studentNum)||999999) || b.time-a.time);
 }
 function _excelCell(v){
   return String(v??'')
@@ -11758,60 +11765,148 @@ function _excelCell(v){
     .replace(/>/g,'&gt;')
     .replace(/\r?\n/g,'<br>');
 }
-function downloadWritingExcel(){
-  const rows = getWritingExportRows();
-  if(!rows.length) return showToast('⚠️ 내보낼 글이 없어요');
-  const headers = ['구분','번호','학생','날짜','제목','장르','상태','점수','읽음일','피드백일','글 내용','피드백'];
-  const body = rows.map(r=>[
-    r.source,r.studentNum,r.studentName,r.date,r.title,r.genre,r.status,r.score,r.readAt,r.feedbackDate,r.content,r.feedback
-  ]);
-  const table = '<html><head><meta charset="UTF-8"></head><body><table border="1">'
-    + '<tr>'+headers.map(h=>'<th>'+_excelCell(h)+'</th>').join('')+'</tr>'
-    + body.map(row=>'<tr>'+row.map(v=>'<td style="mso-number-format:\\@;vertical-align:top;">'+_excelCell(v)+'</td>').join('')+'</tr>').join('')
-    + '</table></body></html>';
-  const blob = new Blob(['\ufeff'+table], {type:'application/vnd.ms-excel;charset=utf-8;'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = '글쓰기_내보내기_' + today() + '.xls';
-  a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
-  showToast('📊 글쓰기 Excel 파일을 내려받았어요');
+/* 학생별로 나눠 내보낼 묶음 — 글이 있는 학생만 */
+function _writingExportGroups(){
+  return writingStudentGroups()
+    .map(g=>({student:g.student, rows:_writingGroupExportRows(g)}))
+    .filter(g=>g.rows.length);
 }
-function downloadWritingHwpx(){
+function _writingFileStamp(){ return today().replace(/[\s.]+/g,'-').replace(/^-+|-+$/g,''); }
+async function downloadWritingExcel(){
   const rows = getWritingExportRows();
   if(!rows.length) return showToast('⚠️ 내보낼 글이 없어요');
-  const text = rows.map((r,i)=>[
-    `${i+1}. ${r.studentName || '이름 없음'} (${r.source})`,
-    `번호: ${r.studentNum || '-'}`,
-    `날짜: ${r.date || '-'}`,
-    `제목: ${r.title || '(제목 없음)'}`,
-    `장르: ${r.genre || '-'}`,
-    `상태: ${r.status}${r.score!=='' ? ' · 점수: '+r.score : ''}`,
-    '',
-    '[학생 글]',
-    r.content || '',
-    '',
-    r.feedback ? '[피드백]\n'+r.feedback : '[피드백]\n-',
-    ''
-  ].join('\n')).join('\n────────────────────────\n\n');
-  const tmp = document.createElement('pre');
-  tmp.id = 'writing-export-tmp-' + Date.now();
-  tmp.style.display = 'none';
-  tmp.textContent = '글쓰기 내보내기\n생성일: ' + today() + '\n\n' + text;
-  document.body.appendChild(tmp);
   try{
-    downloadAiHwpx(tmp.id, '글쓰기_내보내기_' + today());
-  } finally {
-    setTimeout(()=>tmp.remove(), 500);
-  }
+    await _ensureJSZipForForm();
+    const sheets = [{
+      name:'전체',
+      headers:['구분','번호','학생','날짜','제목','장르','상태','점수','읽음일','피드백일','글 내용','피드백'],
+      widths:[10,6,10,12,24,10,12,7,12,12,70,50],
+      rows:rows.map(r=>[r.source,r.studentNum,r.studentName,r.date,r.title,r.genre,r.status,r.score,r.readAt,r.feedbackDate,r.content,r.feedback])
+    }, ..._writingExportGroups().map(g=>({
+      name:_writingGroupLabel(g.student).replace('. ','번 '),
+      headers:STUDENT_WRITING_XLSX_HEADERS, widths:STUDENT_WRITING_XLSX_WIDTHS, rows:_studentWritingXlsxRows(g.rows)
+    }))];
+    _saveBlob(await TeskXlsx.build(sheets), '글쓰기_학생별_' + _writingFileStamp() + '.xlsx');
+    showToast('📊 글쓰기 Excel을 내려받았어요 (학생별 시트 ' + (sheets.length-1) + '개)');
+  }catch(e){ console.warn('글쓰기 Excel 실패', e); showToast('❌ Excel 내려받기 실패: ' + (e?.message||e)); }
+}
+async function downloadWritingHwpx(){
+  const groups = _writingExportGroups();
+  if(!groups.length) return showToast('⚠️ 내보낼 글이 없어요');
+  showToast('⏳ 학생별 HWPX를 만드는 중이에요…');
+  try{
+    await _ensureJSZipForForm();
+    const zip = new JSZip();
+    const used = new Set();
+    for(const g of groups){
+      const base = _studentWritingFileBase(g.student);
+      let name = base, n = 2;
+      while(used.has(name)) name = base + '_' + n++;
+      used.add(name);
+      zip.file(name + '.hwpx', await _createPlainHwpxBlob(_studentWritingHwpxText(g.student, g.rows), name));
+    }
+    _saveBlob(await zip.generateAsync({type:'blob'}), '글쓰기_학생별_' + _writingFileStamp() + '.zip');
+    showToast('⬇ 학생 ' + groups.length + '명의 HWPX를 ZIP으로 내려받았어요');
+  }catch(e){ console.warn('글쓰기 HWPX 실패', e); showToast('❌ HWPX 내려받기 실패: ' + (e?.message||e)); }
 }
 // 미확인(아직 피드백·읽음 처리 안 한) 글만 모아보기 토글
 let writingPendingOnly = false;
 function toggleWritingPendingOnly(){ writingPendingOnly = !writingPendingOnly; renderWriting(); }
 
 // 일별 / 월별 보기 전환
-let writingGroupMode = 'day'; // 'day' | 'month'
-function toggleWritingGroupMode(){ writingGroupMode = (writingGroupMode==='month' ? 'day' : 'month'); writingDateTab = ''; renderWriting(); }
+let writingGroupMode = 'day'; // 'day' | 'month' | 'student'
+function setWritingGroupMode(mode){ writingGroupMode = mode; writingDateTab = ''; renderWriting(); }
+function toggleWritingGroupMode(){ setWritingGroupMode(writingGroupMode==='month' ? 'day' : 'month'); }
+
+/* 👤 학생별 보기 — 한 학생이 그동안 쓴 글을 모아 보고, 그 학생 글만 파일로 내려받는다.
+   명단 학생 + 명단에 없는 이름으로 낸 글(전학·이름 변경 등)도 따로 묶어 빠지지 않게 한다. */
+let writingStudentTab = '';
+function _writingStudentSort(a,b){
+  const an = Number(a?.num), bn = Number(b?.num);
+  const sa = (a?.num!=null && a?.num!=='' && Number.isFinite(an)) ? an : 999999;
+  const sb = (b?.num!=null && b?.num!=='' && Number.isFinite(bn)) ? bn : 999999;
+  return sa - sb || String(a?.name||'').localeCompare(String(b?.name||''),'ko');
+}
+function writingStudentGroups(){
+  const newestFirst = rows=>rows.slice().sort((a,b)=>getPeskWritingTime(b)-getPeskWritingTime(a));
+  const claimed = new Set();
+  const groups = students.slice().sort(_writingStudentSort).map(st=>{
+    const rows = (peskWritingsAll||[]).filter(w=>_recordBelongsToStudent(w, st));
+    rows.forEach(w=>claimed.add(w.id));
+    return {key:'n'+st.num, student:st, rows:newestFirst(rows)};
+  });
+  const extra = new Map();
+  (peskWritingsAll||[]).forEach(w=>{
+    if(claimed.has(w.id)) return;
+    const n = Number(w.studentNum);
+    const name = String(w.studentName||'').trim() || '이름 없음';
+    const key = 'x' + (Number.isFinite(n) && n > 0 ? n : '') + '|' + name;
+    if(!extra.has(key)) extra.set(key, {key, student:{num:(Number.isFinite(n)&&n>0)?n:null, name}, rows:[], extra:true});
+    extra.get(key).rows.push(w);
+  });
+  [...extra.values()].sort((a,b)=>_writingStudentSort(a.student,b.student)).forEach(g=>{ g.rows = newestFirst(g.rows); groups.push(g); });
+  return groups;
+}
+function currentWritingStudentGroup(groups){
+  groups = groups || writingStudentGroups();
+  let g = groups.find(x=>x.key===writingStudentTab);
+  if(!g){ g = groups.find(x=>x.rows.length) || groups[0] || null; writingStudentTab = g ? g.key : ''; }
+  return g;
+}
+let _writingStudentKeys = [];
+function selectWritingStudent(idx){ writingStudentTab = _writingStudentKeys[idx] || ''; renderWriting(); }
+function _writingGroupLabel(st){ return (st.num!=null && st.num!=='' ? st.num + '. ' : '') + (st.name || '이름 없음'); }
+// 교사 등록 글까지 포함한 내보내기용 행. 명단에 없는 학생은 그 학생 이름으로 낸 글만.
+function _writingGroupExportRows(g){
+  const ids = new Set(g.rows.map(w=>w.id));
+  const rows = getStudentWritingRows(g.student);
+  return g.extra ? rows.filter(r=>r.sourceType!=='pesk' || ids.has(r.id)) : rows;
+}
+function downloadWritingStudent(format){
+  const g = currentWritingStudentGroup();
+  if(!g) return showToast('⚠️ 학생을 먼저 골라주세요');
+  return _downloadStudentWritingFile(g.student, _writingGroupExportRows(g), format);
+}
+function renderWritingStudentView(toolbar){
+  const groups = writingStudentGroups();
+  const g = currentWritingStudentGroup(groups);
+  const isPending = w=>(!w.feedback && !w.readAt) || w.needsRevisionReview===true;
+  _writingStudentKeys = groups.map(x=>x.key);
+  const chips = groups.map((x, i)=>{
+    const sel = g && x.key===g.key;
+    const pend = x.rows.filter(isPending).length;
+    const style = 'white-space:nowrap;' + (!x.rows.length && !sel ? 'opacity:.55;' : '');
+    return '<button class="btn btn-sm ' + (sel ? 'btn-purple' : 'btn-secondary') + '" style="' + style + '" onclick="selectWritingStudent(' + i + ')">'
+      + escHtml(_writingGroupLabel(x.student)) + ' <span style="opacity:.75;">(' + x.rows.length + ')</span>'
+      + (pend ? ' <span style="color:var(--coral);" title="미확인 ' + pend + '편">●</span>' : '') + (x.extra ? ' <span title="명단에 없는 이름으로 낸 글">❔</span>' : '')
+      + '</button>';
+  }).join('');
+  let body;
+  if(!g){
+    body = '<div style="text-align:center;padding:24px;color:var(--hint);">학생 명단이 없어요.</div>';
+  } else {
+    const pend = g.rows.filter(isPending).length;
+    const exportCount = _writingGroupExportRows(g).length;
+    const dis = exportCount ? '' : 'disabled ';
+    body = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 4px;border-bottom:2px solid var(--purple-l);margin-bottom:8px;">'
+      + '<div style="font-size:14px;font-weight:900;color:var(--purple);">👤 ' + escHtml(_writingGroupLabel(g.student)) + '</div>'
+      + '<div style="font-size:12px;color:var(--sub);">제출 ' + g.rows.length + '편' + (pend ? ' · <span style="color:var(--coral);font-weight:800;">미확인 ' + pend + '</span>' : '') + '</div>'
+      + '<div style="margin-left:auto;display:flex;gap:6px;">'
+      + '<button class="btn btn-sm btn-secondary" ' + dis + 'onclick="downloadWritingStudent(\'excel\')">📊 이 학생 Excel</button>'
+      + '<button class="btn btn-sm btn-secondary" ' + dis + 'onclick="downloadWritingStudent(\'hwpx\')">⬇ 이 학생 HWPX</button>'
+      + '</div></div>'
+      + (g.rows.length
+        ? '<div class="exam-step-list">' + g.rows.map(peskWritingRowHtml).join('') + '</div>'
+        : '<div style="text-align:center;padding:24px;color:var(--hint);">아직 제출한 글이 없어요.</div>');
+  }
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">' + toolbar + '</div>'
+    + '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;max-height:150px;overflow:auto;">' + chips + '</div>'
+    + body;
+}
+function writingGroupModeButtons(){
+  const b = (mode, label)=>'<button class="btn btn-sm ' + (writingGroupMode===mode ? 'btn-purple' : 'btn-secondary') + '" style="white-space:nowrap;" onclick="setWritingGroupMode(\'' + mode + '\')">' + label + '</button>';
+  return b('day','📅 일별') + b('month','🗓️ 월별') + b('student','👤 학생별');
+}
 
 // 월별 보기: 학생 그룹 접기/펼치기 상태 ('월|학생키' → true=펼침, 기본 접힘)
 let writingMonthGroupExpanded = {};
@@ -11887,7 +11982,7 @@ function renderWriting(){
   let innerContent = '';
   if(writingViewMode==='pesk'){
     const pendingBtn = '<button class="btn btn-sm '+(writingPendingOnly?'btn-purple':'btn-secondary')+'" onclick="toggleWritingPendingOnly()" style="white-space:nowrap;">'
-      + (writingPendingOnly ? '📋 날짜별로 보기' : '🔴 미확인만 모아보기 ('+pendingPesk.length+')') + '</button>';
+      + (writingPendingOnly ? '📋 전체 글 보기' : '🔴 미확인만 모아보기 ('+pendingPesk.length+')') + '</button>';
     if(peskWritingsAll.length===0){
       innerContent = '<div style="text-align:center;padding:30px;color:var(--hint);">아직 학생이 제출한 글이 없어요<br>학생이 Pesk → 글쓰기 탭에서 제출하면 여기에 나타나요</div>';
     } else if(writingPendingOnly){
@@ -11896,6 +11991,8 @@ function renderWriting(){
         + '<div class="card" style="margin-bottom:10px;background:var(--surface);"><div style="font-size:12px;color:var(--sub);">🔴 아직 확인·첨삭 안 한 글 <b>' + pendingPesk.length + '편</b> (모든 날짜 모음)</div></div>'
         + (rows ? '<div class="exam-step-list">' + rows + '</div>'
                 : '<div style="text-align:center;padding:24px;color:var(--hint);">🎉 미확인 글이 없어요. 모두 확인했어요!</div>');
+    } else if(writingGroupMode==='student'){
+      innerContent = renderWritingStudentView(pendingBtn + writingGroupModeButtons());
     } else {
       const isMonth = writingGroupMode==='month';
       const grouped = isMonth ? groupPeskWritingsByMonth() : groupPeskWritingsByDate();
@@ -11982,7 +12079,7 @@ function renderWriting(){
           : '<span style="font-size:11px;color:var(--sub);">제출 학생 없음</span>');
       const submittedCount = sortedStudents.length ? sortedStudents.filter(s=>submittedNums.has(Number(s.num))).length : submittedNames.size;
       const missingCount = sortedStudents.length ? Math.max(0, sortedStudents.length - submittedCount) : 0;
-      const groupBtn = '<button class="btn btn-sm btn-secondary" onclick="toggleWritingGroupMode()" style="white-space:nowrap;">' + (isMonth ? '📅 일별로 보기' : '🗓️ 월별로 모아보기') + '</button>';
+      const groupBtn = writingGroupModeButtons();
       // 제출 현황은 한 줄 요약 + 미제출 이름만. 전체 명단은 펼쳐서 본다.
       const missingNames = sortedStudents
         .filter(s=>!(Number.isFinite(Number(s.num)) ? submittedNums.has(Number(s.num)) : submittedNames.has(String(s.name||'').trim())))
@@ -12053,8 +12150,8 @@ function renderWriting(){
     + (window.TeskWritingReview ? '<button class="btn btn-sm btn-secondary" style="white-space:nowrap;" onclick="TeskWritingReview.openAnthology()">📚 우리 반 글 모음집 (' + peskWritingsAll.filter(w=>w.anthology?.status==='published').length + ')</button>' : '')
     + '<button class="btn btn-sm ' + peskBtnClass + '" onclick="writingViewMode=\'pesk\';renderWriting();">Pesk 제출</button>'
     + '<button class="btn btn-sm ' + teacherBtnClass + '" onclick="writingViewMode=\'teacher\';renderWriting();">직접 등록</button>'
-    + '<button class="btn btn-sm btn-secondary" onclick="downloadWritingExcel()">📊 Excel</button>'
-    + '<button class="btn btn-sm btn-secondary" onclick="downloadWritingHwpx()">⬇ HWPX</button>'
+    + '<button class="btn btn-sm btn-secondary" title="전체 시트 + 학생마다 시트 하나" onclick="downloadWritingExcel()">📊 Excel (학생별 시트)</button>'
+    + '<button class="btn btn-sm btn-secondary" title="학생마다 HWPX 파일 하나씩, ZIP으로 묶음" onclick="downloadWritingHwpx()">⬇ HWPX (학생별 ZIP)</button>'
     + '</div></div>'
     + innerContent
     + '</div>'
@@ -13670,7 +13767,9 @@ function getStudentWritingRows(student){
       score:w?.eval?.total ?? null,
       feedback:w?.eval?.feedback || '',
       status:'분석 완료',
-      rubric:_hydrateRubric(w?.eval?.rubric || w?.rubric || null)
+      rubric:_hydrateRubric(w?.eval?.rubric || w?.rubric || null),
+      dateKey:getPeskWritingDateKey({date:w.date}),
+      time:0
     }));
   const peskRows = (peskWritingsAll||[])
     .filter(w=>_recordBelongsToStudent(w, student))
@@ -13688,18 +13787,21 @@ function getStudentWritingRows(student){
       rubricStale:!!w.rubricStale,
       teachingContext:w.teachingContext||{},
       revision:w.revision||1,
-      rubric:_hydrateRubric(w?.rubric || null)
+      rubric:_hydrateRubric(w?.rubric || null),
+      dateKey:getPeskWritingDateKey(w),
+      time:getPeskWritingTime(w)
     }));
-  return [...peskRows, ...teacherRows].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  // '2026. 10. 1.' 같은 표시용 날짜를 글자로 비교하면 10월이 9월 뒤로 간다 → YYYY-MM-DD 키로 정렬
+  return [...peskRows, ...teacherRows].sort((a,b)=>String(b.dateKey).localeCompare(String(a.dateKey)) || b.time-a.time);
 }
 function _groupWritingsByDate(rows){
   const grouped = {};
   (rows||[]).forEach(w=>{
-    const key = w.date || '날짜 없음';
+    const key = w.dateKey || w.date || '날짜 없음';
     if(!grouped[key]) grouped[key] = [];
     grouped[key].push(w);
   });
-  return Object.keys(grouped).sort((a,b)=>String(b).localeCompare(String(a))).map(date=>({date, rows:grouped[date]}));
+  return Object.keys(grouped).sort((a,b)=>String(b).localeCompare(String(a))).map(key=>({key, date:/^\d{4}-\d{2}-\d{2}$/.test(key)?formatPeskWritingDateLabel(key):key, rows:grouped[key]}));
 }
 /* 길이 기준 임시 산출(fallback)은 평균에서 제외합니다. */
 function _writingRubricAverages(rows){
@@ -13823,29 +13925,18 @@ function _studentFriendRoundSummary(student,cached){
     };
   });
 }
-function downloadStudentReportWritings(stuNum, format){
-  const student = students.find(s=>Number(s.num)===Number(stuNum));
-  if(!student) return showToast('⚠️ 학생을 찾을 수 없어요');
-  const rows = getStudentWritingRows(student);
-  if(!rows.length) return showToast('⚠️ 내보낼 글이 없어요');
-  const baseName = `${student.num}번_${student.name}_글쓰기_${today()}`;
-  if(format === 'excel'){
-    const headers = ['구분','날짜','제목','장르','상태','점수','루브릭 상세','글 내용','피드백'];
-    const html = '<html><head><meta charset="UTF-8"></head><body><table border="1">'
-      + '<tr>'+headers.map(h=>'<th>'+_excelCell(h)+'</th>').join('')+'</tr>'
-      + rows.map(r=>'<tr>'+[r.source,r.date,r.title,r.genre,r.status,r.score??'',_writingRubricExportText(r.rubric),r.content,r.feedback].map(v=>'<td style="mso-number-format:\\@;vertical-align:top;">'+_excelCell(v)+'</td>').join('')+'</tr>').join('')
-      + '</table></body></html>';
-    const blob = new Blob(['\ufeff'+html], {type:'application/vnd.ms-excel;charset=utf-8;'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = baseName + '.xls';
-    a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
-    showToast('📊 학생별 글쓰기 Excel을 내려받았어요');
-    return;
-  }
-  const grouped = _groupWritingsByDate(rows);
-  const text = grouped.map(g=>[
+/* 학생 한 명의 글 → 파일 내용. 글쓰기 탭(학생별 보기)과 학생 보고서가 같이 쓴다. */
+const STUDENT_WRITING_XLSX_HEADERS = ['구분','날짜','제목','장르','상태','점수','루브릭 상세','글 내용','피드백'];
+const STUDENT_WRITING_XLSX_WIDTHS = [10,12,24,10,12,7,40,70,50];
+function _studentWritingXlsxRows(rows){
+  return rows.map(r=>[r.source,r.date,r.title,r.genre,r.status,r.score??'',_writingRubricExportText(r.rubric),r.content,r.feedback]);
+}
+function _studentWritingFileBase(student){
+  const label = (student.num!=null && student.num!=='' ? student.num + '번_' : '') + (student.name || '이름없음');
+  return (label + '_글쓰기_' + _writingFileStamp()).replace(/[\\\/:*?"<>|]/g,'_').replace(/\s+/g,'');
+}
+function _studentWritingHwpxText(student, rows){
+  const text = _groupWritingsByDate(rows).map(g=>[
     `■ ${g.date}`,
     ...g.rows.map((w,i)=>[
       `${i+1}. ${w.title || '(제목 없음)'}`,
@@ -13859,13 +13950,35 @@ function downloadStudentReportWritings(stuNum, format){
       w.feedback ? '[피드백]\n'+w.feedback : ''
     ].join('\n'))
   ].join('\n\n')).join('\n\n────────────────────────\n\n');
-  const tmp = document.createElement('pre');
-  tmp.id = 'student-writing-export-' + Date.now();
-  tmp.style.display = 'none';
-  tmp.textContent = `${student.num}번 ${student.name} 글쓰기 모음\n생성일: ${today()}\n\n${text}`;
-  document.body.appendChild(tmp);
-  try{ downloadAiHwpx(tmp.id, baseName); }
-  finally{ setTimeout(()=>tmp.remove(), 500); }
+  return `${student.num!=null && student.num!=='' ? student.num+'번 ' : ''}${student.name || ''} 글쓰기 모음\n생성일: ${today()}\n총 ${rows.length}편\n\n${text}`;
+}
+function _saveBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+async function _downloadStudentWritingFile(student, rows, format){
+  if(!rows.length) return showToast('⚠️ 내보낼 글이 없어요');
+  const baseName = _studentWritingFileBase(student);
+  try{
+    await _ensureJSZipForForm();
+    if(format === 'excel'){
+      const blob = await TeskXlsx.build([{name:(student.num!=null&&student.num!==''?student.num+'번 ':'')+(student.name||''), headers:STUDENT_WRITING_XLSX_HEADERS, widths:STUDENT_WRITING_XLSX_WIDTHS, rows:_studentWritingXlsxRows(rows)}]);
+      _saveBlob(blob, baseName + '.xlsx');
+      showToast('📊 ' + (student.name||'학생') + ' 글쓰기 Excel을 내려받았어요');
+    } else {
+      const blob = await _createPlainHwpxBlob(_studentWritingHwpxText(student, rows), baseName);
+      _saveBlob(blob, baseName + '.hwpx');
+      showToast('⬇ ' + (student.name||'학생') + ' 글쓰기 HWPX를 내려받았어요');
+    }
+  }catch(e){ console.warn('학생 글 내보내기 실패', e); showToast('❌ 내려받기 실패: ' + (e?.message||e)); }
+}
+function downloadStudentReportWritings(stuNum, format){
+  const student = students.find(s=>Number(s.num)===Number(stuNum));
+  if(!student) return showToast('⚠️ 학생을 찾을 수 없어요');
+  return _downloadStudentWritingFile(student, getStudentWritingRows(student), format);
 }
 async function saveReportWritingRubric(row, rubric){
   if(!row?.id) throw new Error('글 ID를 찾을 수 없어요');
