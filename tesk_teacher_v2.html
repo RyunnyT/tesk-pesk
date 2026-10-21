@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="shared/pesk-teacher-adventure.css?v=20260910rpg2">
 <!-- 학습 퀘스트 문제 생성기 (초등 3~6학년 교육과정) -->
 <script src="quiz-bank.js?v=20261004grow1"></script>
-<script src="shared/pesk-writing-store.js?v=20261006quota1"></script>
+<script src="shared/pesk-writing-store.js?v=20261021sem1"></script>
 <script src="shared/pesk-quiz-store.js?v=20261006split1"></script>
 <script src="shared/econ-core.js?v=20261009seat3"></script>
 <script src="shared/tesk-econ-ui.js?v=20261009seat3"></script>
@@ -42,7 +42,7 @@
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, getDocs, onSnapshot, collection, updateDoc, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, getDocs, onSnapshot, collection, updateDoc, serverTimestamp, runTransaction, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { firebaseConfig, MASTER_EMAILS } from "./shared/firebase-config.js";
 
@@ -63,6 +63,8 @@ window._fsGetDocs = getDocs;
 window._fsUpdateDoc = updateDoc;
 window._fsOnSnapshot = onSnapshot;
 window._fsCollection = collection;
+window._fsQuery = query;
+window._fsWhere = where;
 window._fsServerTs = serverTimestamp;
 window._fsRunTxn = runTransaction;
 window._signOut = signOut;
@@ -2426,10 +2428,7 @@ async function saveFirebase(k,v){
       localStorage.setItem('tesk-account-version:'+TESK_ROOM,result.updatedAt);
       setSyncStatus('online');return true;
     }
-    await window._fsSetDoc(
-      window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',k),
-      {value:v, updatedAt:new Date().toISOString()}
-    );
+    await writeDataDoc(k, v);
     markSaveOk(k, v);
     setSyncStatus(Object.keys(_saveFailures).length ? 'error' : 'online');return true;
   }catch(e){
@@ -2441,6 +2440,65 @@ async function saveFirebase(k,v){
   }
 }
 
+/* ── 다른 기기(창)의 내용을 덮어쓰지 않기 ──
+   교사 앱은 자료를 문서째로 저장한다. 교실 PC와 집 노트북을 함께 쓰면, 오래 열어 둔 화면에서 저장할 때
+   다른 기기에서 고친 내용이 통째로 사라질 수 있었다. 학생이 쓰지 않는 교사 자료는 저장 직전에 서버의
+   updatedAt이 이 화면이 마지막으로 본 것과 같은지 확인하고, 다르면 덮어쓰지 않고 멈춘다(내용이 같으면 통과).
+   학생이 같이 쓰는 자료(잔액·체크·예금 등)는 이미 트랜잭션·실시간 구독으로 따로 맞춘다. */
+const GUARDED_KEYS = new Set(['tesk-counsels','tesk-records','tesk-observations','tesk-seats','tesk-friends','tesk-settings',
+  'tesk-lessons','tesk-exams','tesk-writings','tesk-cal-events','tesk-writing-phrases','tesk-writing-rubric-reports','tesk-quick-points','tesk-taxes']);
+const _serverAt = {};       // key → 서버 문서 updatedAt (이 화면이 마지막으로 본 것)
+const _saveQueue = {};
+function noteServerVersion(k, at){ if(GUARDED_KEYS.has(k)) _serverAt[k] = at || ''; }
+window.noteServerVersion = noteServerVersion;
+class SaveConflictError extends Error{ constructor(k){ super('다른 기기(창)에서 먼저 바뀌었어요'); this.conflict = true; this.key = k; } }
+async function writeDataDoc(k, v){
+  const ref = window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',k);
+  if(!GUARDED_KEYS.has(k) || !window._fsRunTxn || !(k in _serverAt)){
+    const at = new Date().toISOString();
+    await window._fsSetDoc(ref, {value:v, updatedAt:at});
+    noteServerVersion(k, at);
+    return;
+  }
+  // 같은 자료를 연달아 저장하면 순서대로 — 앞 저장이 끝나야 다음 저장의 기준 시각이 맞는다
+  const run = async ()=>{
+    const at = new Date().toISOString();
+    let wrote = false, serverAt = '';
+    await window._fsRunTxn(window._db, async txn=>{
+      const snap = await txn.get(ref);
+      serverAt = snap.exists() ? (snap.data().updatedAt || '') : '';
+      wrote = false;
+      if(serverAt !== _serverAt[k]){
+        if(snap.exists() && JSON.stringify(snap.data().value) === JSON.stringify(v)) return;   // 내용이 같으면 충돌 아님
+        throw new SaveConflictError(k);
+      }
+      txn.set(ref, {value:v, updatedAt:at});
+      wrote = true;
+    });
+    _serverAt[k] = wrote ? at : serverAt;
+  };
+  const p = (_saveQueue[k] || Promise.resolve()).catch(()=>{}).then(run);
+  _saveQueue[k] = p;
+  return p;
+}
+// 충돌한 자료: 서버 최신본을 기준으로 삼고 이 기기 내용으로 덮어쓴다(선생님이 고른 경우만)
+async function overwriteConflicts(){
+  const keys = Object.keys(_saveFailures).filter(k=>_saveFailures[k].conflict);
+  if(!keys.length) return;
+  const names = keys.map(k=>window.TeskDataHealth?.label(k) || k).join(', ');
+  if(!confirm(names + '\n\n다른 기기(창)에서 바꾼 내용이 사라지고, 이 컴퓨터의 내용으로 바뀌어요. 덮어쓸까요?\n(먼저 [이 컴퓨터 내용 저장]으로 파일을 받아 두면 안전해요)')) return;
+  let ok = 0;
+  for(const k of keys){
+    try{
+      const snap = await window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',k));
+      _serverAt[k] = snap.exists() ? (snap.data().updatedAt || '') : '';
+      const v = load(k, undefined);
+      if(v !== undefined && await saveFirebase(k, v)) ok++;
+    }catch(e){ console.warn('덮어쓰기 실패', k, e); }
+  }
+  showToast(ok === keys.length ? '✅ 이 컴퓨터의 내용으로 저장했어요' : '⚠️ ' + (keys.length - ok) + '개 자료는 저장하지 못했어요');
+}
+
 /* ── 저장 실패·용량 알림 (shared/tesk-data-health.js) ──
    예전에는 서버 저장이 실패해도 상단 점 색만 바뀌어 아무도 몰랐다. 반 전체를 한 문서에 담는 자료
    (상담·누가기록·관찰·체크리스트 등)가 1MB를 넘으면 그 컴퓨터에만 남는다. 실패한 자료는 화면 위
@@ -2450,7 +2508,10 @@ const _sizeWarned = {};        // 한 번 켤 때 문서마다 한 번만 경고
 function markSaveFailed(k, e){
   const H = window.TeskDataHealth;
   const first = !_saveFailures[k];
-  _saveFailures[k] = {at:new Date().toISOString(), size:!!H?.isSizeError(e), text:H ? H.failureText(k, e) : ('서버 저장 실패: '+k)};
+  const label = H ? H.label(k) : k;
+  _saveFailures[k] = e?.conflict
+    ? {at:new Date().toISOString(), conflict:true, text:`'${label}'이(가) 다른 기기(창)에서 먼저 바뀌어서, 덮어쓰지 않고 저장을 멈췄어요.`}
+    : {at:new Date().toISOString(), size:!!H?.isSizeError(e), text:H ? H.failureText(k, e) : ('서버 저장 실패: '+k)};
   if(first) showToast('⚠️ ' + _saveFailures[k].text + ' 이 컴퓨터에는 남아 있어요.');
   renderSaveFailureBar();
 }
@@ -2484,14 +2545,19 @@ function renderSaveFailureBar(){
     host.prepend(bar);
   }
   const serverKeys = keys.filter(k=>!_saveFailures[k].local);
+  const conflictKeys = serverKeys.filter(k=>_saveFailures[k].conflict);
+  const retryKeys = serverKeys.filter(k=>!_saveFailures[k].conflict);
   const sizeFull = serverKeys.some(k=>_saveFailures[k].size);
   bar.innerHTML = '<div style="flex:1 1 280px;min-width:0;"><b>⚠️ 서버에 저장되지 않은 자료가 있어요</b><br>'
     + keys.map(k=>escHtml(_saveFailures[k].text)).join('<br>')
-    + (serverKeys.length ? '<br><span style="color:#7c2d12;">지금 내용은 이 컴퓨터에만 있어요. [다시 시도]를 누르거나, [이 컴퓨터 내용 저장]으로 파일을 받아 두세요. 백업 파일은 서버 내용이라 여기에는 들어가지 않아요.'
+    + (retryKeys.length ? '<br><span style="color:#7c2d12;">지금 내용은 이 컴퓨터에만 있어요. [다시 시도]를 누르거나, [이 컴퓨터 내용 저장]으로 파일을 받아 두세요. 백업 파일은 서버 내용이라 여기에는 들어가지 않아요.'
         + (sizeFull ? ' 저장 공간이 가득 찬 자료는 오래된 기록을 정리해야 저장돼요.' : '') + '</span>' : '')
+    + (conflictKeys.length ? '<br><span style="color:#7c2d12;">다른 기기의 내용을 지키려고 멈춘 거예요. 보통은 [최신 내용 불러오기]로 새로고침한 뒤 다시 고치면 돼요. 이 컴퓨터에서 고친 것이 맞다면 [이 기기 내용으로 덮어쓰기]를 누르세요.</span>' : '')
     + '</div><div style="display:flex;gap:6px;flex-wrap:wrap;">'
-    + (serverKeys.length ? '<button class="btn btn-sm btn-primary" onclick="retryFailedSaves()">다시 시도</button>'
-        + '<button class="btn btn-sm btn-secondary" onclick="downloadUnsavedLocal()">이 컴퓨터 내용 저장</button>' : '')
+    + (retryKeys.length ? '<button class="btn btn-sm btn-primary" onclick="retryFailedSaves()">다시 시도</button>' : '')
+    + (conflictKeys.length ? '<button class="btn btn-sm btn-primary" onclick="location.reload()">최신 내용 불러오기</button>'
+        + '<button class="btn btn-sm btn-secondary" onclick="overwriteConflicts()">이 기기 내용으로 덮어쓰기</button>' : '')
+    + (serverKeys.length ? '<button class="btn btn-sm btn-secondary" onclick="downloadUnsavedLocal()">이 컴퓨터 내용 저장</button>' : '')
     + '<button class="btn btn-sm btn-secondary" onclick="goPage(\'workspace\');setTimeout(()=>document.getElementById(\'data-health-card\')?.scrollIntoView({block:\'center\'}),80)">데이터 용량 보기</button>'
     + '</div>';
   if(document.getElementById('page-home')?.classList.contains('active')) renderHome();
@@ -2510,7 +2576,7 @@ function downloadUnsavedLocal(){
   showToast('💾 이 컴퓨터에 있는 ' + Object.keys(docs).length + '개 자료를 파일로 저장했어요');
 }
 async function retryFailedSaves(){
-  const keys = Object.keys(_saveFailures).filter(k=>!_saveFailures[k].local);
+  const keys = Object.keys(_saveFailures).filter(k=>!_saveFailures[k].local && !_saveFailures[k].conflict);
   if(!keys.length) return;
   showToast('⏳ 다시 저장하는 중…');
   let ok = 0;
@@ -3016,6 +3082,7 @@ async function loadFromFirebase(){
         window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',k)
       );
       if(k==='tesk-accounts')localStorage.setItem('tesk-account-version:'+TESK_ROOM,snap.exists()?(snap.data().updatedAt||''):'');
+      noteServerVersion(k, snap.exists()?(snap.data().updatedAt||''):'');
       if(snap.exists()){localStorage.setItem(k,JSON.stringify(snap.data().value));loaded++;}
     }catch(e){}
   }
@@ -3081,6 +3148,50 @@ let activePeskSurveyRoundId = 'round-1';
 let friendRoundView = 'active';
 let _peskUnsubs = [];
 let econLogsAll = [];        // 전체 경제 로그 (data/pesk-purchase-log)
+/* 거래 로그는 수백 KB짜리 문서인데, 학생이 모험 정답을 맞히거나 물건을 살 때마다 바뀐다.
+   실시간으로 받으면 그때마다 문서 전체가 교사 PC로 다시 내려와 화면이 무거워진다.
+   → 학급 경제 화면을 보고 있을 때만 실시간, 그 밖에는 2분마다(창이 보일 때만) 한 번 가져온다.
+   첫 화면의 '상점 사용 승인' 수는 최대 2분 늦게 바뀔 수 있다. */
+const ECON_LOG_POLL_MS = 120000;
+let _econLogLive = null, _econLogFetchedAt = 0, _econLogFetching = false;
+function applyEconLogSnap(snap){
+  const rows = snap.exists() ? (snap.data().value||[]) : [];
+  _econLogFetchedAt = Date.now();
+  econLogsAll = rows.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  maybeArchiveEconLogs(rows);   // 커지면 2주 지난 줄을 주 단위 보관 문서로 옮긴다 (shared/tesk-econ-ui.js)
+  const econActive = document.getElementById('page-economy')?.classList.contains('active');
+  if(econActive && currentEconTab==='log') renderEconLog();
+  else if(econActive) renderEconomy();
+  if(document.getElementById('purchase-log') && econActive) loadPeskPurchases();
+  if(document.getElementById('page-home')?.classList.contains('active')) renderHome();
+}
+function econLogRef(){ return window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','pesk-purchase-log'); }
+async function refreshEconLogs(force){
+  if(!window._fbReady || !window._db || _econLogLive || _econLogFetching) return;
+  if(!force && (document.hidden || Date.now() - _econLogFetchedAt < ECON_LOG_POLL_MS)) return;
+  _econLogFetching = true;
+  try{ applyEconLogSnap(await window._fsGetDoc(econLogRef())); }
+  catch(e){ console.warn('거래 로그 불러오기 실패', e); }
+  finally{ _econLogFetching = false; }
+}
+function syncEconLogFeed(){
+  if(!window._fbReady || !window._db) return;
+  const want = !document.hidden && !!document.getElementById('page-economy')?.classList.contains('active');
+  if(want && !_econLogLive){
+    _econLogLive = window._fsOnSnapshot(econLogRef(), applyEconLogSnap, e=>console.warn('거래 로그 구독 실패', e));
+  } else if(!want && _econLogLive){
+    _econLogLive(); _econLogLive = null;
+  }
+  if(!want) refreshEconLogs(false);
+}
+function startEconLogFeed(){
+  refreshEconLogs(true);
+  syncEconLogFeed();
+  const timer = setInterval(syncEconLogFeed, 30000);
+  const onVis = ()=>syncEconLogFeed();
+  document.addEventListener('visibilitychange', onVis);
+  return ()=>{ clearInterval(timer); document.removeEventListener('visibilitychange', onVis); if(_econLogLive){ _econLogLive(); _econLogLive = null; } };
+}
 let econLogStudentFilter = 'all';
 let econLogKindFilter = 'all';
 let econLogCollapsed = false;
@@ -3227,10 +3338,52 @@ function subscribePeskData(){
   _peskUnsubs = [];
   if(!window._fbReady||!window._db) return;
 
-  // pesk-writings 실시간 구독
-  _peskUnsubs.push(writingStore().subscribe(
-    (rows)=>{
+  // pesk-writings 실시간 구독 — 기본은 이번 학기 글만 (ensureAllWritings로 전체 전환)
+  _writingScopeWaiters = [];
+  _peskUnsubs.push(subscribeTeacherWritings(writingsScope));
+  _peskUnsubs.push(()=>{ if(_writingUnsub){ _writingUnsub(); _writingUnsub = null; } });
+  subscribePeskDataRest();
+}
+/* ── 교사 글 목록 범위 ──
+   앱을 열 때마다 반 전체 글 수만큼 읽기가 나간다(10월 기준 1,483편 → 학년 말 수천 편).
+   기본은 이번 학기 글만 실시간으로 받고, 보고서·생활기록부·통계처럼 지난 글이 필요한 화면을 열거나
+   [지난 글도 불러오기]를 누르면 전체로 바꾼다(한 번 바꾸면 이 창에서는 계속 전체). */
+let writingsScope = 'semester';
+let _writingUnsub = null, _writingScopeWaiters = [];
+function writingsSemesterSince(){
+  const b = writingRangeBounds({preset:'semester'});
+  const [y, m, d] = b.from.split('-').map(Number);
+  return new Date(y, m - 1, d).toISOString();
+}
+function subscribeTeacherWritings(scope){
+  if(_writingUnsub){ _writingUnsub(); _writingUnsub = null; }
+  const st = writingStore();
+  const onError = e=>{ console.warn('글쓰기 구독 실패', e); showToast('⚠️ 학생 글 목록을 불러오지 못했어요: '+e.message); };
+  if(!st.subscribeSince || !window._fsQuery) scope = writingsScope = 'all';   // 쿼리를 못 쓰면 예전처럼 전체
+  _writingUnsub = scope === 'all'
+    ? st.subscribe(onTeacherWritings, onError)
+    : st.subscribeSince(writingsSemesterSince(), onTeacherWritings, onError);
+  return ()=>{};
+}
+function ensureAllWritings(){
+  if(writingsScope === 'all') return Promise.resolve();
+  if(!window._fbReady || !window._db) return Promise.resolve();
+  writingsScope = 'all';
+  const done = new Promise(res=>_writingScopeWaiters.push(res));
+  subscribeTeacherWritings('all');
+  return done;
+}
+// 글쓰기 탭의 기간이 이번 학기보다 앞이면 전체를 받아 온다
+function writingsCoverRange(){
+  if(writingsScope === 'all') return true;
+  const b = writingRangeBounds();
+  return !!b && !!b.from && b.from >= writingRangeBounds({preset:'semester'}).from;
+}
+async function ensureWritingsForRange(){ if(!writingsCoverRange()){ showToast('⏳ 지난 글까지 불러오는 중…'); await ensureAllWritings(); } }
+function loadAllWritingsNow(){ showToast('⏳ 지난 글까지 불러오는 중…'); ensureAllWritings().then(()=>{ showToast('📚 지난 글까지 모두 불러왔어요 (' + peskWritingsAll.length + '편)'); renderWriting(); }); }
+function onTeacherWritings(rows){
         peskWritingsAll = rows;
+        if(_writingScopeWaiters.length && writingsScope === 'all'){ const w = _writingScopeWaiters; _writingScopeWaiters = []; w.forEach(f=>f()); }
         // 글쓰기 페이지 열려있으면 갱신
         if(document.getElementById('page-writing')?.classList.contains('active') && !_isPeskFeedbackEditing()){
           renderWriting();
@@ -3242,10 +3395,8 @@ function subscribePeskData(){
         if(document.getElementById('page-home')?.classList.contains('active')){
           renderHome();
         }
-    },
-    e=>{ console.warn('글쓰기 구독 실패', e); showToast('⚠️ 학생 글 목록을 불러오지 못했어요: '+e.message); }
-  ));
-
+}
+function subscribePeskDataRest(){
   // pesk-peer-survey 실시간 구독
   _peskUnsubs.push(window._fsOnSnapshot(
     window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','pesk-peer-survey'),
@@ -3345,23 +3496,8 @@ function subscribePeskData(){
     }
   ));
 
-  // 경제 거래 로그 실시간 구독 (data/pesk-purchase-log)
-  _peskUnsubs.push(window._fsOnSnapshot(
-    window._fsDoc(window._db,'classrooms',TESK_ROOM,'data','pesk-purchase-log'),
-    (snap)=>{
-      const rows = snap.exists() ? (snap.data().value||[]) : [];
-      econLogsAll = rows.sort((a,b)=>(b.ts||0)-(a.ts||0));
-      maybeArchiveEconLogs(rows);   // 커지면 2주 지난 줄을 주 단위 보관 문서로 옮긴다 (shared/tesk-econ-ui.js)
-      if(document.getElementById('page-economy')?.classList.contains('active') && currentEconTab==='log'){
-        renderEconLog();
-      } else if(document.getElementById('page-economy')?.classList.contains('active')){
-        renderEconomy();
-      }
-      if(document.getElementById('purchase-log') && document.getElementById('page-economy')?.classList.contains('active')){
-        loadPeskPurchases();
-      }
-    }
-  ));
+  // 경제 거래 로그 (data/pesk-purchase-log) — 학급 경제 화면을 볼 때만 실시간, 아니면 2분마다 한 번
+  _peskUnsubs.push(startEconLogFeed());
 
   // 학생 자율 투자 포트폴리오 실시간 구독 (포인트 지급 화면에서 보유 주식 평가액 표시)
   _peskUnsubs.push(window._fsOnSnapshot(
@@ -4511,6 +4647,7 @@ function goPage(id){
   });
   document.getElementById('topbar-title').textContent=PAGE_TITLES[id]||id;
   renderPage(id);
+  if(typeof syncEconLogFeed==='function') syncEconLogFeed();
   window.TeskUI?.onNavigate(id);
   window.TeskHistory?.afterNavigate();
 }
@@ -4520,6 +4657,10 @@ function renderPage(id){
     exam:renderExam,writing:renderWriting,counsel:renderCounsel,friends:renderFriends,report:renderReport,
     checklist:renderTeacherChecklistPanel,adventure:loadQuiz,literacy:renderLiteracy,myroom:loadMyRoom,workspace:renderHome};
   if(r[id]) r[id]();
+  // 보고서·생활기록부·통계는 학년 전체 글이 필요하다 — 이번 학기만 받은 상태면 전체를 받은 뒤 다시 그린다
+  if(['report','records','stats'].includes(id) && writingsScope !== 'all'){
+    ensureAllWritings().then(()=>{ if(document.getElementById('page-'+id)?.classList.contains('active') && r[id]) r[id](); });
+  }
   // 포인트 지급 페이지는 학생별 주식·예금 잔액을 보여주므로 캐시가 비어있으면 로드 후 한 번 더 렌더
   if(id==='points'){
     (async()=>{
@@ -12035,6 +12176,7 @@ function _writingExportGroups(){
 }
 function _writingFileStamp(){ return today().replace(/[\s.]+/g,'-').replace(/^-+|-+$/g,''); }
 async function downloadWritingExcel(){
+  await ensureWritingsForRange();
   const rows = getWritingExportRows();
   if(!rows.length) return showToast(writingRangeText() ? '⚠️ 이 기간에 내보낼 글이 없어요' : '⚠️ 내보낼 글이 없어요');
   try{
@@ -12053,6 +12195,7 @@ async function downloadWritingExcel(){
   }catch(e){ console.warn('글쓰기 Excel 실패', e); showToast('❌ Excel 내려받기 실패: ' + (e?.message||e)); }
 }
 async function downloadWritingHwpx(){
+  await ensureWritingsForRange();
   const groups = _writingExportGroups();
   if(!groups.length) return showToast(writingRangeText() ? '⚠️ 이 기간에 내보낼 글이 없어요' : '⚠️ 내보낼 글이 없어요');
   showToast('⏳ 학생별 HWPX를 만드는 중이에요…');
@@ -12207,12 +12350,14 @@ function _writingGroupExportRows(g){
   const rows = getStudentWritingRows(g.student).filter(r=>writingInRange(r.dateKey));
   return g.extra ? rows.filter(r=>r.sourceType!=='pesk' || ids.has(r.id)) : rows;
 }
-function downloadWritingStudent(format){
+async function downloadWritingStudent(format){
+  await ensureWritingsForRange();
   const g = currentWritingStudentGroup();
   if(!g) return showToast('⚠️ 학생을 먼저 골라주세요');
   return _downloadStudentWritingFile(g.student, _writingGroupExportRows(g), format, {tag:writingRangeFileTag(), period:writingRangeText()});
 }
 function renderWritingStudentView(toolbar){
+  if(!writingsCoverRange()) ensureAllWritings().then(()=>{ if(writingGroupMode==='student') renderWriting(); });
   const groups = writingStudentGroups();
   const g = currentWritingStudentGroup(groups);
   const isPending = w=>(!w.feedback && !w.readAt) || w.needsRevisionReview===true;
@@ -12571,6 +12716,11 @@ function renderWriting(){
     + '<button class="btn btn-sm btn-secondary" title="전체 시트 + 학생마다 시트 하나" onclick="downloadWritingExcel()">📊 Excel (학생별 시트)</button>'
     + '<button class="btn btn-sm btn-secondary" title="학생마다 HWPX 파일 하나씩, ZIP으로 묶음" onclick="downloadWritingHwpx()">⬇ HWPX (학생별 ZIP)</button>'
     + '</div></div>'
+    + (writingViewMode==='pesk' && writingsScope!=='all'
+      ? '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--sub);margin:10px 0 0;padding-top:8px;border-top:1px dashed var(--border);">'
+        + '<span>📅 이번 학기(' + escHtml(formatPeskWritingDateLabel(writingRangeBounds({preset:'semester'}).from)) + '~) 글만 불러왔어요. 앱을 열 때 읽기 한도를 아끼려는 거예요.</span>'
+        + '<button class="btn btn-sm btn-secondary" onclick="loadAllWritingsNow()">지난 글도 불러오기</button></div>'
+      : '')
     + innerContent
     + '</div>'
     + teacherBtn;
@@ -16257,7 +16407,7 @@ async function bulkAddStudents(){
 // 서버 문서 하나를 트랜잭션으로 읽고 고쳐 씁니다. 바뀐 내용이 없으면 쓰지 않습니다. 새 값을 돌려줍니다.
 async function _mutateServerDoc(key, mutator){
   const ref = window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',key);
-  let result;
+  let result, written = '';
   await window._fsRunTxn(window._db, async (txn)=>{
     const snap = await txn.get(ref);
     if(!snap.exists()){ result = undefined; return; }
@@ -16265,8 +16415,9 @@ async function _mutateServerDoc(key, mutator){
     const before = JSON.stringify(value);
     const next = mutator(value);
     result = next;
-    if(JSON.stringify(next) !== before) txn.set(ref,{value:next,updatedAt:new Date().toISOString()});
+    if(JSON.stringify(next) !== before){ const at=new Date().toISOString(); txn.set(ref,{value:next,updatedAt:at}); written=at; }
   });
+  if(written) noteServerVersion(key, written);
   return result;
 }
 // 학생 번호·계정으로 묶인 항목을 객체에서 지웁니다.
@@ -16780,7 +16931,7 @@ function saveApiSettings(){
 <script src="shared/tesk-peer-analysis.js?v=20261001su1"></script>
 <script src="shared/tesk-peer-class-ai.js?v=20260930voice"></script>
 <script src="shared/tesk-history.js?v=20260914f2"></script>
-<script src="shared/tesk-teaching.js?v=20261001counsel3"></script>
+<script src="shared/tesk-teaching.js?v=20261021guard1"></script>
 <link rel="stylesheet" href="shared/tesk-writing-review.css?v=20261001proof1">
 <script src="shared/writing-proofread.js?v=20260928wr1"></script>
 <script src="shared/tesk-writing-review.js?v=20261001read2"></script>

@@ -14,12 +14,12 @@
  const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x)?Object.fromEntries(Object.entries(x).sort(([a],[b])=>a<b?-1:a>b?1:0)):x);
  async function persist(key,id,next,expected){
   if(!root._db||!root._fsRunTxn)throw Error('서버 연결 후 다시 저장해주세요. 입력은 유지됩니다.');
-  const room=TESK_ROOM,ref=root._fsDoc(root._db,'classrooms',room,'data',key);let saved;
+  const room=TESK_ROOM,ref=root._fsDoc(root._db,'classrooms',room,'data',key);let saved,written='';
   await root._fsRunTxn(root._db,async txn=>{const snap=await txn.get(ref),rows=snap.exists()?(snap.data().value||[]):[];if(!Array.isArray(rows))throw Error('저장 자료 형식을 확인해주세요.');const old=rows.find(r=>r.id===id);
    if(expected!==undefined&&(!old||stable(old)!==stable(JSON.parse(expected))))throw Error('다른 곳에서 기록이 바뀌었습니다. 최신 기록을 연 뒤 다시 저장해주세요.');
    if(expected===undefined&&old)throw Error('이미 저장된 기록입니다. 목록에서 확인해주세요.');
-   const stamp=new Date().toISOString(),value=next===null?null:{...next,id,updatedAt:stamp};saved=[...rows.filter(r=>r.id!==id),...(value?[value]:[])];txn.set(ref,{value:saved,updatedAt:stamp});
-  });if(room!==TESK_ROOM)throw Error('저장은 완료됐지만 학급이 바뀌었습니다. 해당 학급에서 확인해주세요.');saveLocal(key,saved);return saved;
+   const stamp=new Date().toISOString(),value=next===null?null:{...next,id,updatedAt:stamp};saved=[...rows.filter(r=>r.id!==id),...(value?[value]:[])];txn.set(ref,{value:saved,updatedAt:stamp});written=stamp;
+  });root.noteServerVersion?.(key,written);if(room!==TESK_ROOM)throw Error('저장은 완료됐지만 학급이 바뀌었습니다. 해당 학급에서 확인해주세요.');saveLocal(key,saved);return saved;
  }
  function print(title,html){const w=root.open('','_blank');if(!w)return showToast('팝업을 허용해주세요.');w.document.write('<!doctype html><html lang="ko"><meta charset="utf-8"><title>'+E(title)+'</title><style>body{font:14px/1.7 "Malgun Gothic",sans-serif;margin:24px;color:#182c23}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccd8d0;padding:8px;text-align:left}article{break-inside:avoid;border-bottom:1px solid #ddd;padding:16px 0}pre{white-space:pre-wrap;font:inherit}button,input,textarea{display:none}@page{margin:16mm}</style><h1>'+E(title)+'</h1>'+html+'</html>');w.document.close();setTimeout(()=>{if(!w.closed)w.print();},250);}
  function reviewResult(r){return r.entryState==='missing'?'미입력':r.entryState==='absent'?'미응시':r.took===false?'미응시 / 미입력':r.score==null?'미입력':r.score+'점';}

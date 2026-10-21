@@ -32,6 +32,20 @@ function create(api, roomId){
     const stopCurrent = api._fsOnSnapshot(items, snap=>{ current=itemRows(snap); currentReady=true; emit(); }, fail);
     return ()=>{ active=false; stopOld(); stopCurrent(); };
   }
+  /* 교사용 — since(ISO 시각) 이후에 낸 글만 받는다. 앱을 열 때마다 반 전체 글 수만큼 읽기가 나가서
+     (1년이면 수천 번) 기본은 이번 학기만 받고, 지난 글은 필요할 때 subscribe()로 바꾼다.
+     삭제 표시 문서에는 submittedAt이 없어 따로 받는다(안 받으면 옛 배열의 지운 글이 되살아난다). */
+  function subscribeSince(since, next, error){
+    const qs = [api._fsQuery(items, api._fsWhere('submittedAt', '>=', String(since))), api._fsQuery(items, api._fsWhere('deleted', '==', true))];
+    const recent = w=>String(w && w.submittedAt || '') >= String(since);
+    let old = [], oldReady = false, active = true;
+    const parts = qs.map(()=>null);
+    const emit = ()=>{ if(active && oldReady && parts.every(Boolean)) next(merge(old.filter(recent), [].concat(...parts))); };
+    const fail = e=>{ if(active && error) error(e); };
+    const stops = [api._fsOnSnapshot(legacyRef, snap=>{ old=legacyRows(snap); oldReady=true; emit(); }, fail)];
+    qs.forEach((q, i)=>stops.push(api._fsOnSnapshot(q, snap=>{ parts[i]=itemRows(snap); emit(); }, fail)));
+    return ()=>{ active=false; stops.forEach(fn=>fn()); };
+  }
   /* 학생용 — 반 전체 글 대신 '내 글 + 모음집에 실린 글'만 받는다.
      반 전체를 받으면 앱을 열 때마다 글 수만큼 읽기가 나가 무료 한도(하루 5만)를 넘긴다.
      모음집 게시는 개별 문서(items)에만 저장되므로 옛 배열에서는 내 글만 고르면 된다. */
@@ -113,7 +127,7 @@ function create(api, roomId){
     for(const w of before) if(!ids.has(w.id)) await remove(w.id);
   }
   async function history(id){const snap=await api._fsGetDocs(api._fsCollection(db,'classrooms',roomId,'data','pesk-writings','items',String(id),'revisions'));return snap.docs.map(d=>d.data()).sort((a,b)=>Number(b.revision)-Number(a.revision));}
-  return {load, subscribe, loadMine, subscribeMine, newId, add, update, remove, replaceAll, history};
+  return {load, subscribe, subscribeSince, loadMine, subscribeMine, newId, add, update, remove, replaceAll, history};
 }
 const API = {create, merge};
 // Confirm only the exact text the teacher saw, including transaction retries.

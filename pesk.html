@@ -24,7 +24,7 @@
 <script src="quiz-rating.js?v=20260912mixed1"></script>
 <script src="rpg-monsters.js?v=20261009fail1"></script>
 <script src="boss-sprites.js"></script>
-<script src="shared/pesk-writing-store.js?v=20261006quota1"></script>
+<script src="shared/pesk-writing-store.js?v=20261021sem1"></script>
 <script src="shared/pesk-quiz-store.js?v=20261006split1"></script>
 <script src="shared/econ-core.js?v=20261009seat3"></script>
 <script src="shared/pesk-econ-ui.js?v=20261009econ2"></script>
@@ -8688,6 +8688,7 @@ function showTab(tab){
   if(tab==='shop')pullShopEconomy();
   if(tab==='shop'||tab==='stock')renderEconomyPanels();
   petTick(tab === 'myroom');
+  syncLiveDocs();   // 이 화면에 필요한 공용 문서는 실시간으로, 나머지는 몇 분마다
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -9312,6 +9313,37 @@ async function pullStudents(){
   }catch(e){ console.warn('포인트 불러오기 실패', e); }
   finally{ _studentsPullBusy = false; }
 }
+/* 학생들이 자주 바꾸는 반 공용 문서(구매·체크·예금·주식·아바타)는, 한 명이 바꿀 때마다 접속한 학생
+   모두가 다시 읽어 무료 읽기 한도를 빨리 쓴다. 그 화면을 보고 있을 때만 실시간으로 받고,
+   그 밖에는 몇 분에 한 번(창이 보일 때만) 가져온다. 내가 바꾼 것은 저장할 때 바로 화면에 반영된다. */
+const _liveDocSyncs = [];
+function panelOpen(...tabs){ return tabs.some(t=>{ const el = document.getElementById('panel-'+t); return !!el && el.style.display !== 'none'; }); }
+function liveWhileOpen(key, onSnap, isLive, pollMs){
+  const ref = window._fsDoc(window._db,'classrooms',roomId,'data',key);
+  let live = null, lastAt = 0, busy = false, stopped = false;
+  const apply = snap=>{ lastAt = Date.now(); try{ onSnap(snap); }catch(e){ console.warn('화면 갱신 실패', key, e); } };
+  const pull = async force=>{
+    if(stopped || live || busy || (!force && (document.hidden || Date.now() - lastAt < pollMs))) return;
+    busy = true;
+    try{ apply(await window._fsGetDoc(ref)); }catch(e){ console.warn('불러오기 실패', key, e); }
+    finally{ busy = false; }
+  };
+  const sync = ()=>{
+    if(stopped) return;
+    const want = !document.hidden && isLive();
+    if(want && !live) live = window._fsOnSnapshot(ref, apply, e=>console.warn('실시간 연결 실패', key, e));
+    else if(!want && live){ live(); live = null; }
+    if(!want) pull(false);
+  };
+  _liveDocSyncs.push(sync);
+  if(isLive()) sync(); else pull(true);
+  const timer = setInterval(sync, 20000);
+  document.addEventListener('visibilitychange', sync);
+  return ()=>{ stopped = true; clearInterval(timer); document.removeEventListener('visibilitychange', sync);
+    const i = _liveDocSyncs.indexOf(sync); if(i >= 0) _liveDocSyncs.splice(i, 1);
+    if(live){ live(); live = null; } };
+}
+function syncLiveDocs(){ _liveDocSyncs.slice().forEach(f=>f()); }
 function subscribeToUpdates(){
   _unsubs.forEach(fn=>fn());
   _unsubs = [];
@@ -9364,9 +9396,7 @@ function subscribeToUpdates(){
   const shopTimer = setInterval(()=>{ if(shopPanelVisible() && recentlyActive()) pullShopEconomy(); }, 60000);
   _unsubs.push(()=>clearInterval(shopTimer));
 
-  _unsubs.push(window._fsOnSnapshot(
-    window._fsDoc(window._db,'classrooms',roomId,'data','pesk-purchases'),
-    (snap)=>{
+  _unsubs.push(liveWhileOpen('pesk-purchases', (snap)=>{
       const allPurchases = snap.exists() ? (snap.data().value || []) : [];
       applyClassBossPurchases(allPurchases);
       myPurchases = allPurchases.filter(recordBelongsToMe);
@@ -9374,8 +9404,7 @@ function subscribeToUpdates(){
       if(panel) panel.innerHTML = buildShopPanel(getMyStudent());
       const bankPanel = document.getElementById('panel-stock');
       if(bankPanel) bankPanel.innerHTML = buildBankPanel(getMyStudent());
-    }
-  ));
+    }, ()=>panelOpen('shop','stock','boss'), 180000));
 
   _unsubs.push(window._fsOnSnapshot(
     window._fsDoc(window._db,'classrooms',roomId,'data','tesk-economy-restrictions'),
@@ -9409,16 +9438,13 @@ function subscribeToUpdates(){
     }
   ));
 
-  // 체크리스트 기록 실시간
-  _unsubs.push(window._fsOnSnapshot(
-    window._fsDoc(window._db,'classrooms',roomId,'data','pesk-checklists'),
-    (snap)=>{
+  // 체크리스트 기록 — 체크리스트·챌린지 화면에서만 실시간, 그 밖에는 3분마다
+  _unsubs.push(liveWhileOpen('pesk-checklists', (snap)=>{
       checklistRecords = snap.exists() ? (snap.data().value || {}) : {};
       renderChecklistBody();
       refreshChallengePanel();
       maybeAutoPayAutoChallenge('checklist'); // 내 체크 조건 충족 시 자동 지급
-    }
-  ));
+    }, ()=>panelOpen('checklist','challenge'), 180000));
 
   _unsubs.push(window._fsOnSnapshot(
     window._fsDoc(window._db,'classrooms',roomId,'data','tesk-challenges'),
@@ -9562,54 +9588,42 @@ function subscribeToUpdates(){
     }
   ));
 
-  // 내 은행 예금 실시간
-  _unsubs.push(window._fsOnSnapshot(
-    window._fsDoc(window._db,'classrooms',roomId,'data','pesk-deposits'),
-    (snap)=>{
+  // 내 은행 예금 — 은행·상점 화면에서만 실시간, 그 밖에는 5분마다
+  _unsubs.push(liveWhileOpen('pesk-deposits', (snap)=>{
       if(snap.exists()){
         const all = snap.data().value || {};
         myDeposits = _canonicalEconomyList(all, _mergeDepositLists);
         renderEconomyPanels(getMyStudent());
         checkDepositMaturityNotices();
       }
-    }
-  ));
+    }, ()=>panelOpen('stock','shop'), 300000));
 
-  // 내 주식 보유량 실시간
-  _unsubs.push(window._fsOnSnapshot(
-    window._fsDoc(window._db,'classrooms',roomId,'data','pesk-portfolios'),
-    (snap)=>{
+  // 내 주식 보유량 — 은행·상점 화면에서만 실시간
+  _unsubs.push(liveWhileOpen('pesk-portfolios', (snap)=>{
       if(snap.exists()){
         const all = snap.data().value || {};
         myPortfolio = _canonicalEconomyList(all, _mergePortfolioLists);
         renderEconomyPanels(getMyStudent());
       }
-    }
-  ));
+    }, ()=>panelOpen('stock','shop'), 300000));
 
-  // 주식 가격 실시간
-  _unsubs.push(window._fsOnSnapshot(
-    window._fsDoc(window._db,'classrooms',roomId,'data','tesk-stock-prices'),
-    (snap)=>{
+  // 주식 가격 — 은행·상점 화면에서만 실시간
+  _unsubs.push(liveWhileOpen('tesk-stock-prices', (snap)=>{
       if(snap.exists()){
         stockPrices = snap.data().value || {};
         if(!stockPrices || Object.keys(stockPrices).length===0) stockPrices = _defaultStockPrices();
         renderEconomyPanels(getMyStudent());
       }
-    }
-  ));
+    }, ()=>panelOpen('stock','shop'), 300000));
 
-  // 🧍 마이룸 — 학급 아바타 / 선생님이 정한 가격
-  _unsubs.push(window._fsOnSnapshot(
-    window._fsDoc(window._db,'classrooms',roomId,'data','pesk-avatars'),
-    (snap)=>{
+  // 🧍 마이룸 — 학급 아바타(마이룸에서만 실시간, 그 밖에는 3분마다) / 선생님이 정한 가격
+  _unsubs.push(liveWhileOpen('pesk-avatars', (snap)=>{
       if(_avBusy) return;   // 내가 저장하는 중이면 덮어쓰지 않음
       _applyAvatarDoc(snap.exists() ? (snap.data().value || {}) : {});
       if(avAnyVisible()) scheduleAdventureRefresh();
       const mini = document.getElementById('av-mini');
       if(mini) mini.src = avCharDataURL(avEquipped());
-    }
-  ));
+    }, ()=>panelOpen('myroom'), 180000));
 
   _unsubs.push(window._fsOnSnapshot(
     window._fsDoc(window._db,'classrooms',roomId,'data','pesk-avatar-prices'),
