@@ -1,4 +1,4 @@
-const PESK_CACHE = 'pesk-shell-v62-menu-toggle';
+const PESK_CACHE = 'pesk-shell-v63-write-first';
 const PESK_ASSETS = [
   './landing.html',
   './pesk.html',

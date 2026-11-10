@@ -5274,14 +5274,23 @@ function renderPeskFeaturesT(){
     + PESK_FEATURES_T.map(([id, name, desc]) => '<label class="qz-switch" style="justify-content:flex-start;align-items:flex-start;padding:9px 11px;">'
       + '<input type="checkbox" data-feat="' + id + '"' + (cur[id] === false ? '' : ' checked') + ' onchange="savePeskFeaturesT(this)" style="margin-top:2px;">'
       + '<span><span style="font-size:12.5px;color:var(--text);">' + name + '</span><br><small style="font-weight:600;color:var(--hint);">' + desc + '</small></span></label>').join('')
-    + '</div>';
+    + '</div>'
+    + '<label class="qz-switch" style="display:flex;justify-content:flex-start;align-items:flex-start;padding:10px 12px;margin-top:10px;border-color:var(--tesk);">'
+    + '<input type="checkbox" data-feat-write-first' + (cur.writeFirst === true ? ' checked' : '') + ' onchange="savePeskFeaturesT(this)" style="margin-top:2px;">'
+    + '<span><span style="font-size:12.5px;color:var(--text);">✍️ 글쓰기 먼저</span><br><small style="font-weight:600;color:var(--hint);">글쓰기 요일에는 오늘 글을 내야 다른 메뉴가 열려요. 글쓰기 요일은 「학생 할 일 요일표」를 따르고, 글쓰기 의무에서 뺀 학생은 잠기지 않아요.</small></span></label>';
 }
 function savePeskFeaturesT(input){
   const box = document.getElementById('pesk-features-panel');
   if(!box) return;
   const next = {};
   box.querySelectorAll('[data-feat]').forEach(b => { if(!b.checked) next[b.dataset.feat] = false; });
+  if(box.querySelector('[data-feat-write-first]')?.checked) next.writeFirst = true;
   save('pesk-features', next);
+  if(input && input.hasAttribute('data-feat-write-first')){
+    showToast(input.checked ? '✍️ 글쓰기 먼저를 켰어요 — 오늘 글을 내야 다른 메뉴가 열려요' : '✍️ 글쓰기 먼저를 껐어요');
+    addActivity('📱 Pesk 글쓰기 먼저 ' + (input.checked ? '켜기' : '끄기'));
+    return;
+  }
   const f = PESK_FEATURES_T.find(x => x[0] === input?.dataset.feat);
   if(f){
     showToast((input.checked ? '✅ ' : '🔒 ') + f[1] + ' 메뉴를 ' + (input.checked ? '켰어요' : '껐어요') + ' — 학생 화면에 바로 반영돼요');

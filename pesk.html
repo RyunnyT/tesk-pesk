@@ -310,7 +310,7 @@ html,body{min-height:100vh;font-family:'Pretendard','Geist',sans-serif;
   box-shadow:0 4px 12px rgba(79,142,247,0.25), 0 1px 3px rgba(79,142,247,0.15);
 }
 .tab-btn:not(.active):hover{background:var(--bg);}
-.tab-btn.locked{opacity:.45;filter:grayscale(.4);}
+.tab-btn.locked,.tab-btn.wlocked{opacity:.45;filter:grayscale(.4);}
 
 .bottom-tabbar{
   position:fixed;left:50%;bottom:10px;transform:translateX(-50%);
@@ -335,7 +335,7 @@ html,body{min-height:100vh;font-family:'Pretendard','Geist',sans-serif;
 }
 .bottom-tab-btn .bt-icon{font-size:18px;line-height:1;}
 .bottom-tab-btn.active{background:var(--pesk);color:#fff;box-shadow:0 5px 16px rgba(79,142,247,0.28);}
-.bottom-tab-btn.locked{opacity:.48;filter:grayscale(.45);}
+.bottom-tab-btn.locked,.bottom-tab-btn.wlocked{opacity:.48;filter:grayscale(.45);}
 .bottom-more-menu{
   position:fixed;left:50%;bottom:84px;transform:translateX(-50%) translateY(8px);
   width:min(320px, calc(100% - 34px));z-index:219;
@@ -351,7 +351,7 @@ html,body{min-height:100vh;font-family:'Pretendard','Geist',sans-serif;
   color:var(--text);cursor:pointer;text-align:left;
 }
 .bottom-more-item.active{background:var(--pesk-l);color:var(--pesk);}
-.bottom-more-item.locked{opacity:.5;filter:grayscale(.45);}
+.bottom-more-item.locked,.bottom-more-item.wlocked{opacity:.5;filter:grayscale(.45);}
 .bottom-more-item .mi{font-size:18px;width:22px;text-align:center;}
 @keyframes morePop{
   from{opacity:0;transform:translateX(-50%) translateY(12px) scale(.96);}
@@ -903,8 +903,9 @@ let challengeSubmissions = {};
 let challengeAwards = {};
 let economyRestrictions = {};
 
-/* ── 선생님이 끈 메뉴 ── pesk-features {value:{adventure:false, ...}}. 없는 항목은 켜진 것으로 본다.
-   오늘·글쓰기는 언제나 켜져 있다. 꺼진 메뉴는 탭에서 사라지고 바로가기로도 열리지 않는다. */
+/* ── 선생님이 끈 메뉴 ── pesk-features {value:{adventure:false, ..., writeFirst:true}}. 없는 항목은 켜진 것으로 본다.
+   오늘·글쓰기는 언제나 켜져 있다. 꺼진 메뉴는 탭에서 사라지고 바로가기로도 열리지 않는다.
+   writeFirst: 글쓰기 요일에는 오늘 글을 내야 나머지 메뉴가 열린다 (탭은 보이되 잠김). */
 const PESK_FEATURE_IDS = ['adventure','boss','shop','myroom','counsel','stock','checklist','challenge'];
 let peskFeatures = {};
 function featOn(id){ return !PESK_FEATURE_IDS.includes(id) || peskFeatures[id] !== false; }
@@ -912,7 +913,15 @@ function _applyFeatures(raw){
   const v = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
   peskFeatures = {};
   PESK_FEATURE_IDS.forEach(id => { if(v[id] === false) peskFeatures[id] = false; });
+  if(v.writeFirst === true) peskFeatures.writeFirst = true;
 }
+function writeFirstLocked(){
+  if(!peskFeatures.writeFirst || !todoOn('writing')) return false;
+  if(writingDuty && writingDuty.exempt.includes(Number(myStudentNum))) return false;
+  const today = todayISO();
+  return !(peskWritings || []).some(w => _writingDayKey(w) === today);
+}
+function featLocked(id){ return PESK_FEATURE_IDS.includes(id) && writeFirstLocked(); }
 /* 오늘 할 일 카드가 여는 메뉴 */
 function _taskFeature(go){
   const g = String(go || '');
@@ -926,10 +935,12 @@ function _taskFeature(go){
 /* 탭 버튼·더보기 메뉴·왼쪽 카드를 지금 설정대로 보이거나 숨긴다 */
 function applyFeatureUI(){
   PESK_FEATURE_IDS.forEach(id => {
-    const on = featOn(id);
+    const on = featOn(id), locked = featLocked(id);
     ['tab-','bottom-tab-','more-tab-'].forEach(pre => {
       const el = document.getElementById(pre + id);
-      if(el) el.style.display = on ? '' : 'none';
+      if(!el) return;
+      el.style.display = on ? '' : 'none';
+      el.classList.toggle('wlocked', locked);
     });
   });
   const quest = document.getElementById('quest-side');
@@ -943,6 +954,7 @@ function applyFeatureUI(){
   // 보고 있던 화면이 꺼졌으면 오늘 화면으로
   const cur = PESK_FEATURE_IDS.find(id => { const p = document.getElementById('panel-' + id); return p && p.style.display !== 'none'; });
   if(cur && !featOn(cur)){ showTab('home'); showFeedbackNotice('🔒 선생님이 이 메뉴를 잠시 꺼두셨어요.'); }
+  else if(cur && featLocked(cur)){ showTab('writing'); }
   else if(document.getElementById('panel-home')?.style.display !== 'none') refreshTodayPanel();
 }
 
@@ -2290,7 +2302,8 @@ function buildTodayTasks(me){
   }else if(todoOn('writing')){
     const exempt = writingDuty && writingDuty.exempt.includes(Number(myStudentNum));
     const due = writingDuty && !exempt ? ' · ' + writingDuty.deadlineHour + '시까지' : '';
-    tasks.push({icon:'✍️', go:"showTab('writing')", title:'오늘의 글쓰기', desc:'아직 오늘 글을 쓰지 않았어요' + due});
+    tasks.push({icon:'✍️', go:"showTab('writing')", hot:writeFirstLocked(), title:'오늘의 글쓰기',
+      desc:(writeFirstLocked() ? '🔒 오늘 글을 내면 다른 메뉴가 열려요' : '아직 오늘 글을 쓰지 않았어요') + due});
   }
   const fresh = unseenFeedbackWritings();
   if(fresh.length) tasks.push({icon:'✉️', go:"showTab('writing')", hot:true, title:'새 피드백 ' + fresh.length + '개', desc:'선생님이 내 글에 피드백을 보내주셨어요.'});
@@ -2314,7 +2327,7 @@ function buildTodayTasks(me){
       ? {icon:'🏁', go:"showTab('challenge')", title:'학급 챌린지 ' + left + '개', desc:'오늘 했는지 O / X로 표시해요.'}
       : {icon:'🏁', done:true, go:"showTab('challenge')", title:'학급 챌린지 표시 완료', desc:'오늘 챌린지를 모두 표시했어요.'});
   }
-  const shown = tasks.filter(t => featOn(_taskFeature(t.go)));
+  const shown = tasks.filter(t => featOn(_taskFeature(t.go)) && !featLocked(_taskFeature(t.go)));
   return shown.filter(t => !t.done).concat(shown.filter(t => t.done));
 }
 
@@ -3386,6 +3399,7 @@ async function submitPeskWriting(){
     // 실시간 구독이 먼저 같은 글을 받았어도 목록에는 한 번만 넣는다.
     peskWritings = window.PeskWritings.merge(peskWritings, [savedEntry]);
     _myWritingSignature = getMyWritingSignature(peskWritings);
+    if(peskFeatures.writeFirst){ applyFeatureUI(); if(!writeFirstLocked()) showFeedbackNotice('🔓 오늘 글을 냈어요! 다른 메뉴가 열렸어요.'); }
     resetWritingDraft(false);
     // 제출 완료 후: 폼 입력값을 비우고 닫은 뒤, 리스트만 새로 그림
     const titleEl = document.getElementById('w-title-inp');
@@ -8712,6 +8726,7 @@ function showTab(tab){
   setBottomMore(false);
   if(tab==='literacy'){ advMode = 'lit'; tab = 'adventure'; }   // 예전 링크 호환
   if(!featOn(tab)){ showFeedbackNotice('🔒 선생님이 이 메뉴를 잠시 꺼두셨어요.'); return; }
+  if(featLocked(tab)){ showFeedbackNotice('✍️ 오늘 글을 먼저 내면 다른 메뉴가 열려요.'); tab = 'writing'; }
   if(tab==='adventure' && !_litOpening) advMode = 'rpg';
   ['home','adventure','boss','shop','myroom','writing','counsel','stock','checklist','challenge'].forEach(t=>{
     const panel = document.getElementById('panel-'+t);
@@ -9535,6 +9550,7 @@ function subscribeToUpdates(){
         const nowAnthRequest = myNewWritings.filter(w=>w.anthology?.status==='student-review').length;
         peskWritings = myNewWritings;
         _myWritingSignature = nextSignature;
+        if(peskFeatures.writeFirst) applyFeatureUI();
         const prevAnth = anthologySignature(classAnthology);
         classAnthology = anthologyFrom(allWritings);
         if(prevAnth !== anthologySignature(classAnthology)) refreshAnthologyArea();

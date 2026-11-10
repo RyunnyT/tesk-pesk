@@ -60,6 +60,16 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   await page.evaluate(()=>showTab('shop'));assert.equal(await panel(),'shop');
   await page.evaluate(()=>__featSnap({exists:()=>true,data:()=>({value:{shop:false}})}));
   assert.equal(await panel(),'home');assert.equal(await shown('tab-shop'),false);
+  // ✍️ 글쓰기 먼저: 글쓰기 요일에 오늘 글을 안 냈으면 다른 메뉴는 보이되 잠기고, 누르면 글쓰기로 간다
+  await page.evaluate(()=>{todoSchedule=null;todoOn=()=>true;__featSnap({exists:()=>true,data:()=>({value:{writeFirst:true}})});});
+  const locked=id=>page.evaluate(id=>document.getElementById(id)?.classList.contains('wlocked'),id);
+  assert.equal(await shown('tab-shop'),true);assert.equal(await locked('tab-shop'),true);assert.equal(await locked('tab-writing'),false);
+  await page.evaluate(()=>showTab('shop'));assert.equal(await panel(),'writing');
+  await page.evaluate(()=>showTab('home'));assert.equal(await panel(),'home');
+  // 오늘 글을 내면 바로 풀린다
+  await page.evaluate(()=>{peskWritings=[{id:'w1',studentNum:1,submittedAt:new Date().toISOString()}];applyFeatureUI();});
+  assert.equal(await locked('tab-shop'),false);
+  await page.evaluate(()=>showTab('shop'));assert.equal(await panel(),'shop');
   assert.deepEqual(errors,[]);
   console.log('pesk-features smoke ok');
  }finally{await browser.close();}
