@@ -1300,6 +1300,7 @@ window.addEventListener('error', function(e){
 <section class="page" id="page-workspace" aria-label="설정 · 연동">
   <div class="page-header"><div class="page-title">설정 · 연동</div><div class="page-desc">학급 기본 정보, 데이터 보관과 외부 연결을 관리하세요.</div></div>
   <div class="workspace-grid"><div class="card"><div class="card-header"><div class="card-title">학급 기본 설정</div><span data-icon="settings" aria-hidden="true"></span></div><p class="workspace-description">학급 이름과 교사 정보, AI 설정을 변경할 수 있어요.</p><button class="btn btn-primary" onclick="openSettings()">학급 설정 열기</button></div>
+  <div class="card"><div class="card-header"><div class="card-title">📱 학생 Pesk 메뉴 켜기 · 끄기</div></div><p class="workspace-description">끈 메뉴는 학생 화면에서 사라지고 열 수 없어요. 기록은 지워지지 않아서 다시 켜면 그대로 이어서 써요. 🏠 오늘·✍️ 글쓰기는 항상 켜져 있어요.</p><div id="pesk-features-panel"></div></div>
   <div class="card"><div class="card-header"><div class="card-title">연결 및 계정</div></div><p class="workspace-description">데이터를 새로고침하거나 위젯으로 자료를 보내세요.</p><div class="workspace-actions">    <button onclick="forceRefreshFromFirebase()" title="Firebase에서 새로고침"
       style="background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;
       font-size:11px;color:var(--sub);cursor:pointer;font-family:inherit;">🔄 새로고침</button>
@@ -2392,7 +2393,7 @@ function _resetClassLocalStateOnTeacherSwitch(roomId){
       'tesk-challenge-awards','tesk-writing-rubric-reports','tesk-writing-phrases',
       'tesk-economy-restrictions','pesk-deposits','pesk-checklists',
       'pesk-challenge-submissions','pesk-purchase-log','pesk-purchases',
-      'pesk-avatars','pesk-avatar-prices','pesk-quiz-config','pesk-quiz-progress','pesk-quiz-config','pesk-quiz-progress','tesk-record-history','tesk-ai-drafts'
+      'pesk-avatars','pesk-avatar-prices','pesk-quiz-config','pesk-quiz-progress','pesk-quiz-config','pesk-quiz-progress','tesk-record-history','tesk-ai-drafts','pesk-features'
     ].forEach(k=>localStorage.removeItem(k));
     sessionStorage.removeItem('tesk-initial-synced');
   }
@@ -2944,7 +2945,7 @@ const SYNC_KEYS=['tesk-settings','tesk-students','tesk-missions','tesk-shop','te
   'tesk-jobs','tesk-records','tesk-exams','tesk-writings','tesk-counsels',
   'tesk-counsel-requests','tesk-friends','tesk-observations','tesk-seats','tesk-activities','tesk-accounts',
   'tesk-stock-prices','tesk-portfolios','tesk-taxes','tesk-salary-tax-enabled','tesk-badge-discount','tesk-bank-plans','tesk-bank-badge-bonus',
-  'tesk-student-badges','tesk-cal-events','tesk-quick-points','tesk-checklist-items','tesk-challenges','tesk-challenge-awards','tesk-writing-rubric-reports','tesk-economy-restrictions','pesk-deposits','pesk-checklists','pesk-challenge-submissions','pesk-writing-topic','pesk-writing-duty','pesk-class-boss','tesk-writing-phrases','pesk-todo-schedule','pesk-literacy','pesk-quest-config',
+  'tesk-student-badges','tesk-cal-events','tesk-quick-points','tesk-checklist-items','tesk-challenges','tesk-challenge-awards','tesk-writing-rubric-reports','tesk-economy-restrictions','pesk-deposits','pesk-checklists','pesk-challenge-submissions','pesk-writing-topic','pesk-writing-duty','pesk-class-boss','tesk-writing-phrases','pesk-todo-schedule','pesk-literacy','pesk-quest-config','pesk-features',
   'tesk-bank-settings','tesk-wealth-tax','tesk-stock-index','tesk-econ-snapshots'];
 
 // ── 학급 데이터 백업/복원 ──
@@ -4655,7 +4656,7 @@ function renderPage(id){
   const r={home:renderHome,students:renderStudents,points:renderPoints,economy:renderEconomy,
     missions:renderMissions,'ai-assist':renderAiAssist,records:renderRecords,stats:renderStats,
     exam:renderExam,writing:renderWriting,counsel:renderCounsel,friends:renderFriends,report:renderReport,
-    checklist:renderTeacherChecklistPanel,adventure:loadQuiz,literacy:renderLiteracy,myroom:loadMyRoom,workspace:renderHome};
+    checklist:renderTeacherChecklistPanel,adventure:loadQuiz,literacy:renderLiteracy,myroom:loadMyRoom,workspace:()=>{renderHome();renderPeskFeaturesT();}};
   if(r[id]) r[id]();
   // 보고서·생활기록부·통계는 학년 전체 글이 필요하다 — 이번 학기만 받은 상태면 전체를 받은 뒤 다시 그린다
   if(['report','records','stats'].includes(id) && writingsScope !== 'all'){
@@ -5249,6 +5250,43 @@ function renderQuestT(){
     + '<span style="font-size:11px;color:var(--hint);">이번 주(' + week.slice(5).replace('-','/') + '~) 예시</span></div>'
     + '<div style="margin-top:6px;">' + (sample || '<div style="font-size:11.5px;color:var(--hint);">학생이 없어요</div>') + '</div>'
     + mistakes;
+}
+/* ══════════════════════════════════════
+   📱 학생 Pesk 메뉴 켜기·끄기
+   · pesk-features {adventure:false, ...} 에 끈 메뉴만 false 로 남긴다. 없는 항목은 켜진 것.
+   · 학생 앱은 실시간으로 받아 탭·더보기·오늘 할 일에서 숨기고, 열려 있던 화면이면 오늘로 돌려보낸다.
+   ══════════════════════════════════════ */
+const PESK_FEATURES_T = [
+  ['adventure','⚔️ 모험','학습 모험 · 📖 오늘의 지문 · 🧩 주간 퀘스트'],
+  ['boss','🗿 보스','우리 반 보스 도전'],
+  ['shop','🏪 매점','상품 구매 · 경매'],
+  ['myroom','🧍 마이룸','아바타 꾸미기 · 펫 · 도감'],
+  ['counsel','💬 상담','상담 신청'],
+  ['stock','🏦 학급은행','예금 · 주식'],
+  ['checklist','✅ 체크리스트','체크 권한 직업 학생의 명렬표'],
+  ['challenge','🏁 챌린지','학급 챌린지 O/X 표시']
+];
+function renderPeskFeaturesT(){
+  const box = document.getElementById('pesk-features-panel');
+  if(!box) return;
+  const cur = load('pesk-features', {}) || {};
+  box.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">'
+    + PESK_FEATURES_T.map(([id, name, desc]) => '<label class="qz-switch" style="justify-content:flex-start;align-items:flex-start;padding:9px 11px;">'
+      + '<input type="checkbox" data-feat="' + id + '"' + (cur[id] === false ? '' : ' checked') + ' onchange="savePeskFeaturesT(this)" style="margin-top:2px;">'
+      + '<span><span style="font-size:12.5px;color:var(--text);">' + name + '</span><br><small style="font-weight:600;color:var(--hint);">' + desc + '</small></span></label>').join('')
+    + '</div>';
+}
+function savePeskFeaturesT(input){
+  const box = document.getElementById('pesk-features-panel');
+  if(!box) return;
+  const next = {};
+  box.querySelectorAll('[data-feat]').forEach(b => { if(!b.checked) next[b.dataset.feat] = false; });
+  save('pesk-features', next);
+  const f = PESK_FEATURES_T.find(x => x[0] === input?.dataset.feat);
+  if(f){
+    showToast((input.checked ? '✅ ' : '🔒 ') + f[1] + ' 메뉴를 ' + (input.checked ? '켰어요' : '껐어요') + ' — 학생 화면에 바로 반영돼요');
+    addActivity('📱 Pesk 메뉴 ' + f[1] + ' ' + (input.checked ? '켜기' : '끄기'));
+  }
 }
 function saveQuestT(){
   const box = document.getElementById('quest-panel');

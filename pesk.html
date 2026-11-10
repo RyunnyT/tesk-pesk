@@ -903,6 +903,49 @@ let challengeSubmissions = {};
 let challengeAwards = {};
 let economyRestrictions = {};
 
+/* ── 선생님이 끈 메뉴 ── pesk-features {value:{adventure:false, ...}}. 없는 항목은 켜진 것으로 본다.
+   오늘·글쓰기는 언제나 켜져 있다. 꺼진 메뉴는 탭에서 사라지고 바로가기로도 열리지 않는다. */
+const PESK_FEATURE_IDS = ['adventure','boss','shop','myroom','counsel','stock','checklist','challenge'];
+let peskFeatures = {};
+function featOn(id){ return !PESK_FEATURE_IDS.includes(id) || peskFeatures[id] !== false; }
+function _applyFeatures(raw){
+  const v = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+  peskFeatures = {};
+  PESK_FEATURE_IDS.forEach(id => { if(v[id] === false) peskFeatures[id] = false; });
+}
+/* 오늘 할 일 카드가 여는 메뉴 */
+function _taskFeature(go){
+  const g = String(go || '');
+  const m = g.match(/showTab\('(\w+)'\)/);
+  if(m) return m[1];
+  if(/openAdventure\('boss'\)/.test(g)) return 'boss';
+  if(/openAdventure\(|openLiteracy\(|quest-side/.test(g)) return 'adventure';
+  if(/openBankFromToday/.test(g)) return 'stock';
+  return '';
+}
+/* 탭 버튼·더보기 메뉴·왼쪽 카드를 지금 설정대로 보이거나 숨긴다 */
+function applyFeatureUI(){
+  PESK_FEATURE_IDS.forEach(id => {
+    const on = featOn(id);
+    ['tab-','bottom-tab-','more-tab-'].forEach(pre => {
+      const el = document.getElementById(pre + id);
+      if(el) el.style.display = on ? '' : 'none';
+    });
+  });
+  const quest = document.getElementById('quest-side');
+  if(quest) quest.style.display = featOn('adventure') ? '' : 'none';
+  const chal = document.getElementById('student-challenge-wrap');
+  if(chal) chal.style.display = featOn('challenge') ? '' : 'none';
+  // 더보기 안이 모두 꺼졌으면 더보기 버튼도 숨긴다
+  const anyMore = !!document.querySelector('#bottom-more-menu .bottom-more-item:not([style*="display: none"])');
+  ['tab-more','bottom-tab-more'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = anyMore ? '' : 'none'; });
+  if(!anyMore) setBottomMore(false);
+  // 보고 있던 화면이 꺼졌으면 오늘 화면으로
+  const cur = PESK_FEATURE_IDS.find(id => { const p = document.getElementById('panel-' + id); return p && p.style.display !== 'none'; });
+  if(cur && !featOn(cur)){ showTab('home'); showFeedbackNotice('🔒 선생님이 이 메뉴를 잠시 꺼두셨어요.'); }
+  else if(document.getElementById('panel-home')?.style.display !== 'none') refreshTodayPanel();
+}
+
 // 로컬 알림 목록
 const STUDENT_SCOPE_KEY = () => roomId + '-' + (myAccountUid || ('num' + myStudentNum));
 const NOTIF_KEY = () => 'pesk-notifs-' + STUDENT_SCOPE_KEY();
@@ -1226,7 +1269,7 @@ async function loadData(){
                 'tesk-checklist-items','pesk-checklists','tesk-challenges','pesk-challenge-submissions','tesk-challenge-awards','pesk-class-fund','tesk-economy-restrictions',
                 'pesk-avatars','pesk-avatar-prices','pesk-quiz-config','pesk-quiz-summary',
                 'pesk-writing-topic','pesk-writing-duty','pesk-class-boss','pesk-todo-schedule','pesk-literacy','pesk-quest-config',
-                'tesk-bank-settings','tesk-wealth-tax','pesk-auctions'];
+                'tesk-bank-settings','tesk-wealth-tax','pesk-auctions','pesk-features'];
     // 거래 로그(pesk-purchase-log)는 큰 문서라 시작할 때 읽지 않는다 — 상점을 열 때 가져온다 (pullShopEconomy)
     const snaps=await Promise.all(keys.map(k=>
       window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data',k))
@@ -1292,6 +1335,7 @@ async function loadData(){
     _applyTodoSchedule((snaps[28] && snaps[28].exists()) ? snaps[28].data().value : null);
     _applyLiteracy((snaps[29] && snaps[29].exists()) ? snaps[29].data().value : null);
     _applyQuestCfg((snaps[30] && snaps[30].exists()) ? snaps[30].data().value : null);
+    _applyFeatures((snaps[34] && snaps[34].exists()) ? snaps[34].data().value : null);
 
     // 아주 옛 버전이 기기에 남긴 예금 목록은 서버로 올리지 않고 지운다.
     // 기기 저장값은 학생이 마음대로 고칠 수 있어서, 올리면 없는 예금을 만들어 해지할 수 있었다.
@@ -1313,7 +1357,7 @@ async function loadData(){
     console.warn('데이터 로드 실패:', e);
     students=[]; missions=[]; studentBadges={}; jobs=[];
     peskWritings=[]; classAnthology=[]; stockPrices={}; myPortfolio=[]; mySurvey=null; myPurchases=[]; applyClassBossPurchases([]); myDeposits=[];
-    checklistItems=[]; checklistRecords={}; classChallenges={manual:[]}; challengeSubmissions={}; challengeAwards={}; purchaseLogs=[]; economyRestrictions={};
+    checklistItems=[]; checklistRecords={}; classChallenges={manual:[]}; challengeSubmissions={}; challengeAwards={}; purchaseLogs=[]; economyRestrictions={}; peskFeatures={};
     allAvatars={}; myAvatar=null; avPrices={cats:{},items:{},offCats:[],offItems:[]};
     quizConfig=null; allQuizProgress={}; myQuiz=null;
     localNotifs=[]; localTxns=[];
@@ -2069,6 +2113,7 @@ function renderDashboard(){
   if(moreMenu && !document.getElementById('more-tab-challenge')){
     moreMenu.insertAdjacentHTML('afterbegin',"<button class=\"bottom-more-item\" id=\"more-tab-challenge\" onclick=\"showTab('challenge')\"><span class=\"mi\">🏁</span><span>챌린지</span></button>");
   }
+  applyFeatureUI();
   subscribeToUpdates();
   // 체험 모드 안내 배지
   renderDemoBadge();
@@ -2269,7 +2314,8 @@ function buildTodayTasks(me){
       ? {icon:'🏁', go:"showTab('challenge')", title:'학급 챌린지 ' + left + '개', desc:'오늘 했는지 O / X로 표시해요.'}
       : {icon:'🏁', done:true, go:"showTab('challenge')", title:'학급 챌린지 표시 완료', desc:'오늘 챌린지를 모두 표시했어요.'});
   }
-  return tasks.filter(t => !t.done).concat(tasks.filter(t => t.done));
+  const shown = tasks.filter(t => featOn(_taskFeature(t.go)));
+  return shown.filter(t => !t.done).concat(shown.filter(t => t.done));
 }
 
 function openBankFromToday(){
@@ -8665,6 +8711,7 @@ function showTab(tab){
   }
   setBottomMore(false);
   if(tab==='literacy'){ advMode = 'lit'; tab = 'adventure'; }   // 예전 링크 호환
+  if(!featOn(tab)){ showFeedbackNotice('🔒 선생님이 이 메뉴를 잠시 꺼두셨어요.'); return; }
   if(tab==='adventure' && !_litOpening) advMode = 'rpg';
   ['home','adventure','boss','shop','myroom','writing','counsel','stock','checklist','challenge'].forEach(t=>{
     const panel = document.getElementById('panel-'+t);
@@ -9539,6 +9586,12 @@ function subscribeToUpdates(){
       renderEconomyPanels(getMyStudent());
       refreshTodayPanel();
     }
+  ));
+
+  // 메뉴 켜기/끄기 — 선생님이 끄면 바로 탭에서 사라진다
+  _unsubs.push(window._fsOnSnapshot(
+    window._fsDoc(window._db,'classrooms',roomId,'data','pesk-features'),
+    (snap)=>{ _applyFeatures(snap.exists() ? snap.data().value : null); applyFeatureUI(); }
   ));
 
   // 🧩 주간 퀘스트 설정 — 선생님이 종류·목표를 바꾸면 바로 반영

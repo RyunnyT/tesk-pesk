@@ -17,7 +17,7 @@ const LABELS = {
   'tesk-writing-rubric-reports':'글쓰기 평가 보고','tesk-economy-restrictions':'경제 제한','pesk-deposits':'은행 예금',
   'pesk-checklists':'체크리스트 기록','pesk-challenge-submissions':'도전 제출','pesk-writing-topic':'글쓰기 주제',
   'pesk-writing-duty':'글쓰기 의무','pesk-class-boss':'학급 보스','tesk-writing-phrases':'피드백 문구',
-  'pesk-todo-schedule':'할 일 일정','pesk-literacy':'오늘의 지문','pesk-quest-config':'퀘스트 설정',
+  'pesk-todo-schedule':'할 일 일정','pesk-literacy':'오늘의 지문','pesk-quest-config':'퀘스트 설정','pesk-features':'Pesk 메뉴 켜기·끄기',
   'tesk-bank-settings':'은행 설정','tesk-wealth-tax':'재산세','tesk-stock-index':'주가 지수','tesk-econ-snapshots':'경제 지표 기록',
   'pesk-purchases':'구매 물품','pesk-purchase-log':'거래 로그','pesk-portfolios':'주식 보유','pesk-peer-survey':'교우관계 설문',
   'tesk-teacher-notif':'교사 알림','tesk-stock-raw-prices':'주식 원시 시세','pesk-avatars':'아바타','pesk-avatar-prices':'아바타 가격',

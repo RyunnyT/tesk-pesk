@@ -1,4 +1,4 @@
-const PESK_CACHE = 'pesk-shell-v61-data-quota';
+const PESK_CACHE = 'pesk-shell-v62-menu-toggle';
 const PESK_ASSETS = [
   './landing.html',
   './pesk.html',
