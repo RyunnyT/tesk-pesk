@@ -64,3 +64,14 @@ test('quiz rewards are buffered per day and flushed as one merged log row',async
   f.c.pushEconLog=async(e,o)=>{f.logs.push({...e,mergeId:o.mergeId});return true;};await f.c.flushQuizRewardLog();
   assert.equal(f.logs.at(-1).delta,5,'실패하면 다음에 다시 올린다');
 });
+
+test('bidding on a multi-item auction keeps several bidders and refunds only the one pushed out',async()=>{
+  const ends=new Date(Date.now()+3600000).toISOString();
+  const f=setup({'pesk-auctions':[{id:'m',title:'급식 먼저',qty:2,startPrice:100,step:50,endsAt:ends,status:'open',bids:[],
+    tops:[{num:2,name:'친구',amount:100,at:'2026-01-01'},{num:3,name:'셋',amount:100,at:'2026-01-02'}]}]});
+  f.docs['tesk-students'].push({num:3,name:'셋',points:0});
+  f.elements['bid-m']={value:'150'};await f.c.bidAuction('m');
+  assert.equal(f.docs['tesk-students'][0].points,850);assert.equal(f.docs['tesk-students'][1].points,500,'먼저 부른 친구는 그대로');
+  assert.equal(f.docs['tesk-students'][2].points,100,'밀려난 사람만 환불');
+  assert.deepEqual(f.docs['pesk-auctions'][0].tops.map(t=>t.num),[1,2]);
+});

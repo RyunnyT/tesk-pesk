@@ -117,3 +117,27 @@ test('seat chart: no-desk cells are skipped by winners, filling, reshaping and t
   assert.equal(p.grid[1],null);assert.deepEqual(p.grid.filter(x=>x!=null).sort(),[1,2,3,4,5]);
   assert.throws(()=>SP.plan({students:[1,2,3,4,5,6].map(num=>({num})),rows:2,cols:3,voids:[1]}),/자리 수\(5\)/);
 });
+
+test('auction with several items: top N bidders each win one, the lowest is pushed out and refunded, cancel refunds everyone',()=>{
+  const now=Date.parse('2026-11-12T00:00:00Z'),a={id:'q',qty:2,startPrice:100,step:50,endsAt:'2026-11-13T00:00:00Z',status:'open'};
+  let r=E.placeBid(a,{num:1,name:'가',amount:100,cash:1000,now});assert.equal(r.refund,null);
+  r=E.placeBid(r.auction,{num:2,name:'나',amount:100,cash:1000,now:now+1});assert.equal(r.refund,null,'두 개라 둘 다 낙찰권');
+  assert.equal(E.minBid(r.auction),150,'다 차면 최저 + 호가');assert.equal(E.minBid(r.auction,1),150,'내 입찰 + 호가');
+  assert.throws(()=>E.placeBid(r.auction,{num:3,amount:140,cash:1000,now}),/BID_TOO_LOW:150/);
+  r=E.placeBid(r.auction,{num:3,name:'다',amount:150,cash:1000,now:now+2});assert.deepEqual([r.refund.num,r.refund.amount],[2,100],'같은 값이면 늦게 부른 사람이 밀린다');
+  r=E.placeBid(r.auction,{num:1,amount:300,cash:200,now:now+3});assert.equal(r.pay,200,'낙찰권 안이면 차액만');assert.equal(r.refund,null);
+  assert.deepEqual(r.auction.tops.map(t=>[t.num,t.amount]),[[1,300],[3,150]]);assert.equal(r.auction.top.num,1);
+  const won=E.closeAuction(r.auction,{now});assert.deepEqual(won.winners.map(w=>[w.num,w.amount]),[[1,300],[3,150]]);assert.deepEqual(won.refunds,[]);
+  const x=E.closeAuction(r.auction,{cancel:true,now});assert.deepEqual(x.refunds,[{num:1,amount:300},{num:3,amount:150}]);
+  // 예전 기록(top 만 있음)은 1개짜리로 그대로 읽힌다
+  const old=E.auctionState({startPrice:100,step:10,top:{num:5,amount:120}});assert.equal(old.qty,1);assert.equal(old.tops[0].num,5);assert.equal(E.minBid(old),130);
+});
+
+test('auction list: trimming never drops an open auction (escrowed money); only finished ones can be deleted',()=>{
+  const list=[{id:'open-old',status:'open'},...Array.from({length:30},(_,i)=>({id:'c'+i,status:i%2?'closed':'cancelled'}))];
+  const t=E.trimAuctions([...list,{id:'new',status:'open'}]);
+  assert.equal(t.length,30);assert.ok(t.some(a=>a.id==='open-old'),'오래 열린 경매가 사라지면 맡긴 돈도 사라진다');assert.ok(t.some(a=>a.id==='new'));
+  assert.equal(E.trimAuctions(Array.from({length:35},(_,i)=>({id:'o'+i,status:'open'}))).length,35,'진행 중인 경매뿐이면 하나도 버리지 않는다');
+  assert.deepEqual(E.removeAuction(list,'c0').map(a=>a.id).includes('c0'),false);
+  assert.throws(()=>E.removeAuction(list,'open-old'),/AUCTION_STILL_OPEN/);assert.throws(()=>E.removeAuction(list,'zz'),/AUCTION_NOT_FOUND/);
+});

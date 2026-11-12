@@ -331,15 +331,18 @@ async function renderAuctionPanel(fresh){
   const list = auctionsT.map(a => a && a.kind === 'seats' ? EC().seatAuctionState(a) : EC().auctionState(a)).reverse();
   if(seatDraft) return renderSeatAuctionEditor();
   box.innerHTML = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;"><button class="btn btn-sm btn-primary" onclick="createAuction()">+ 경매 열기</button><button class="btn btn-sm btn-primary" onclick="openSeatAuctionEditor()">🪑 자리 경매 열기</button><button class="btn btn-sm btn-secondary" onclick="renderAuctionPanel(true)">🔄 새로고침</button>'
-    + '<span style="font-size:11px;color:var(--sub);align-self:center;">경매는 선생님만 열 수 있고 학생은 입찰만 해요. 입찰한 돈은 바로 맡겨 두고, 더 높은 입찰이 오면 이전 입찰자에게 돌려줘요. 마감 확정하면 낙찰자 「내 물건」에 들어가고 낙찰 금액은 학급(국고)으로 회수돼요.</span></div>'
+    + '<span style="font-size:11px;color:var(--sub);align-self:center;">경매는 선생님만 열 수 있고 학생은 입찰만 해요. 입찰한 돈은 바로 맡겨 두고, 더 높은 입찰이 오면 이전 입찰자에게 돌려줘요. 마감 확정하면 낙찰자 「내 물건」에 들어가고 낙찰 금액은 학급(국고)으로 회수돼요. 진행 중인 경매는 [경매 취소]로 모두 환불하고, 끝난 경매는 [목록에서 삭제]로 지워요.</span></div>'
     + (list.length ? list.map(a => {
         if(a.kind === 'seats') return seatAuctionTeacherCard(a, name);
         const ended = a.endsAt && new Date(a.endsAt).getTime() <= Date.now();
         return '<div style="padding:12px;border:1px solid var(--border);border-radius:12px;margin-bottom:8px;background:var(--surface);"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><b>' + escHtml(a.icon || '🔨') + ' ' + escHtml(a.title) + '</b><span style="font-size:12px;">'
           + (a.status === 'open' ? (ended ? '⏰ 입찰 마감 · 확정 필요' : '진행 중 · ' + new Date(a.endsAt).toLocaleString('ko-KR') + ' 마감') : a.status === 'closed' ? '✅ 낙찰 확정' : '취소됨') + '</span></div>'
-          + '<div style="font-size:12px;color:var(--sub);margin-top:4px;">시작가 ' + a.startPrice.toLocaleString() + ' · 호가 단위 ' + a.step.toLocaleString() + ' · 입찰 ' + a.bids.length + '회'
-          + (a.top ? ' · 최고 <b>' + a.top.amount.toLocaleString() + '</b> (' + escHtml(name(a.top.num)) + ')' : ' · 입찰 없음') + '</div>'
-          + (a.status === 'open' ? '<div style="display:flex;gap:6px;margin-top:8px;"><button class="btn btn-sm btn-primary" onclick="closeAuctionT(\'' + a.id + '\',false)">마감 확정</button><button class="btn btn-sm btn-secondary" onclick="closeAuctionT(\'' + a.id + '\',true)">취소 (환불)</button></div>' : '')
+          + '<div style="font-size:12px;color:var(--sub);margin-top:4px;">' + (a.qty > 1 ? '<b>' + a.qty + '개</b> · ' : '') + '시작가 ' + a.startPrice.toLocaleString() + ' · 호가 단위 ' + a.step.toLocaleString() + ' · 입찰 ' + a.bids.length + '회'
+          + (!a.tops.length ? ' · 입찰 없음' : a.qty > 1 ? ' · ' + (a.status === 'closed' ? '낙찰' : '낙찰권') + ' ' + a.tops.length + '/' + a.qty + '명' : ' · 최고 <b>' + a.top.amount.toLocaleString() + '</b> (' + escHtml(name(a.top.num)) + ')') + '</div>'
+          + (a.qty > 1 && a.tops.length ? '<div style="font-size:12px;margin-top:4px;">' + a.tops.map(t => escHtml(name(t.num)) + ' <b>' + t.amount.toLocaleString() + '</b>').join(' · ') + '</div>' : '')
+          + '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">'
+          + (a.status === 'open' ? '<button class="btn btn-sm btn-primary" onclick="closeAuctionT(\'' + a.id + '\',false)">마감 확정</button><button class="btn btn-sm btn-secondary" onclick="closeAuctionT(\'' + a.id + '\',true)">경매 취소 (환불)</button>'
+            : '<button class="btn btn-sm btn-secondary" onclick="deleteAuctionT(\'' + a.id + '\')">🗑 목록에서 삭제</button>') + '</div>'
           + '</div>';
       }).join('') : '<div style="padding:16px;text-align:center;color:var(--sub);font-size:12px;">열린 경매가 없어요. 자리 선점, 1일 반장, 급식 먼저 먹기처럼 하나뿐인 권리를 경매에 올려 보세요.</div>');
 }
@@ -347,17 +350,19 @@ async function createAuction(){
   const v = await openAppFormModal({title: '경매 열기', fields: [
     {name: 'title', label: '경매 물건(권리)', placeholder: '예) 다음 주 자리 먼저 고르기', required: true}, {name: 'icon', label: '아이콘', value: '🪑'},
     {name: 'desc', label: '설명 (선택)', placeholder: '예) 다음 주 월요일 자리 바꾸기 때 가장 먼저 골라요'},
+    {name: 'qty', label: '물건 개수 (높게 부른 순서로 한 명에 하나씩 낙찰)', type: 'number', min: 1, max: EC().AUCTION_MAX_QTY, value: 1, required: true},
     {name: 'start', label: '시작 가격', type: 'number', min: 1, value: 1000, required: true}, {name: 'step', label: '호가 단위', type: 'number', min: 1, value: 200, required: true},
     {name: 'hours', label: '입찰 기간 (시간)', type: 'number', min: 1, value: 24, required: true}], submitText: '경매 열기'});
   if(!v) return;
-  const start = Math.round(Number(v.start)), step = Math.round(Number(v.step)), hours = Number(v.hours);
+  const start = Math.round(Number(v.start)), step = Math.round(Number(v.step)), hours = Number(v.hours), qty = Number(v.qty);
   if(!v.title || !(start >= 1) || !(step >= 1) || !(hours > 0)) return showToast('⚠️ 값을 확인하세요');
+  if(!Number.isInteger(qty) || qty < 1 || qty > EC().AUCTION_MAX_QTY) return showToast('⚠️ 물건 개수는 1~' + EC().AUCTION_MAX_QTY + '개로 정해 주세요');
   const a = {id: 'auc_' + uid(), title: String(v.title).slice(0, 40), icon: String(v.icon || '🔨').slice(0, 4), desc: String(v.desc || '').slice(0, 120),
-    startPrice: start, step, endsAt: new Date(Date.now() + hours * 3600000).toISOString(), status: 'open', bids: [], top: null, createdAt: new Date().toISOString()};
+    qty, startPrice: start, step, endsAt: new Date(Date.now() + hours * 3600000).toISOString(), status: 'open', bids: [], tops: [], top: null, createdAt: new Date().toISOString()};
   await window._fsRunTxn(window._db, async txn => {
     const s = await txn.get(econRef('pesk-auctions'));
-    const list = (s.exists() ? (s.data().value || []) : []).slice(-29);   // 최근 30개까지만 남긴다 (진행 중인 경매는 마감 전이라 앞쪽에 남지 않게)
-    list.push(a);
+    // 30개까지만 남긴다 — 끝난 경매만 오래된 것부터 버린다 (진행 중인 경매에는 맡긴 돈이 있다)
+    const list = EC().trimAuctions([...(s.exists() ? (s.data().value || []) : []), a]);
     txn.set(econRef('pesk-auctions'), {value: list, updatedAt: new Date().toISOString()});
     auctionsT = list;
   });
@@ -373,7 +378,7 @@ async function closeAuctionT(id, cancel){
       message: cancel ? '자리 경매를 취소하고 입찰한 학생 모두에게 돈을 돌려줄까요?' : '경매 자리 ' + a.lots.length + '개 중 ' + sold + '개가 낙찰돼요.\n낙찰 금액은 학급(국고)으로 회수돼요. 확정한 뒤 [자리표에 반영]을 누르면 자리배치에 들어가요.',
       submitText: cancel ? '취소하고 환불' : '확정', danger: !!cancel})) return;
   }else if(!await openAppConfirmModal({title: cancel ? '경매 취소' : '경매 마감 확정',
-    message: cancel ? '경매를 취소하고 최고 입찰자에게 맡긴 돈을 돌려줄까요?' : (a.top ? '최고 입찰 ' + econMoney(a.top.amount) + '으로 낙찰을 확정할까요?\n낙찰자 「내 물건」에 들어가고, 낙찰 금액은 ' + (EC().FEATURES.fund ? '공동 기금으로 가요.' : '학급(국고)으로 회수돼요.') : '입찰이 없어요. 경매를 닫을까요?'),
+    message: cancel ? '경매를 취소하고 입찰자' + (a.tops.length > 1 ? ' ' + a.tops.length + '명' : '') + '에게 맡긴 돈을 돌려줄까요?' : (a.top ? (a.qty > 1 ? a.qty + '개 중 ' + a.tops.length + '개를 높게 부른 ' + a.tops.length + '명에게 낙찰할까요?' : '최고 입찰 ' + econMoney(a.top.amount) + '으로 낙찰을 확정할까요?') + '\n낙찰자 「내 물건」에 들어가고, 낙찰 금액은 ' + (EC().FEATURES.fund ? '공동 기금으로 가요.' : '학급(국고)으로 회수돼요.') : '입찰이 없어요. 경매를 닫을까요?'),
     submitText: cancel ? '취소하고 환불' : '확정', danger: !!cancel})) return;
   let out = null;
   try{
@@ -400,17 +405,22 @@ async function closeAuctionT(id, cancel){
       const r = EC().closeAuction(list[i], {cancel});
       list[i] = r.auction;
       out = {r, logs: []};
-      if(r.refund){
-        const studs = ss.exists() ? (ss.data().value || []) : [], j = studs.findIndex(s => String(s.num) === String(r.refund.num));
-        if(j >= 0){ const b = Number(studs[j].points || 0); studs[j].points = b + r.refund.amount; txn.set(econRef('tesk-students'), {value: studs, updatedAt: at}); out.students = studs;
-          out.logs.push({type: 'auction_refund', studentNum: studs[j].num, studentName: studs[j].name || '', delta: r.refund.amount, balanceBefore: b, balanceAfter: b + r.refund.amount, detail: '경매 취소 환불: ' + r.auction.title}); }
+      if(r.refunds.length){
+        const studs = ss.exists() ? (ss.data().value || []) : [];
+        r.refunds.forEach(f => { const j = studs.findIndex(s => String(s.num) === String(f.num)); if(j < 0) return; const b = Number(studs[j].points || 0); studs[j].points = b + f.amount;
+          out.logs.push({type: 'auction_refund', studentNum: studs[j].num, studentName: studs[j].name || '', delta: f.amount, balanceBefore: b, balanceAfter: b + f.amount, detail: '경매 취소 환불: ' + r.auction.title}); });
+        txn.set(econRef('tesk-students'), {value: studs, updatedAt: at}); out.students = studs;
       }
-      if(r.winner){
+      if(r.winners.length){
         const buys = ps.exists() ? (ps.data().value || []) : [];
-        buys.push({id: 'auction:' + id, studentNum: Number(r.winner.num), studentName: r.winner.name || '', itemId: 'auction:' + id, itemName: r.auction.title, icon: r.auction.icon || '🔨',
-          price: r.winner.amount, paidWith: 'auction', source: 'auction', date: new Date().toLocaleDateString('ko-KR'), status: 'pending', qty: 1, createdAt: at});
+        // 물건이 하나면 예전과 같은 id (auction:경매id), 여러 개면 낙찰자마다 따로
+        r.winners.forEach(w => { const bid = r.auction.qty > 1 ? 'auction:' + id + ':' + w.num : 'auction:' + id;
+          if(buys.some(b => b && b.id === bid)) return;
+          buys.push({id: bid, studentNum: Number(w.num), studentName: w.name || '', itemId: 'auction:' + id, itemName: r.auction.title, icon: r.auction.icon || '🔨',
+            price: w.amount, paidWith: 'auction', source: 'auction', date: new Date().toLocaleDateString('ko-KR'), status: 'pending', qty: 1, createdAt: at}); });
         txn.set(econRef('pesk-purchases'), {value: buys, updatedAt: at});
-        if(EC().FEATURES.fund) txn.set(econRef('pesk-class-fund'), {value: EC().addToFund(fs.exists() ? fs.data().value : null, r.winner.amount, 'auction', r.auction.title), updatedAt: at});
+        const total = r.winners.reduce((t, w) => t + w.amount, 0);
+        if(EC().FEATURES.fund) txn.set(econRef('pesk-class-fund'), {value: EC().addToFund(fs.exists() ? fs.data().value : null, total, 'auction', r.auction.title), updatedAt: at});
       }
       txn.set(econRef('pesk-auctions'), {value: list, updatedAt: at});
       auctionsT = list;
@@ -419,6 +429,26 @@ async function closeAuctionT(id, cancel){
   if(out.students){ students = out.students; saveLocal('tesk-students', students); renderStudents(); }
   await pushTeacherEconLogs(out.logs);
   addActivity((cancel ? '🔨 경매 취소: ' : '🔨 경매 낙찰: ') + (out.r.auction.title || ''));
+  renderAuctionPanel();
+}
+
+/* 끝난(확정·취소) 경매를 목록에서 지운다. 돈은 이미 정리됐다 — 낙찰 물건(「내 물건」)과 거래 로그는 그대로 남는다.
+   진행 중인 경매는 지울 수 없다 (먼저 취소해서 환불해야 한다) */
+async function deleteAuctionT(id){
+  const raw = auctionsT.find(x => x && x.id === id);
+  if(!raw) return;
+  if(!await openAppConfirmModal({title: '경매 삭제', message: '「' + (raw.title || '경매') + '」를 경매 목록에서 지울까요?\n학생 화면의 지난 경매에서도 사라져요. 낙찰받은 물건과 거래 기록은 그대로 남아요.', submitText: '삭제', danger: true})) return;
+  try{
+    await window._fsRunTxn(window._db, async txn => {
+      const s = await txn.get(econRef('pesk-auctions'));
+      const list = EC().removeAuction(s.exists() ? (s.data().value || []) : [], id);
+      txn.set(econRef('pesk-auctions'), {value: list, updatedAt: new Date().toISOString()});
+      auctionsT = list;
+    });
+  }catch(e){
+    return showToast('⚠️ ' + (e.message === 'AUCTION_STILL_OPEN' ? '진행 중인 경매는 먼저 취소해야 지울 수 있어요' : e.message === 'AUCTION_NOT_FOUND' ? '이미 지워진 경매예요' : e.message));
+  }
+  addActivity('🗑 경매 삭제: ' + (raw.title || ''));
   renderAuctionPanel();
 }
 
@@ -580,8 +610,7 @@ async function createSeatAuction(){
   saveSeatDraftToChart();
   await window._fsRunTxn(window._db, async txn => {
     const sn = await txn.get(econRef('pesk-auctions'));
-    const list = (sn.exists() ? (sn.data().value || []) : []).slice(-29);
-    list.push(a);
+    const list = EC().trimAuctions([...(sn.exists() ? (sn.data().value || []) : []), a]);   // 끝난 경매만 버린다
     txn.set(econRef('pesk-auctions'), {value: list, updatedAt: new Date().toISOString()});
     auctionsT = list;
   });
@@ -608,6 +637,7 @@ function seatAuctionTeacherCard(a, name){
     + '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">'
     + (a.status === 'open' ? '<button class="btn btn-sm btn-primary" onclick="closeAuctionT(\'' + a.id + '\',false)">마감 확정</button><button class="btn btn-sm btn-secondary" onclick="closeAuctionT(\'' + a.id + '\',true)">취소 (모두 환불)</button>' : '')
     + (a.status === 'closed' ? '<button class="btn btn-sm btn-primary" onclick="applySeatAuctionToChart(\'' + a.id + '\')">자리표에 반영</button>' : '')
+    + (a.status !== 'open' ? '<button class="btn btn-sm btn-secondary" onclick="deleteAuctionT(\'' + a.id + '\')">🗑 목록에서 삭제</button>' : '')
     + '</div></div>';
 }
 /* 낙찰자를 자리배치(tesk-seats)에 넣는다. 원래 그 자리에 있던 학생은 빈자리로 옮기고, 나머지는 선생님이 바꾼다. */

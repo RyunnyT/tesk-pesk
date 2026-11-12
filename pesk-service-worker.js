@@ -1,4 +1,4 @@
-const PESK_CACHE = 'pesk-shell-v63-write-first';
+const PESK_CACHE = 'pesk-shell-v64-auction-qty';
 const PESK_ASSETS = [
   './landing.html',
   './pesk.html',
@@ -14,8 +14,8 @@ const PESK_ASSETS = [
   './shared/pesk-class-quest-ui.js?v=20261009fail1',
   './shared/pesk-writing-store.js?v=20261021sem1',
   './shared/pesk-quiz-store.js?v=20261006split1',
-  './shared/econ-core.js?v=20261009seat3',
-  './shared/pesk-econ-ui.js?v=20261009econ2',
+  './shared/econ-core.js?v=20261112auc',
+  './shared/pesk-econ-ui.js?v=20261112auc',
   './shared/pesk-seat-auction.js?v=20261009seat3',
   './shared/pesk-learning-sync.js?v=20260918',
   './shared/peer-survey.js?v=20260920',

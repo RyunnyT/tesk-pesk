@@ -156,37 +156,71 @@ function allocate(raw, goalId, amount){
   return f;
 }
 
-/* ── 경매 ── 입찰액은 바로 맡겨 두고(현금에서 빠짐), 더 높은 입찰이 오면 이전 최고 입찰자에게 돌려준다 */
+/* ── 경매 ── 입찰액은 바로 맡겨 두고(현금에서 빠짐), 더 높은 입찰이 오면 밀려난 입찰자에게 돌려준다.
+   물건이 여러 개(qty)면 높은 순서로 qty명이 하나씩 낙찰받는다 (한 학생은 하나까지, 각자 부른 값을 낸다).
+   tops: 지금 낙찰권 안에 있는 입찰 (높은 값 순, 같은 값이면 먼저 부른 사람이 앞). top 은 그 맨 앞 (예전 기록·화면 호환) */
+const AUCTION_MAX_QTY = 30;
+const byBid = (p, q) => (q.amount - p.amount) || String(p.at || '').localeCompare(String(q.at || ''));
 function auctionState(a){
   const x = a && typeof a === 'object' ? a : {};
-  return {...x, startPrice: Math.max(1, int(x.startPrice, 1)), step: Math.max(1, int(x.step, 100)),
+  const qty = Math.max(1, Math.min(AUCTION_MAX_QTY, int(x.qty, 1)));
+  const raw = Array.isArray(x.tops) ? x.tops : (x.top && x.top.num != null ? [x.top] : []);
+  const tops = raw.filter(t => t && t.num != null).map(t => ({...t, amount: int(t.amount)})).sort(byBid).slice(0, qty);
+  return {...x, qty, startPrice: Math.max(1, int(x.startPrice, 1)), step: Math.max(1, int(x.step, 100)),
     status: ['open', 'closed', 'cancelled'].includes(x.status) ? x.status : 'open',
-    bids: Array.isArray(x.bids) ? x.bids.slice(-30) : [], top: x.top && x.top.num != null ? {...x.top, amount: int(x.top.amount)} : null};
+    bids: Array.isArray(x.bids) ? x.bids.slice(-30) : [], tops, top: tops[0] || null};
 }
-function minBid(a){ const s = auctionState(a); return s.top ? s.top.amount + s.step : s.startPrice; }
-/* 반환: {auction, pay(내가 더 낼 돈), refund:{num, amount}|null} */
+/* 다음 입찰 최소 금액 — who 를 주면 그 학생 기준 (이미 낙찰권 안이면 내 입찰 + 호가) */
+function minBid(a, who){
+  const s = auctionState(a), mine = who != null ? s.tops.find(t => String(t.num) === String(who)) : null;
+  if(mine) return mine.amount + s.step;
+  return s.tops.length < s.qty ? s.startPrice : s.tops[s.tops.length - 1].amount + s.step;
+}
+/* 반환: {auction, pay(내가 더 낼 돈), refund:{num, amount}|null (낙찰권에서 밀려난 입찰자)} */
 function placeBid(raw, {num: who, name, amount, cash, now = Date.now()}){
   const a = auctionState(raw), amt = int(amount);
   if(a.status !== 'open') throw new Error('AUCTION_CLOSED');
   if(a.endsAt && new Date(a.endsAt).getTime() <= now) throw new Error('AUCTION_ENDED');
-  if(!Number.isSafeInteger(amt) || amt < minBid(a)) throw new Error('BID_TOO_LOW:' + minBid(a));
-  const mine = a.top && String(a.top.num) === String(who);
-  const pay = mine ? amt - a.top.amount : amt;          // 내가 이미 최고면 차액만 더 맡긴다
+  const min = minBid(a, who);
+  if(!Number.isSafeInteger(amt) || amt < min) throw new Error('BID_TOO_LOW:' + min);
+  const mine = a.tops.find(t => String(t.num) === String(who));
+  const pay = mine ? amt - mine.amount : amt;          // 이미 낙찰권 안이면 차액만 더 맡긴다
   if(num(cash) < pay) throw new Error('NOT_ENOUGH_CASH:' + pay);
-  const refund = a.top && !mine ? {num: a.top.num, name: a.top.name, amount: a.top.amount} : null;
-  a.top = {num: who, name: String(name || ''), amount: amt, at: new Date(now).toISOString()};
-  a.bids.push({num: who, name: String(name || ''), amount: amt, at: a.top.at});
+  let refund = null;
+  if(!mine && a.tops.length >= a.qty){ const out = a.tops.pop(); refund = {num: out.num, name: out.name, amount: out.amount}; }
+  const at = new Date(now).toISOString(), myName = String(name || '');
+  if(mine){ mine.amount = amt; mine.at = at; if(myName) mine.name = myName; }
+  else a.tops.push({num: who, name: myName, amount: amt, at});
+  a.tops.sort(byBid);
+  a.top = a.tops[0];
+  a.bids.push({num: who, name: myName, amount: amt, at});
   if(a.bids.length > 30) a.bids.splice(0, a.bids.length - 30);
   return {auction: a, pay, refund};
 }
-/* 교사: 마감 확정(낙찰) 또는 취소(최고 입찰자에게 환불) */
+/* 교사: 마감 확정(낙찰) 또는 취소(낙찰권 안의 모든 입찰자에게 환불).
+   winner/refund 는 첫 번째 것 (예전 호출 호환), winners/refunds 가 전체 */
 function closeAuction(raw, {cancel = false, now = Date.now()} = {}){
   const a = auctionState(raw);
   if(a.status !== 'open') throw new Error('AUCTION_CLOSED');
   a.status = cancel ? 'cancelled' : 'closed';
   a.closedAt = new Date(now).toISOString();
-  if(!cancel) a.winner = a.top || null;
-  return {auction: a, refund: cancel && a.top ? {num: a.top.num, amount: a.top.amount} : null, winner: cancel ? null : (a.top || null)};
+  const winners = cancel ? [] : a.tops.map(t => ({...t}));
+  const refunds = cancel ? a.tops.map(t => ({num: t.num, amount: t.amount})) : [];
+  if(!cancel){ a.winner = winners[0] || null; a.winners = winners; }
+  return {auction: a, refund: refunds[0] || null, refunds, winner: winners[0] || null, winners};
+}
+/* 경매 목록 줄이기·지우기 — 진행 중인 경매(맡긴 돈이 있다)는 절대 버리지 않는다. 끝난 경매만 오래된 것부터 버린다.
+   (예전에는 새 경매를 열 때 앞에서부터 잘라서, 오래 열어 둔 경매가 입찰금과 함께 사라질 수 있었다) */
+function trimAuctions(list, keep = 30){
+  const xs = (Array.isArray(list) ? list : []).filter(Boolean);
+  let extra = xs.length - keep;
+  return xs.filter(a => { if(extra > 0 && (a.status === 'closed' || a.status === 'cancelled')){ extra--; return false; } return true; });
+}
+function removeAuction(list, id){
+  const xs = Array.isArray(list) ? list : [], i = xs.findIndex(a => a && a.id === id);
+  if(i < 0) throw new Error('AUCTION_NOT_FOUND');
+  if(xs[i].status !== 'closed' && xs[i].status !== 'cancelled') throw new Error('AUCTION_STILL_OPEN');
+  return xs.filter((_, k) => k !== i);
 }
 
 /* ── 자리 경매 ── 선생님이 고른 자리마다 따로 입찰한다.
@@ -324,7 +358,7 @@ const FEATURES = {fund: false, classIndex: false};
 
 const API = {FEATURES, gini, indicators, giniLabel, BANK_DEFAULTS, BANK_RECOMMENDED, RECOMMENDED_PLANS, bankSettings, depositEarlyPct, depositValueAt, depositRoom,
   WEALTH_DEFAULT, wealthSettings, wealthTax, payTax, fundState, donate, addToFund, allocate,
-  auctionState, minBid, placeBid, closeAuction, seatAuctionState, seatMinBid, placeSeatBid, closeSeatAuction, applySeatWinners, reshapeSeats, fillSeats, upsertLog, isPendingUse, logTime, weekKey, compactQuizRewards, splitForArchive, bytesOf,
+  AUCTION_MAX_QTY, auctionState, minBid, placeBid, closeAuction, trimAuctions, removeAuction, seatAuctionState, seatMinBid, placeSeatBid, closeSeatAuction, applySeatWinners, reshapeSeats, fillSeats, upsertLog, isPendingUse, logTime, weekKey, compactQuizRewards, splitForArchive, bytesOf,
   INDEX_CODE, INDEX_NAME, INDEX_BASE_VALUE, indexPrice};
 if(typeof module === 'object' && module.exports) module.exports = API;
 root.EconCore = API;

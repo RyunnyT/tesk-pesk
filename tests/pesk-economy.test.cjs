@@ -114,3 +114,22 @@ test('server economy mode sends bank actions to Cloud Functions and never writes
  assert.deepEqual(calls[0],['dep','test','w1',100]);assert.deepEqual(calls[1],['wd','test','d9',true]);
  assert.equal(JSON.stringify(f.docs),before);
 });
+
+test('buying stock keeps other students\' holdings and conserves cash + stock value exactly',async()=>{
+  const f=setup();f.docs['pesk-portfolios']={one:[{code:'ABC',qty:1,avgPrice:90,accountUid:'one'}],two:[{code:'ABC',qty:5,accountUid:'two',studentNum:2}],2:[{code:'XYZ',qty:3,studentNum:2}]};
+  f.run('myPortfolio=[{code:"ABC",qty:1,avgPrice:90,accountUid:"one"}]');f.elements['qty-ABC'].value='4';
+  await f.c.buyStockPesk('ABC','테스트',100);
+  assert.equal(f.docs['tesk-students'][0].points,600);assert.equal(f.docs['pesk-portfolios'].one[0].qty,5);
+  assert.deepEqual(f.docs['pesk-portfolios'].two,[{code:'ABC',qty:5,accountUid:'two',studentNum:2}]);assert.deepEqual(f.docs['pesk-portfolios'][2],[{code:'XYZ',qty:3,studentNum:2}]);
+  assert.equal(f.docs['tesk-students'][0].points+f.docs['pesk-portfolios'].one[0].qty*100,1100,'산 만큼 현금이 빠지고 주식으로 들어온다');
+});
+test('a student without an account uid buys into the number bucket and nothing disappears',async()=>{
+  const f=setup();f.run('myAccountUid=""');f.docs['pesk-portfolios']={1:[{code:'ABC',qty:2,studentNum:1}]};f.run('myPortfolio=[{code:"ABC",qty:2}]');
+  await f.c.buyStockPesk('ABC','테스트',100);
+  assert.equal(f.docs['tesk-students'][0].points,900);assert.equal(f.docs['pesk-portfolios'][1].length,1);assert.equal(f.docs['pesk-portfolios'][1][0].qty,3);
+});
+test('a cheaper server price charges the server price, never more than shown',async()=>{
+  const f=setup();f.docs['tesk-stock-prices'].ABC=80;f.elements['qty-ABC'].value='2';
+  await f.c.buyStockPesk('ABC','테스트',100);
+  assert.equal(f.docs['tesk-students'][0].points,840);assert.equal(f.docs['pesk-portfolios'].one[0].qty,2);
+});

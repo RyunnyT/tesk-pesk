@@ -193,18 +193,23 @@ function buildAuctionPanel(){
   const blocked = economyBlocked('shop');
   const card = a => {
     if(a.kind === 'seats') return buildSeatAuctionCard(a);   // 자리 경매: shared/pesk-seat-auction.js
-    const mineTop = a.top && String(a.top.num) === myNum, ended = a.endsAt && new Date(a.endsAt).getTime() <= Date.now();
+    const mine = a.tops.find(t => String(t.num) === myNum), mineTop = !!mine, ended = a.endsAt && new Date(a.endsAt).getTime() <= Date.now();
+    const low = a.tops.length >= a.qty ? a.tops[a.tops.length - 1] : null;
     return '<div class="qz-goal' + (mineTop ? ' done' : '') + '"><div class="qz-goal-top"><b>' + escHtml(a.icon || '🔨') + ' ' + escHtml(a.title || '경매') + '</b><span>' + escHtml(auctionTimeText(a)) + '</span></div>'
       + (a.desc ? '<p class="rpg-hint">' + escHtml(a.desc) + '</p>' : '')
-      + '<p style="font-size:12px;margin:4px 0;">' + (a.top ? '지금 최고 입찰 <b>' + a.top.amount.toLocaleString() + ' 🪙</b>' + (mineTop ? ' · <b style="color:#15803d;">내가 최고 입찰자예요</b>' : '') : '시작 가격 <b>' + a.startPrice.toLocaleString() + ' 🪙</b> · 아직 입찰이 없어요') + '</p>'
-      + (blocked || ended ? '' : '<div style="display:flex;gap:6px;"><input type="number" inputmode="numeric" id="bid-' + escHtml(a.id) + '" placeholder="' + E.minBid(a).toLocaleString() + ' 이상" style="flex:1;min-width:0;padding:8px;border:1px solid var(--border);border-radius:8px;font:inherit;">'
+      + (a.qty > 1
+        ? '<p style="font-size:12px;margin:4px 0;"><b>' + a.qty + '개</b>를 높게 부른 순서로 한 명에 하나씩 낙찰해요. 낙찰권 ' + a.tops.length + '/' + a.qty + '명'
+          + (low ? ' · 지금 낙찰권 최저 <b>' + low.amount.toLocaleString() + ' 🪙</b>' : ' · 시작 가격 <b>' + a.startPrice.toLocaleString() + ' 🪙</b>')
+          + (mine ? '<br><b style="color:#15803d;">내 입찰 ' + mine.amount.toLocaleString() + ' 🪙 · 지금 낙찰권 안에 있어요</b>' : '') + '</p>'
+        : '<p style="font-size:12px;margin:4px 0;">' + (a.top ? '지금 최고 입찰 <b>' + a.top.amount.toLocaleString() + ' 🪙</b>' + (mineTop ? ' · <b style="color:#15803d;">내가 최고 입찰자예요</b>' : '') : '시작 가격 <b>' + a.startPrice.toLocaleString() + ' 🪙</b> · 아직 입찰이 없어요') + '</p>')
+      + (blocked || ended ? '' : '<div style="display:flex;gap:6px;"><input type="number" inputmode="numeric" id="bid-' + escHtml(a.id) + '" placeholder="' + E.minBid(a, myNum).toLocaleString() + ' 이상" style="flex:1;min-width:0;padding:8px;border:1px solid var(--border);border-radius:8px;font:inherit;">'
         + '<button class="pesk-btn primary" style="width:auto;margin:0;padding:8px 12px;font-size:12px;" onclick="bidAuction(\'' + escHtml(a.id) + '\')">입찰</button></div>')
-      + '<p class="rpg-hint" style="margin-top:6px;">입찰하면 그 돈을 맡겨 둬요. 다른 친구가 더 높게 부르면 바로 돌려받아요.</p></div>';
+      + '<p class="rpg-hint" style="margin-top:6px;">입찰하면 그 돈을 맡겨 둬요. ' + (a.qty > 1 ? '낙찰권에서 밀려나면' : '다른 친구가 더 높게 부르면') + ' 바로 돌려받아요.</p></div>';
   };
   return '<div class="qz-goal"><b>🔨 우리 반 경매</b><p class="rpg-hint">선생님이 올린 물건이나 권리를 가장 높은 값을 부른 친구가 가져가요. 낙찰된 돈은 학급(국고)으로 돌아가요.</p></div>'
     + (open.length ? open.map(card).join('') : '<div class="empty-state">지금 열린 경매가 없어요.</div>')
     + (done.length ? '<div class="section-title" style="margin-top:14px;">지난 경매</div>' + done.map(a => a.kind === 'seats' ? buildSeatAuctionCard(a) : '<div class="qz-goal"><div class="qz-goal-top"><b>' + escHtml(a.icon || '🔨') + ' ' + escHtml(a.title) + '</b><span>'
-        + (a.status === 'cancelled' ? '취소됨' : a.winner ? (String(a.winner.num) === myNum ? '🎉 내가 낙찰!' : '낙찰 ' + Number(a.winner.amount).toLocaleString() + ' 🪙') : '입찰 없음') + '</span></div></div>').join('') : '');
+        + (a.status === 'cancelled' ? '취소됨' : a.tops.some(t => String(t.num) === myNum) ? '🎉 내가 낙찰!' : a.top ? (a.qty > 1 ? a.tops.length + '명 낙찰' : '낙찰 ' + Number(a.top.amount).toLocaleString() + ' 🪙') : '입찰 없음') + '</span></div></div>').join('') : '');
 }
 let _bidBusy = false;
 async function bidAuction(id){
@@ -239,7 +244,7 @@ async function bidAuction(id){
       const at = new Date().toISOString();
       txn.set(studRef, {value: list, updatedAt: at});
       txn.set(aucRef, {value: auctions, updatedAt: at});
-      out = {list, auctions, pay: r.pay, before, after: before - r.pay, refundRow, title: r.auction.title};
+      out = {list, auctions, pay: r.pay, before, after: before - r.pay, refundRow, title: r.auction.title, qty: r.auction.qty};
     });
   }catch(e){
     const m = String(e?.message || '');
@@ -254,8 +259,8 @@ async function bidAuction(id){
   addTxn('🔨 경매 입찰 (' + out.title + ')', out.pay, 'spend');
   void pushEconLog({type:'auction_bid', detail:'경매 입찰: ' + out.title, delta:-out.pay, balanceBefore:out.before, balanceAfter:out.after, meta:{auctionId:id, bid:amt}});
   if(out.refundRow) void pushEconLog({type:'auction_refund', studentNum:out.refundRow.num, studentName:out.refundRow.name, accountUid:'', actor:'system',
-    detail:'경매 환불 (더 높은 입찰): ' + out.title, delta:out.refundRow.amount, balanceBefore:out.refundRow.before, balanceAfter:out.refundRow.after, meta:{auctionId:id}});
-  showFeedbackNotice('🔨 입찰했어요! 지금 최고 입찰자예요.');
+    detail:'경매 환불 (낙찰권에서 밀려남): ' + out.title, delta:out.refundRow.amount, balanceBefore:out.refundRow.before, balanceAfter:out.refundRow.after, meta:{auctionId:id}});
+  showFeedbackNotice(out.qty > 1 ? '🔨 입찰했어요! 지금 낙찰권 안에 있어요.' : '🔨 입찰했어요! 지금 최고 입찰자예요.');
   const panel = document.getElementById('panel-shop');
   if(panel) panel.innerHTML = buildShopPanel(getMyStudent());
 }

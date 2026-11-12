@@ -13,7 +13,7 @@
 | `tesk-bank-settings` | 교사 | `{maxPerStudent, earlyPct}` 1인 예금 한도(0=없음), 중도 해지 이자 %. 없으면 한도 없음·30% (예전 그대로) |
 | `tesk-wealth-tax` | 교사 | `{enabled, toFund, brackets:[{min, rate}], lastRunAt}` 누진 재산세 |
 | `pesk-class-fund` (꺼 둠) | 교사 | `{balance, goals:[{id,title,icon,target,raised,status,donors}], history}` 공동 기금 |
-| `pesk-auctions` | 학생(입찰)·교사(열기·확정) | `[{id,kind?,title,startPrice,step,endsAt,status,top,bids,winner, layout?, lots?}]` 경매·자리 경매 (최근 30개) |
+| `pesk-auctions` | 학생(입찰)·교사(열기·확정) | `[{id,kind?,title,qty,startPrice,step,endsAt,status,tops,top,bids,winners,winner, layout?, lots?}]` 경매·자리 경매 (30개까지 — 넘치면 끝난 경매만 오래된 것부터 버린다) |
 | `tesk-stock-index` | 교사 | `{base:{종목:상장 때 가격}, createdAt}` 우리반 펀드 기준. 가격은 `tesk-stock-prices.IDX100` |
 | `tesk-econ-snapshots` | 교사 | 하루 한 번 경제 지표 기록 (최근 120일) |
 | `pesk-econ-archive-{YYYY-Www}`, `pesk-econ-archive-index` | 교사 | 2주 지난 거래 로그의 주 단위 보관 |
@@ -25,6 +25,8 @@
 - **세금**: 모든 징수(기존 소득세·건강보험료·종합소득세 포함)는 현금에서만 낸다. 모자라면 잔액을 마이너스로 만들지 않고 `taxDue` 로 남겨 다음 징수 때 함께 걷는다. 재산세는 현금+예금+주식 합계에 구간별로 넘는 부분에만 세율을 붙인다(누진). `toFund` 면 걷은 돈이 공동 기금으로 간다.
 - **공동 기금**: 기부는 학생 잔액과 기금을 한 트랜잭션으로 바꾼다. 목표를 넘친 금액은 기금 잔액으로. 목표 금액이 모이면 `funded`, 교사가 활동 후 `done`.
 - **경매**: 선생님만 연다(학생은 입찰만). 입찰액은 바로 맡긴다(현금에서 빠짐). 더 높은 입찰이 오면 같은 트랜잭션에서 이전 최고 입찰자에게 돌려준다. 이미 최고 입찰자면 차액만 낸다. 마감 시각 뒤에는 입찰을 막고, 교사가 확정하면 낙찰자 `pesk-purchases` 에 물건이 들어가고 금액은 학급으로 회수, 취소하면 최고 입찰자에게 환불.
+  **물건 개수(qty, 2026-11-12)**: 1~30개. 높게 부른 순서로 qty명이 한 명에 하나씩 낙찰받고 각자 부른 값을 낸다(`tops`). 자리가 다 차면 최소 입찰은 낙찰권 최저 + 호가이고, 밀려난 사람만 같은 트랜잭션에서 환불. 확정하면 낙찰자마다 `pesk-purchases` 한 줄(1개짜리는 예전과 같은 id `auction:경매id`), 취소하면 낙찰권 안의 모두에게 환불. `top` 만 있는 예전 경매는 1개짜리로 읽는다.
+  **삭제**: 확정·취소된 경매만 [목록에서 삭제]로 지운다(진행 중이면 먼저 취소). 돈·낙찰 물건·거래 로그는 건드리지 않는다.
   (규칙상 학생도 `pesk-auctions` 문서를 쓸 수 있어야 입찰이 된다 — 다른 경제 문서와 같은 수준의 보호이며, 화면에서 경매를 여는 기능은 선생님 화면에만 있다.)
 - **자리 경매** (`kind:'seats'`): 선생님이 자리배치(`tesk-seats`)의 줄·칸·짝 책상 모양에서 경매할 자리를 고른다(`lots:[{seat, top, bids, winner}]`).
   학생 화면은 교탁이 있는 자리표에 금액만 보여준다 — 자리 기록에는 이름을 남기지 않고, 지금 누가 어디 앉았는지·배치 근거도 보이지 않는다.
