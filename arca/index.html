@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>아르카 연대기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Jua&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#f3e9d2; --ink-dim:#c9b994; --gold:#e3b75a; --gold-dk:#9a7330;
+  --panel:#1d2236; --panel-2:#272d47; --line:#4a5170; --bg:#0d1020;
+  --main:#f5c542; --sub:#6cc3ff; --board:#b9c0d6; --bad:#ff7b7b; --good:#7be0a5;
+  --parch:#e9d9b4; --parch-ink:#4a3a22;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--ink);font-family:'Jua',system-ui,'Malgun Gothic',sans-serif;-webkit-tap-highlight-color:transparent;touch-action:none;user-select:none}
+button{font-family:inherit;cursor:pointer}
+.hidden{display:none!important}
+.frame{background:linear-gradient(180deg,var(--panel-2),var(--panel));border:2px solid var(--gold-dk);border-radius:12px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06),0 8px 24px rgba(0,0,0,.45)}
+.btn{background:linear-gradient(180deg,#f0c86c,#c4923b);color:#2a1d07;border:2px solid #7a5520;border-radius:10px;padding:10px 16px;font-size:16px;box-shadow:0 3px 0 #6b4a1b}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #6b4a1b}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line);box-shadow:none}
+input,select{font-family:inherit;font-size:15px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:#12162a;color:var(--ink)}
+
+/* ── 타이틀 ── */
+.screen{position:fixed;inset:0;overflow:auto;touch-action:auto}
+#title{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px;
+  background:radial-gradient(ellipse at 50% 30%,#2b3566 0%,#141936 55%,#0a0c18 100%)}
+#title canvas{position:absolute;inset:0;pointer-events:none}
+.logo{text-align:center;position:relative}
+.logo small{display:block;color:var(--gold);letter-spacing:.4em;font-size:13px;margin-bottom:6px}
+.logo h1{margin:0;font-family:'Gowun Batang',serif;font-weight:700;font-size:clamp(40px,9vw,64px);
+  background:linear-gradient(180deg,#fff6d8,#e3b75a 60%,#a5762c);-webkit-background-clip:text;background-clip:text;color:transparent}
+.logo p{margin:8px 0 0;color:var(--ink-dim);font-family:'Gowun Batang',serif}
+.title-btns{display:flex;flex-direction:column;gap:10px;width:min(280px,100%);position:relative}
+.note{position:relative;color:#8f97b8;font-size:12px;text-align:center;line-height:1.6;max-width:440px}
+
+/* ── 만들기 ── */
+#create{padding:22px 16px 40px;background:#0f1328}
+#create .wrap{max-width:900px;margin:0 auto}
+#create h2{font-family:'Gowun Batang',serif;text-align:center;margin:6px 0 4px}
+#create .sub{text-align:center;color:var(--ink-dim);margin:0 0 16px;font-size:14px}
+.jobs{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.job{padding:12px;text-align:center;border:2px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink)}
+.job.on{border-color:var(--gold);box-shadow:0 0 0 3px rgba(227,183,90,.25),0 0 24px rgba(227,183,90,.2)}
+.job img{width:128px;height:128px;image-rendering:pixelated;margin:-10px 0 -14px}
+.job b{display:block;font-size:20px;margin:4px 0}
+.job .mentor{color:var(--gold);font-size:13px}
+.job p{font-family:'Gowun Batang',serif;font-size:13px;color:var(--ink-dim);line-height:1.6;margin:6px 0 0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;margin:16px 0}
+.row label{display:flex;gap:6px;align-items:center;color:var(--ink-dim)}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{background:#12162a;color:var(--ink-dim);border:0;padding:8px 14px}
+.seg button.on{background:var(--gold);color:#2a1d07}
+.pets{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.pet-pick{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:6px 8px;color:var(--ink)}
+.pet-pick.on{border-color:var(--sub)}
+.pet-pick img{width:48px;height:48px;display:block;margin:auto;image-rendering:pixelated}
+
+/* ── 게임 ── */
+#game{position:fixed;inset:0}
+#stage{position:absolute;inset:0}
+#stage canvas{display:block}
+.hud{position:absolute;left:10px;top:10px;display:flex;gap:10px;align-items:center;padding:8px 12px 8px 8px;z-index:5;pointer-events:none;max-width:calc(100% - 190px)}
+.hud .face{width:52px;height:52px;border-radius:10px;background:#12162a;border:2px solid var(--gold-dk);image-rendering:pixelated;flex:none}
+.hud b{font-size:16px;display:block;line-height:1.1}.hud .hjob{display:block;color:var(--gold);font-size:12px;margin-top:2px}
+.bar{height:9px;border-radius:6px;background:#0b0e1c;border:1px solid #000;overflow:hidden;margin-top:4px;width:150px;max-width:100%}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#e0565b,#ff8f6b);transition:width .35s}
+.hud small{display:block;color:var(--ink-dim);font-size:11px;margin-top:3px;white-space:nowrap}
+.menu{position:absolute;right:10px;top:10px;display:flex;gap:6px;z-index:5}
+.mbtn{width:48px;height:48px;border-radius:12px;font-size:22px;background:linear-gradient(180deg,var(--panel-2),var(--panel));border:2px solid var(--gold-dk);color:var(--ink);box-shadow:0 4px 10px rgba(0,0,0,.4)}
+.tracker{position:absolute;right:10px;top:66px;width:min(260px,52vw);padding:9px 12px;z-index:5;font-size:13px;pointer-events:none}
+.tracker .t{color:var(--main);font-size:14px}
+.tracker .s{font-family:'Gowun Batang',serif;color:var(--ink);margin-top:3px;line-height:1.5}
+.chap{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:4;font-family:'Gowun Batang',serif;color:#fff6d8;text-shadow:0 2px 6px #000;font-size:15px;pointer-events:none;opacity:0;transition:opacity 1s}
+.chap.show{opacity:1}
+/* 터치 조작 */
+#joy{position:absolute;left:18px;bottom:18px;width:132px;height:132px;border-radius:50%;background:rgba(20,24,48,.35);border:2px solid rgba(227,183,90,.45);z-index:6;touch-action:none}
+#joy i{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff0c4,#c4923b);border:2px solid #7a5520}
+#act{position:absolute;right:22px;bottom:30px;width:86px;height:86px;border-radius:50%;z-index:6;font-size:16px;line-height:1.15;
+  background:radial-gradient(circle at 35% 30%,#ffe6a0,#c4923b);border:3px solid #7a5520;color:#2a1d07;box-shadow:0 5px 0 #6b4a1b;opacity:.55}
+#act.on{opacity:1}
+@media (hover:hover) and (pointer:fine){#joy,#act{display:none}}
+.keys{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);font-size:12px;color:#d8d2f0;background:rgba(10,12,24,.6);padding:4px 10px;border-radius:8px;z-index:4;pointer-events:none}
+@media (hover:none),(pointer:coarse){.keys{display:none}}
+
+/* ── 겹쳐 뜨는 창 ── */
+#layer{position:fixed;inset:0;z-index:30;pointer-events:none}
+#layer > *{pointer-events:auto}
+.overlay{position:fixed;inset:0;display:flex;align-items:flex-end;justify-content:center;background:rgba(5,7,15,.35)}
+.overlay.center{align-items:center;background:rgba(5,7,15,.55)}
+.sheet{width:min(920px,100%);margin:0 auto;padding:12px;position:relative}
+.talk{display:flex;gap:14px;align-items:flex-end;padding:16px 18px 14px;min-height:160px;cursor:pointer}
+.portrait{flex:none;width:96px;height:96px;border-radius:12px;border:2px solid var(--gold-dk);display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#3b4470,#151a33);overflow:hidden}
+.portrait img{width:100%;height:100%;image-rendering:pixelated;object-fit:contain}
+.talk .body{flex:1;min-width:0}
+.talk .name{display:inline-block;padding:2px 12px;border-radius:8px;background:var(--gold);color:#2a1d07;font-size:15px;margin-bottom:8px}
+.talk .text{font-family:'Gowun Batang',serif;font-size:18px;line-height:1.75;min-height:62px;white-space:pre-wrap}
+.talk.narr .text{color:#d8d2f0;font-style:italic}
+.talk .next{text-align:right;color:var(--gold);font-size:13px;animation:bob 1s infinite}
+@keyframes bob{50%{transform:translateY(-4px)}}
+.choices{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.choice{padding:10px 14px;border-radius:10px;border:1px solid var(--gold);background:#1a1f3a;color:var(--ink);font-family:'Gowun Batang',serif;font-size:16px;text-align:left}
+.choice:hover{background:#2a3157}
+.skip{position:absolute;right:16px;top:-26px;font-size:13px;padding:4px 10px}
+.quiz{padding:16px;max-width:640px;margin:0 auto}
+.quiz .head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.quiz .head b{color:var(--gold);font-family:'Gowun Batang',serif;font-size:17px}
+.dots{display:flex;gap:5px}
+.dots i{width:14px;height:14px;border-radius:50%;background:#0b0e1c;border:1px solid var(--line)}
+.dots i.on{background:radial-gradient(circle at 35% 35%,#fff7c8,var(--gold));border-color:var(--gold);box-shadow:0 0 8px var(--gold)}
+.q{font-size:20px;line-height:1.6;white-space:pre-wrap;padding:12px;background:#12162a;border-radius:10px;border:1px solid var(--line)}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.opt{padding:13px 10px;font-size:19px;border-radius:10px;border:2px solid var(--line);background:#1a1f3a;color:var(--ink)}
+.opt:hover:not(:disabled){border-color:var(--gold)}
+.opt.right{border-color:var(--good);background:#173a2c}.opt.wrong{border-color:var(--bad);background:#3e1a22}
+.opt.hint{outline:2px dashed rgba(123,224,165,.6);outline-offset:2px}
+.fb{margin-top:10px;min-height:24px;font-family:'Gowun Batang',serif;line-height:1.6;white-space:pre-wrap}
+.fb.good{color:var(--good)}.fb.bad{color:#ffb3b3}
+.quiz .foot{display:flex;justify-content:space-between;gap:8px;margin-top:10px}
+/* 전투 */
+.arena{position:relative;height:240px;max-width:640px;margin:0 auto 10px;border-radius:12px;overflow:hidden;border:2px solid var(--gold-dk);
+  background:linear-gradient(180deg,#9fb6d6 0%,#d3dcec 42%,#6f9a4e 43%,#4f7a38 100%)}
+.arena .mist{position:absolute;inset:0;background:radial-gradient(ellipse at 72% 62%,rgba(240,242,250,.6),transparent 55%);pointer-events:none}
+.arena canvas.hero{position:absolute;left:8%;bottom:6px;width:192px;height:192px;image-rendering:pixelated}
+.arena img.pet{position:absolute;left:3%;bottom:16px;width:48px;image-rendering:pixelated}
+.arena img.mon{position:absolute;right:10%;bottom:22px;width:150px;image-rendering:pixelated;transition:transform .15s;filter:saturate(.35) brightness(1.08)}
+.hpbox{position:absolute;top:8px;width:44%;padding:6px 10px;border-radius:10px;background:rgba(13,16,32,.82);font-size:13px;z-index:2}
+.hpbox.l{left:8px}.hpbox.r{right:8px;text-align:right}
+.hpbox .bar{width:auto}
+.bar i.mon{background:linear-gradient(90deg,#8e7cf0,#c3b8ff)}
+.shake{animation:shake .3s}@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.flash{animation:flash .35s}@keyframes flash{50%{filter:brightness(2.2) saturate(0)}}
+.float{position:absolute;font-size:26px;font-weight:bold;pointer-events:none;animation:up 1s forwards;z-index:3;text-shadow:0 2px 0 #000}
+@keyframes up{to{transform:translateY(-50px);opacity:0}}
+.skillname{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-family:'Gowun Batang',serif;font-size:24px;color:#fff6d8;text-shadow:0 0 12px var(--gold),0 2px 0 #000;pointer-events:none;animation:pop .9s forwards;z-index:3;white-space:nowrap}
+@keyframes pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}25%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}100%{opacity:0}}
+.bolt{position:absolute;left:28%;bottom:110px;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle,#fff,#ffe27a 40%,#8a6ce0 70%,transparent 72%);box-shadow:0 0 18px #ffe27a;animation:fly .35s linear forwards;z-index:2}
+@keyframes fly{to{left:76%;bottom:80px}}
+.passage{font-family:'Gowun Batang',serif;font-size:17px;line-height:1.9;background:var(--parch);color:var(--parch-ink);padding:16px 18px;border-radius:10px;max-height:46vh;overflow:auto}
+.passage h4{margin:0 0 8px;text-align:center}.passage p{margin:0 0 10px;text-indent:1em}
+.card{padding:22px;width:min(460px,92vw);text-align:center}
+.card h3{font-family:'Gowun Batang',serif;color:var(--gold);margin:0 0 10px;font-size:22px}
+.loot{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.loot div{display:flex;gap:10px;align-items:center;text-align:left;padding:8px 10px;border-radius:10px;background:#141933;border:1px solid var(--line)}
+.loot span.i{font-size:28px}.loot small{display:block;color:var(--ink-dim);font-family:'Gowun Batang',serif}
+.panel{padding:18px;width:min(560px,94vw);max-height:88vh;overflow:auto}
+.panel h3{font-family:'Gowun Batang',serif;color:var(--gold);margin:0 0 10px}
+.bag-top{display:flex;gap:14px;align-items:center}
+.bag-top img{width:110px;height:110px;image-rendering:pixelated;background:#12162a;border-radius:14px;border:1px solid var(--line)}
+.stat{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:12px 0}
+.stat div{background:#141933;border-radius:10px;padding:8px;text-align:center;font-size:13px;color:var(--ink-dim)}
+.stat b{display:block;color:var(--ink);font-size:18px}
+.tabs{display:flex;gap:6px;margin-bottom:8px}
+.tab{flex:1;padding:6px;border-radius:8px;border:1px solid var(--line);background:#141933;color:var(--ink-dim)}
+.tab.on{background:var(--gold);color:#2a1d07;border-color:var(--gold)}
+.qi{padding:9px 10px;border-radius:10px;background:#141933;margin-top:6px;border-left:4px solid var(--line)}
+.qi.main{border-left-color:var(--main)}.qi.sub{border-left-color:var(--sub)}.qi.board{border-left-color:var(--board)}
+.qi.done{opacity:.55}.qi b{font-size:14px}.qi small{display:block;color:var(--ink-dim);font-size:12px;margin-top:2px;font-family:'Gowun Batang',serif}
+.qi .go{color:var(--gold);font-size:12px;margin-top:3px}
+.acts{display:flex;flex-direction:column;gap:8px}
+.act{display:flex;gap:10px;align-items:center;text-align:left;padding:10px 12px;border-radius:10px;background:#141933;border:1px solid var(--line);color:var(--ink);font-size:15px}
+.act .m{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:bold;color:#222}
+.act .m.main{background:var(--main)}.act .m.sub{background:var(--sub)}.act .m.board{background:var(--board)}
+.act small{display:block;color:var(--ink-dim);font-size:12px;margin-top:2px}
+.settings label{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:10px 0;color:var(--ink-dim)}
+.end{padding:28px 22px;width:min(520px,92vw);text-align:center}
+.end h2{font-family:'Gowun Batang',serif;color:var(--gold);margin:0 0 6px}
+.end p{font-family:'Gowun Batang',serif;color:var(--ink-dim);line-height:1.8}
+.toast{position:fixed;left:50%;bottom:130px;transform:translateX(-50%);z-index:60;padding:10px 16px;border-radius:10px;background:#141933;border:1px solid var(--gold);color:var(--ink);font-size:15px;max-width:90vw;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+.loading{position:fixed;inset:0;display:grid;place-items:center;background:#0d1020;z-index:40;font-family:'Gowun Batang',serif;color:var(--gold)}
+.credit{position:absolute;left:10px;bottom:6px;font-size:10px;color:rgba(255,255,255,.5);z-index:4;pointer-events:auto}
+.credit a{color:inherit}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:560px){
+  .talk{padding:12px;min-height:140px}.portrait{width:64px;height:64px}.talk .text{font-size:16px}
+  .opts{grid-template-columns:1fr}.arena canvas.hero{width:144px;height:144px}.arena img.mon{width:110px}
+  .hud .bar{width:96px}.tracker{top:auto;bottom:160px;right:10px;width:min(220px,60vw)}
+}
+</style>
+</head>
+<body>
+<section id="title" class="screen">
+  <canvas id="stars"></canvas>
+  <div class="logo"><small>CHRONICLES OF ARCA</small><h1>아르카 연대기</h1><p>배운 것은 별빛이 되어 세상을 다시 쓴다</p></div>
+  <div class="title-btns">
+    <button class="btn" id="btn-continue" onclick="continueGame()">이어하기</button>
+    <button class="btn" onclick="openCreate()">새 모험 시작</button>
+    <button class="btn ghost" onclick="openSettings()">⚙️ 선생님 설정 (학년·난이도)</button>
+  </div>
+  <p class="note">시제품 · 테스트 데이터로만 동작합니다. 진행은 이 브라우저에만 저장되고 Pesk·학급 데이터와 연결되지 않습니다.</p>
+</section>
+
+<section id="create" class="screen hidden"><div class="wrap">
+  <h2>어떤 모험가가 될까요?</h2>
+  <p class="sub">큰 이야기는 같지만, 직업마다 스승과 수련, 대사가 달라요.</p>
+  <div class="row"><div class="seg" id="sex"><button data-v="m">👦 남자</button><button data-v="f">👧 여자</button></div>
+    <label>이름 <input id="in-name" maxlength="10" value="모험가"></label></div>
+  <div class="jobs" id="jobs"></div>
+  <p class="sub" style="margin:18px 0 8px">함께할 펫 (테스트용 — 나중엔 Pesk 펫을 그대로 데려와요)</p>
+  <div class="pets" id="pets"></div>
+  <div class="row"><label>펫 이름 <input id="in-pet" maxlength="8" value="뭉치"></label></div>
+  <div class="row"><button class="btn ghost" onclick="show('title')">뒤로</button><button class="btn" onclick="createHero()">모험 시작 ✦</button></div>
+</div></section>
+
+<section id="game" class="hidden">
+  <div id="stage"></div>
+  <div class="hud frame"><img class="face" id="hud-face" alt=""><div style="min-width:0"><b id="hud-name"></b><span class="hjob" id="hud-job"></span>
+    <div class="bar"><i id="hud-hp"></i></div><small id="hud-nums"></small></div></div>
+  <div class="menu"><button class="mbtn" title="퀘스트 일지" onclick="openLog()">📜</button><button class="mbtn" title="가방" onclick="openBag()">🎒</button><button class="mbtn" title="설정" onclick="openSettings()">⚙️</button></div>
+  <div class="tracker frame" id="tracker"></div>
+  <div class="chap" id="chap"></div>
+  <div id="joy"><i></i></div>
+  <button id="act" onclick="world && world.scene().tryInteract()">💬<br>말하기</button>
+  <div class="keys">방향키(WASD) 이동 · Space 말하기</div>
+  <div class="credit">그림: <a href="assets/CREDITS.md" target="_blank">LPC (CC-BY-SA 3.0)</a></div>
+</section>
+<div id="layer"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
+<script src="../avatar-extras.js"></script>
+<script src="../pet-sprites.js"></script>
+<script src="../quiz-bank.js"></script>
+<script src="arca-ch1.js"></script>
+<script src="arca-engine.js"></script>
+<script src="arca-sprites.js"></script>
+<script src="arca-world.js"></script>
+<script>
+'use strict';
+const A = window.ARCA, D = window.ARCA_CH1, SP = window.ARCA_SPRITES;
+const SAVE_KEY = 'arca-save-v1', CFG_KEY = 'arca-cfg-v1';
+const PETS = [['p_dog','dog','강아지'],['p_cat','cat','고양이'],['p_slime','slime','슬라임'],['p_rabbit','rabbit','토끼'],['p_chick','chick','병아리']];
+let S = null, place = 'home', logTab = 'main', pickedJob = 'knight', pickedPet = 'p_dog', pickedSex = 'm', world = null, busy = false;
+let cfg = loadCfg();
+const FACES = {}, SHEETS = {};
+
+/* ── 저장 ── 브라우저 저장소가 막혀 있어도 게임은 돌아간다 */
+function store(k, v){ try{ if(v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); }catch(e){ return null; } }
+function save(){ store(SAVE_KEY, JSON.stringify(S)); }
+function loadCfg(){ const d = { subject:'math', grade:5, term:1, tier:2, hint:false }; try{ return Object.assign(d, JSON.parse(store(CFG_KEY) || '{}')); }catch(e){ return d; } }
+function saveCfg(){ store(CFG_KEY, JSON.stringify(cfg)); }
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function show(id){ ['title','create','game'].forEach(x => $(x).classList.toggle('hidden', x !== id)); }
+function toast(msg){ document.querySelectorAll('.toast').forEach(t => t.remove()); const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2800); }
+function petURL(id, kind, stage){ const info = window.AV_PET ? window.AV_PET(id) : null; return window.PET_DATAURL ? window.PET_DATAURL(kind, stage || 2, 128, info ? info.pal : null) : ''; }
+function monsterURL(m){ return window.PET_DATAURL ? window.PET_DATAURL(m.art.pet, m.art.stage, 160, m.art.pal) : ''; }
+
+/* ── 타이틀 ── */
+function drawStars(){
+  const cv = $('stars'), c = cv.getContext('2d'); cv.width = innerWidth; cv.height = innerHeight;
+  for(let i = 0; i < 140; i++){ c.fillStyle = 'rgba(255,248,220,' + (Math.random() * .8 + .1) + ')'; const s = Math.random() < .1 ? 2 : 1; c.fillRect(Math.random() * cv.width, Math.random() * cv.height, s, s); }
+}
+function boot(){ drawStars(); $('btn-continue').classList.toggle('hidden', !store(SAVE_KEY)); show('title'); }
+function continueGame(){ try{ S = A.normalize(JSON.parse(store(SAVE_KEY))); }catch(e){ return toast('저장본을 읽지 못했어요. 새로 시작해 주세요.'); } enterWorld(false); }
+
+/* ── 만들기 ── 직업 카드에 실제 걷기 그림의 정면을 보여 준다 */
+const previewCache = {};
+async function jobPreview(job, sex){
+  const k = job + sex;
+  if(!previewCache[k]){ const sheet = await SP.compose(SP.heroLook(job, sex), 'walk'); previewCache[k] = SP.frameURL(sheet, 64, 0, 'down'); }
+  return previewCache[k];
+}
+async function openCreate(){
+  if(store(SAVE_KEY) && !confirm('지금 저장된 모험을 지우고 새로 시작할까요?')) return;
+  show('create'); renderCreate();
+}
+async function renderCreate(){
+  document.querySelectorAll('#sex button').forEach(b => { b.classList.toggle('on', b.dataset.v === pickedSex); b.onclick = () => { pickedSex = b.dataset.v; renderCreate(); }; });
+  const cards = await Promise.all(Object.entries(D.jobs).map(async ([id, j]) => {
+    const m = D.npcs[j.mentor];
+    return '<button class="job' + (id === pickedJob ? ' on' : '') + '" onclick="pickedJob=\'' + id + '\';renderCreate()"><img src="' + await jobPreview(id, pickedSex) + '" alt=""><b>' + j.icon + ' ' + esc(j.name) + '</b>'
+      + '<div class="mentor">스승 ' + esc(m.name) + ' · ' + esc(j.place) + '</div><p>' + esc(j.desc) + '</p></button>';
+  }));
+  $('jobs').innerHTML = cards.join('');
+  $('pets').innerHTML = PETS.map(([id, kind, name]) => '<button class="pet-pick' + (id === pickedPet ? ' on' : '') + '" onclick="pickedPet=\'' + id + '\';renderCreate()"><img src="' + petURL(id, kind, 1) + '" alt="">' + esc(name) + '</button>').join('');
+}
+function createHero(){
+  const pet = PETS.find(p => p[0] === pickedPet);
+  S = A.newState({ name:$('in-name').value.trim() || '모험가', job:pickedJob, pet:pet[0], petKind:pet[1], petName:$('in-pet').value.trim() || pet[2] });
+  S.sex = pickedSex;
+  save(); enterWorld(true);
+}
+
+/* ── 세계 ── */
+async function enterWorld(fresh){
+  show('game');
+  const load = document.createElement('div'); load.className = 'loading'; load.textContent = '루멘 마을로 가는 중…'; document.body.appendChild(load);
+  const job = D.jobs[S.job];
+  world = await window.ARCA_WORLD.start({
+    parent:'stage', heroLook:SP.heroLook(S.job, S.sex || 'm'), mentorId:job.mentor,
+    petURL:petURL(S.pet, S.petKind, 2), monsterURL:monsterURL(D.monsters.fogslime),
+    start:fresh ? { x:8.5, y:26.6 } : null,
+    nameOf:id => (D.npcs[id] || {}).name || '',
+    markOf, worldState, isBusy:() => busy || !!$('layer').firstChild,
+    onInteract:interact, onNear:near => $('act').classList.toggle('on', !!near),
+    joystick:() => joy,
+    onReady:() => { load.remove(); }
+  });
+  SHEETS.hero = world.heroSheet; Object.assign(SHEETS, world.npcSheets);
+  FACES.me = SP.faceURL(world.heroSheet);
+  Object.entries(world.npcSheets).forEach(([id, c]) => { FACES[id] = SP.faceURL(c); });
+  FACES.momo = window.ARCA_WORLD.owlCanvas().toDataURL();
+  SHEETS.heroAttack = await SP.compose(SP.heroLook(S.job, S.sex || 'm'), 'attack');
+  renderHud();
+  const ch = $('chap'); ch.textContent = '제' + D.no + '장 · ' + D.title; ch.classList.add('show'); setTimeout(() => ch.classList.remove('show'), 3500);
+  if(fresh){ place = 'home'; await sleep(600); runAction('m1'); }
+}
+function markOf(loc){
+  const acts = A.placeActions(S, D, loc);
+  if(!acts.length) return null;
+  const top = acts[0], q = top.quest.type;
+  const color = q === 'main' ? '#f5c542' : q === 'sub' ? '#6cc3ff' : '#c8cede';
+  return { sym:acts.some(a => a.mark === '?' && a.quest.type === q) ? '?' : '!', color };
+}
+function worldState(){
+  const battleHere = D.quests.some(q => { const st = A.currentStep(S, q); return st && st.kind === 'battle' && st.at === 'field'; });
+  return { erased:!!(S.quests.m2 || {}).done, monster:battleHere };
+}
+function refreshWorld(){ renderHud(); const sc = world && world.scene(); if(sc && sc.refresh) sc.refresh(); }
+function placeName(id){ const l = A.locations(S, D).find(x => x.id === id); return l ? l.name : id; }
+function whereNext(q, step){
+  const npc = { train:D.npcs[D.jobs[S.job].mentor].name, guild:'도라', square:'마르타 할머니', library:'모모', lighthouse:'오스카' }[step.at];
+  return npc ? A.fixJosa(placeName(step.at) + '의 ' + npc) : placeName(step.at);
+}
+function renderHud(){
+  const job = D.jobs[S.job];
+  if(FACES.me) $('hud-face').src = FACES.me;
+  $('hud-name').textContent = S.name;
+  $('hud-job').textContent = job.icon + ' 견습 ' + job.name + (S.titles.length ? ' · ' + S.titles[S.titles.length - 1] : '');
+  $('hud-hp').style.width = S.hp + '%';
+  $('hud-nums').textContent = '체력 ' + S.hp + ' · 공적 ' + S.merit + ' · 별빛 ' + S.stats.correct;
+  /* 지금 할 일 — 메인 퀘스트 먼저 */
+  const mains = D.quests.filter(q => q.type === 'main');
+  const cur = mains.find(q => A.questStatus(S, q) === 'active') || mains.find(q => A.questStatus(S, q) === 'available');
+  let html;
+  if(cur){
+    const st = A.currentStep(S, cur) || cur.steps[0];
+    html = '<div class="t">❗ ' + esc(A.questTitle(cur, S, D)) + '</div><div class="s">→ ' + esc(whereNext(cur, st)) + '<br><span style="color:var(--ink-dim)">' + esc(stepText(cur, st)) + '</span></div>';
+  } else html = '<div class="t">✦ 1장 완료</div><div class="s">남은 서브 퀘스트를 찾아 마을을 둘러보세요.</div>';
+  $('tracker').innerHTML = html;
+}
+function stepText(q, step){
+  if(!step) return '';
+  if(step.kind === 'solve'){ const r = S.quests[q.id] || {}; return '📝 ' + A.stepLabel(step, S, D) + ' (' + (r.progress || 0) + '/' + step.count + ')'; }
+  if(step.kind === 'battle') return '⚔️ ' + D.monsters[step.monster].name + ' 물리치기';
+  if(step.kind === 'read') return '📖 책 읽기';
+  return '💬 이야기 나누기';
+}
+
+/* ── 다가가서 말 걸기 ── */
+const SMALLTALK = {
+  home:'아늑한 숙소예요. 쉬면 체력이 가득 차요.', guild:'오늘도 의뢰가 산더미예요!', square:'빵 하나 먹고 가렴. 공짜는 아니지만.',
+  library:'책은 조용히 읽어요. 부엉이 앞에서는 더더욱.', lighthouse:'바다 냄새가 짙구먼.', field:'안개가 걷힌 들판이 고요해요.', train:'수련은 꾸준함이 전부다.'
+};
+async function interact(near){
+  if(busy) return;
+  if(near.spot && near.spot.talk === 'kai'){ return say('kai', S.flags.kai_warm ? '…뭐야. 할 말 있어? (카이가 살짝 웃었다가 금세 표정을 감췄어요.)' : S.flags.kai_cool ? '난 바빠. 저리 가.' : '…….'); }
+  place = near.spot.id;
+  const acts = A.placeActions(S, D, place);
+  if(near.monster){ const a = acts.find(x => x.step && x.step.kind === 'battle'); if(a) return runAction(a.quest.id); }
+  const rest = place === 'home';
+  if(!acts.length && !rest){ const who = near.npcId || null; return who ? say(who, SMALLTALK[place] || '…') : toast(SMALLTALK[place] || '조용해요.'); }
+  if(acts.length === 1 && !rest) return runAction(acts[0].quest.id);
+  const pick = await chooseAction(acts, rest);
+  if(pick === 'rest'){ A.rest(S); save(); refreshWorld(); toast('💤 푹 쉬었어요. 체력이 가득 찼어요.'); }
+  else if(pick) runAction(pick);
+}
+function chooseAction(acts, rest){
+  return new Promise(r => {
+    const rows = acts.map(a => '<button class="act" data-q="' + a.quest.id + '"><span class="m ' + a.quest.type + '">' + a.mark + '</span><span><b>' + esc(A.questTitle(a.quest, S, D)) + '</b><small>' + esc(a.mark === '!' ? '새 퀘스트' : stepText(a.quest, a.step)) + (a.quest.daily ? ' · 오늘 ' + A.dailyLeft(S, a.quest) + '번 남음' : '') + '</small></span></button>').join('')
+      + (rest ? '<button class="act" data-q="rest"><span class="m board">💤</span><span><b>쉬기</b><small>체력을 모두 되찾아요.</small></span></button>' : '');
+    const el = layer('<div class="frame panel"><h3>' + esc(placeName(place)) + '</h3><div class="acts">' + rows + '</div><div style="text-align:right;margin-top:10px"><button class="btn ghost" id="x">닫기</button></div></div>', 'center');
+    el.querySelectorAll('.act').forEach(b => b.onclick = () => { closeLayer(); r(b.dataset.q); });
+    el.querySelector('#x').onclick = () => { closeLayer(); r(null); };
+  });
+}
+async function say(who, text){
+  busy = true;
+  try{ await playLines([{ who, speaker:(D.npcs[who] || {}).name || '', color:(D.npcs[who] || {}).color, text }]); } finally { busy = false; }
+}
+
+/* ── 퀘스트 진행 ── 이 장소에서 할 수 있는 단계를 이어서 한다 */
+async function runAction(id){
+  if(busy) return; busy = true;
+  try{
+    const q = A.questById(D, id);
+    if(A.questStatus(S, q) === 'available'){ A.startQuest(S, D, id); save(); }
+    while(true){
+      const step = A.currentStep(S, q);
+      if(!step) break;
+      if(step.at !== place){ refreshWorld(); toast('다음 목표: ' + whereNext(q, step)); break; }
+      let ok = true;
+      if(step.kind === 'talk') await playScene(step.scene);
+      else if(step.kind === 'solve') ok = await runSolve(q, step);
+      else if(step.kind === 'read') ok = await runRead(step.passage);
+      else if(step.kind === 'battle'){
+        if(S.hp <= 0){ toast('체력이 없어요. 숙소에서 쉬고 오세요.'); ok = false; }
+        else {
+          if(step.before && !S.flags['seen_' + step.before]){ await playScene(step.before); A.setFlag(S, 'seen_' + step.before); save(); }
+          ok = await runBattle(step.monster);
+        }
+      }
+      if(!ok) break;
+      const res = A.finishStep(S, D, id); save();
+      if(res && res.done){
+        refreshWorld();
+        await showReward(q, res.reward);
+        if(res.endsChapter) await showChapterEnd();
+        break;
+      }
+    }
+  } finally { busy = false; refreshWorld(); }
+}
+
+/* ── 대화 ── */
+function layer(html, cls){ $('layer').innerHTML = '<div class="overlay ' + (cls || '') + '">' + html + '</div>'; return $('layer').firstChild; }
+function closeLayer(){ $('layer').innerHTML = ''; }
+function portraitHTML(l){
+  if(l.who === 'me') return '<img src="' + FACES.me + '" alt="">';
+  if(l.who === 'pet') return '<img src="' + petURL(S.pet, S.petKind, 2) + '" alt="">';
+  if(FACES[l.who]) return '<img src="' + FACES[l.who] + '" alt="">';
+  return '<span style="font-size:44px">' + esc(l.portrait || '✦') + '</span>';
+}
+async function playScene(sceneId){ await playLines(A.sceneLines(sceneId, S, D)); }
+async function playLines(lines){
+  let skipping = false;
+  for(const l of lines){
+    if(!A.lineVisible(l, S)) continue;
+    if(skipping && !l.choices) continue;
+    skipping = false;
+    const narr = l.who === 'narr';
+    const el = layer('<div class="sheet"><button class="btn ghost skip" id="skip">건너뛰기 ⏭</button><div class="frame talk' + (narr ? ' narr' : '') + '" id="talk">'
+      + (narr ? '' : '<div class="portrait" style="border-color:' + (l.color || '#9a7330') + '">' + portraitHTML(l) + '</div>')
+      + '<div class="body">' + (narr ? '' : '<span class="name">' + esc(l.speaker) + '</span>') + '<div class="text" id="tx"></div>'
+      + (l.choices ? '<div class="choices" id="ch"></div>' : '<div class="next">▼</div>') + '</div></div></div>');
+    if(await typeLine(l, el) === 'skip') skipping = true;
+  }
+  closeLayer();
+}
+function typeLine(l, el){
+  return new Promise(resolve => {
+    const tx = el.querySelector('#tx'); let i = 0, done = false;
+    const finish = () => { clearInterval(timer); tx.textContent = l.text; done = true; if(l.choices) showChoices(); };
+    const showChoices = () => {
+      el.querySelector('#ch').innerHTML = l.choices.map((c, k) => '<button class="choice" data-k="' + k + '">▸ ' + esc(c.label) + '</button>').join('');
+      el.querySelectorAll('.choice').forEach(b => b.onclick = e => { e.stopPropagation(); A.setFlag(S, l.choices[b.dataset.k].flag); save(); resolve('next'); });
+    };
+    const timer = setInterval(() => { i += 2; tx.textContent = l.text.slice(0, i); if(i >= l.text.length) finish(); }, 28);
+    el.querySelector('#talk').onclick = () => { if(!done) return finish(); if(!l.choices) resolve('next'); };
+    el.querySelector('#skip').onclick = e => { e.stopPropagation(); if(l.choices){ finish(); return; } clearInterval(timer); resolve('skip'); };
+  });
+}
+document.addEventListener('keydown', e => {
+  if((e.key === ' ' || e.key === 'Enter') && $('talk')){ e.preventDefault(); e.stopPropagation(); $('talk').click(); }
+}, true);
+
+/* ── 문제 ── 교사 설정(학년·학기·난이도)만 문제를 바꾼다 */
+let qSeed = Date.now();
+function makeQ(){
+  const q = window.QUIZ && window.QUIZ.makeQuestion({ subject:cfg.subject, grade:cfg.grade, term:cfg.term, tier:cfg.tier, seed:'arca:' + (qSeed++), responseMode:'choice', contextMode:'plain' });
+  return q || { q:'7 × 8 = ?', answer:56, options:[54,56,48,63], explain:'7을 8번 더하면 56이에요.' };
+}
+const same = (q, v) => window.QUIZ ? window.QUIZ.sameAnswer(q, v) : String(q.answer) === String(v);
+function quizHTML(title, right, q){
+  return '<div class="frame quiz"><div class="head"><b>' + esc(title) + '</b>' + right + '</div>'
+    + '<div class="q">' + esc(q.q) + '</div><div class="opts">' + (q.options || []).map((o, k) => '<button class="opt' + (cfg.hint && same(q, o) ? ' hint' : '') + '" data-k="' + k + '">' + esc(o) + '</button>').join('') + '</div>'
+    + '<div class="fb" id="fb"></div><div class="foot"><button class="btn ghost" id="quit">그만하기</button><button class="btn hidden" id="go">다음 ▶</button></div></div>';
+}
+function askOne(q, el){
+  return new Promise(resolve => {
+    el.querySelector('#quit').onclick = () => resolve(null);
+    el.querySelectorAll('.opt').forEach(b => b.onclick = () => {
+      const ok = same(q, q.options[b.dataset.k]);
+      el.querySelectorAll('.opt').forEach(x => { x.disabled = true; if(same(q, q.options[x.dataset.k])) x.classList.add('right'); });
+      if(!ok) b.classList.add('wrong');
+      resolve(ok);
+    });
+  });
+}
+function waitNext(el){
+  const go = el.querySelector('#go'); go.classList.remove('hidden');
+  return new Promise(r => { go.onclick = () => r(true); el.querySelector('#quit').onclick = () => r(false); });
+}
+async function runSolve(quest, step){
+  const label = A.stepLabel(step, S, D);
+  while(true){
+    const r = S.quests[quest.id], q = makeQ();
+    const dots = '<div class="dots">' + Array.from({ length:step.count }, (_, k) => '<i class="' + (k < r.progress ? 'on' : '') + '"></i>').join('') + '</div>';
+    const el = layer('<div class="sheet">' + quizHTML('✦ ' + label, dots, q) + '</div>', 'center');
+    const ok = await askOne(q, el);
+    if(ok === null){ closeLayer(); save(); return false; }
+    const res = A.answer(S, D, quest.id, ok); save(); renderHud();
+    const fb = el.querySelector('#fb');
+    fb.className = 'fb ' + (ok ? 'good' : 'bad');
+    fb.textContent = ok ? '✨ 정답! 별빛이 한 줄 새겨졌어요. (' + res.progress + '/' + res.need + ')' : '아쉬워요. 정답은 ' + q.answer + '\n' + (q.explain || '');
+    el.querySelectorAll('.dots i').forEach((d, k) => d.classList.toggle('on', k < res.progress));
+    if(res.complete){ await sleep(900); closeLayer(); return true; }
+    if(!await waitNext(el)){ closeLayer(); return false; }
+  }
+}
+
+/* ── 읽기 ── */
+async function runRead(id){
+  const p = D.passages[id], body = p.text.map(t => '<p>' + esc(t) + '</p>').join('');
+  let el = layer('<div class="sheet"><div class="frame quiz"><div class="passage"><h4>『' + esc(p.title) + '』</h4>' + body + '</div>'
+    + '<div class="foot"><button class="btn ghost" id="quit">나중에</button><button class="btn" id="go">다 읽었어요 ▶</button></div></div></div>', 'center');
+  if(!await new Promise(r => { el.querySelector('#go').onclick = () => r(true); el.querySelector('#quit').onclick = () => r(false); })){ closeLayer(); return false; }
+  for(const item of p.questions){
+    let ok = false;
+    while(!ok){
+      const q = { q:item.q, answer:item.answer, options:item.options.slice().sort(() => Math.random() - .5) };
+      el = layer('<div class="sheet">' + quizHTML('📖 ' + p.title, '', q) + '</div>', 'center');
+      el.querySelector('.q').insertAdjacentHTML('beforebegin', '<details style="margin-bottom:8px;color:var(--ink-dim)"><summary>지문 다시 보기</summary><div class="passage" style="margin-top:6px">' + body + '</div></details>');
+      const res = await new Promise(r => {
+        el.querySelector('#quit').onclick = () => r(null);
+        el.querySelectorAll('.opt').forEach(b => b.onclick = () => r(q.options[b.dataset.k] === q.answer ? b : (b.classList.add('wrong'), false)));
+      });
+      if(res === null){ closeLayer(); return false; }
+      ok = !!res; S.stats.tried++; if(ok){ S.stats.correct++; res.classList.add('right'); } save();
+      const fb = el.querySelector('#fb'); fb.className = 'fb ' + (ok ? 'good' : 'bad');
+      fb.textContent = ok ? '✨ 맞았어요!' : '다시 한 번 지문을 읽어 볼까요?';
+      await sleep(ok ? 800 : 1200);
+    }
+  }
+  closeLayer(); return true;
+}
+
+/* ── 전투 ── 정답이면 내가 공격(직업별 휘두르기), 틀리면 몬스터가 반격 */
+function drawHero(cv, sheet, cell, frame){
+  const x = cv.getContext('2d'); x.imageSmoothingEnabled = false; x.clearRect(0, 0, cv.width, cv.height);
+  const o = (128 - cell) / 2;
+  x.drawImage(sheet, frame * cell, 3 * cell, cell, cell, o, o, cell, cell);   // 3 = 오른쪽 보기
+}
+async function swing(cv){
+  if(S.job === 'mage'){ return; }
+  for(let f = 0; f < 6; f++){ drawHero(cv, SHEETS.heroAttack, 128, f); await sleep(55); }
+  drawHero(cv, SHEETS.hero, 64, 0);
+}
+async function runBattle(monsterId){
+  const m = D.monsters[monsterId], job = D.jobs[S.job];
+  const b = A.newBattle(S, D, monsterId);
+  const hp = () => esc(S.name) + ' · 체력 ' + S.hp + '<div class="bar"><i style="width:' + S.hp + '%"></i></div>';
+  const mhp = () => esc(m.name) + ' · ' + b.mhp + '/' + b.mmax + '<div class="bar"><i class="mon" style="width:' + (b.mhp / b.mmax * 100) + '%"></i></div>';
+  let first = true;
+  while(!b.over){
+    const q = makeQ(), potion = S.items.some(id => (D.items[id] || {}).heal);
+    const el = layer('<div class="sheet"><div class="arena" id="arena"><div class="mist"></div><div class="hpbox l" id="hpl">' + hp() + '</div><div class="hpbox r" id="hpr">' + mhp() + '</div>'
+      + '<img class="pet" src="' + petURL(S.pet, S.petKind, 2) + '" alt=""><canvas class="hero" id="hc" width="128" height="128"></canvas><img class="mon" id="mon" src="' + monsterURL(m) + '" alt=""></div>'
+      + quizHTML('⚔️ 정답을 맞혀 공격!', potion ? '<button class="btn ghost" id="pot" style="padding:4px 10px">🧪 물약</button>' : '', q) + '</div>', 'center');
+    const cv = el.querySelector('#hc'); drawHero(cv, SHEETS.hero, 64, 0);
+    const ar = el.querySelector('#arena'), mon = el.querySelector('#mon'), fb = el.querySelector('#fb');
+    if(first){ first = false; floatText(ar, m.line, 'skillname'); }
+    const pot = el.querySelector('#pot');
+    if(pot) pot.onclick = () => { const h = A.usePotion(S, D); save(); if(h) toast('🧪 체력을 ' + h + ' 되찾았어요!'); pot.remove(); el.querySelector('#hpl').innerHTML = hp(); };
+    const ok = await askOne(q, el);
+    if(ok === null){ closeLayer(); save(); toast('전투에서 물러났어요. 언제든 다시 도전할 수 있어요.'); return false; }
+    const ev = A.battleTurn(S, D, b, ok); save();
+    if(ev.hit){
+      fb.className = 'fb good'; fb.textContent = '✨ 정답! ' + job.skill + '!';
+      floatText(ar, job.skill + '!', 'skillname');
+      if(S.job === 'mage'){ const bolt = document.createElement('div'); bolt.className = 'bolt'; ar.appendChild(bolt); await sleep(350); bolt.remove(); }
+      else await swing(cv);
+      mon.classList.add('shake', 'flash'); floatText(ar, '-' + ev.hit, 'float', '70%', '#ffe27a');
+    } else {
+      fb.className = 'fb bad'; fb.textContent = '아쉬워요. 정답은 ' + q.answer + '\n' + (q.explain || '');
+      mon.style.transform = 'translateX(-60px)'; await sleep(160); mon.style.transform = '';
+      if(ev.guarded) floatText(ar, '📿 ' + A.fixJosa(S.petName + '이(가)') + ' 막았다!', 'skillname');
+      else { cv.classList.add('shake', 'flash'); floatText(ar, '-' + ev.hurt, 'float', '20%', '#ff8a8a'); }
+    }
+    el.querySelector('#hpl').innerHTML = hp(); el.querySelector('#hpr').innerHTML = mhp(); renderHud();
+    if(b.over){ await sleep(900); break; }
+    if(!await waitNext(el)){ closeLayer(); toast('전투에서 물러났어요. 몬스터 체력은 처음으로 돌아가요.'); return false; }
+  }
+  closeLayer();
+  if(b.won){ await bigCard('⚔️ 승리!', '<p style="font-family:Gowun Batang,serif">' + esc(A.fixJosa(m.name + '을(를)')) + ' 물리쳤어요!</p>'); return true; }
+  await bigCard('쓰러졌어요…', '<p style="font-family:Gowun Batang,serif">괜찮아요. 숙소에서 쉬고 다시 도전해요. 지금까지의 진행은 그대로예요.</p>');
+  return false;
+}
+function floatText(host, text, cls, left, color){
+  const f = document.createElement('div'); f.className = cls; f.textContent = text;
+  if(cls === 'float'){ f.style.left = left; f.style.top = '40%'; f.style.color = color; }
+  host.appendChild(f); setTimeout(() => f.remove(), 1000);
+}
+
+/* ── 보상·일지·가방·설정 ── */
+function bigCard(title, body){
+  return new Promise(r => { const el = layer('<div class="frame card"><h3>' + title + '</h3>' + body + '<button class="btn" id="ok">확인</button></div>', 'center'); el.querySelector('#ok').onclick = () => { closeLayer(); r(); }; });
+}
+function itemRow(id){ const it = D.items[id]; return '<div><span class="i">' + it.icon + '</span><span><b>' + esc(it.name) + '</b><small>' + esc(it.desc) + '</small></span></div>'; }
+async function showReward(q, got){
+  const rows = (got.items || []).map(itemRow).join('')
+    + (got.titles || []).map(t => '<div><span class="i">🎖️</span><span><b>칭호 「' + esc(t) + '」</b><small>이름 옆에 붙어요.</small></span></div>').join('')
+    + (got.merit ? '<div><span class="i">📜</span><span><b>길드 공적 +' + got.merit + '</b><small>' + D.meritBox.every + '점마다 보급 상자를 받아요. (지금 ' + S.merit + '점)</small></span></div>' : '');
+  await bigCard((q.type === 'main' ? '메인 퀘스트 완료' : '퀘스트 완료') + ' ✦', '<p style="font-family:Gowun Batang,serif">「' + esc(A.questTitle(q, S, D)) + '」</p>' + (rows ? '<div class="loot">' + rows + '</div>' : ''));
+}
+async function showChapterEnd(){
+  const pr = A.chapterProgress(S, D), left = pr.subTotal - pr.sub;
+  await new Promise(r => {
+    const el = layer('<div class="frame end"><h2>제1장 「' + esc(D.title) + '」 완료</h2><p>등대의 불이 꺼지고, 바다에서 안개가 밀려옵니다.<br>별의 나침반 조각을 찾는 여정이 시작됩니다.</p>'
+      + '<p style="color:var(--gold)">다음 이야기: ' + esc(D.next) + ' (준비 중)</p>'
+      + (left ? '<p>아직 끝내지 않은 서브 퀘스트가 ' + left + '개 있어요. 머리 위에 파란 ! 가 뜬 사람을 찾아보세요.</p>' : '<p>모든 서브 퀘스트까지 끝냈어요. 대단해요!</p>')
+      + '<button class="btn" id="ok">마을로 돌아가기</button></div>', 'center');
+    el.querySelector('#ok').onclick = () => { closeLayer(); r(); };
+  });
+}
+function openLog(){
+  const list = D.quests.filter(q => (logTab === 'main' ? q.type === 'main' : q.type !== 'main')).map(q => {
+    const st = A.questStatus(S, q);
+    if(st === 'locked') return '';
+    const step = A.currentStep(S, q);
+    const go = st === 'active' && step ? '→ ' + whereNext(q, step) + ' · ' + stepText(q, step) : st === 'available' ? '→ ' + whereNext(q, q.steps[0]) + ' (받기)' : '완료';
+    return '<div class="qi ' + q.type + (st === 'done' ? ' done' : '') + '"><b>' + (st === 'done' ? '✔ ' : '') + esc(A.questTitle(q, S, D)) + '</b><small>' + esc(A.fill(q.summary, S, D)) + '</small>'
+      + (q.reward ? '<small>보상: ' + esc(rewardHint(q.reward)) + '</small>' : '') + '<div class="go">' + esc(go) + '</div></div>';
+  }).join('');
+  const el = layer('<div class="frame panel"><h3>📜 퀘스트 일지</h3><div class="tabs"><button class="tab' + (logTab === 'main' ? ' on' : '') + '" data-t="main">메인</button><button class="tab' + (logTab === 'sub' ? ' on' : '') + '" data-t="sub">서브·의뢰</button></div>'
+    + (list || '<p style="color:var(--ink-dim)">아직 받을 수 있는 퀘스트가 없어요.</p>') + '<div style="text-align:right;margin-top:10px"><button class="btn" id="ok">닫기</button></div></div>', 'center');
+  el.querySelectorAll('.tab').forEach(t => t.onclick = () => { logTab = t.dataset.t; openLog(); });
+  el.querySelector('#ok').onclick = closeLayer;
+}
+function rewardHint(r){
+  const out = (r.items || []).map(id => D.items[id].icon + ' ' + D.items[id].name);
+  if(r.jobItem){ const it = D.items[r.jobItem + '_' + S.job]; if(it) out.push(it.icon + ' ' + it.name); }
+  if(r.title) out.push('칭호 「' + r.title + '」'); if(r.merit) out.push('공적 ' + r.merit);
+  return out.join(', ');
+}
+function openBag(){
+  const job = D.jobs[S.job], counts = {};
+  S.items.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
+  const rows = Object.keys(counts).map(id => itemRow(id).replace('</b>', (counts[id] > 1 ? ' ×' + counts[id] : '') + '</b>')).join('');
+  const big = SHEETS.hero ? SP.frameURL(SHEETS.hero, 64, 0, 'down') : '';
+  const el = layer('<div class="frame panel"><div class="bag-top"><img src="' + big + '" alt=""><div><b style="font-size:20px">' + esc(S.name) + '</b><div style="color:var(--gold)">' + job.icon + ' 견습 ' + esc(job.name) + ' · 스승 ' + esc(D.npcs[job.mentor].name) + '</div>'
+    + '<div style="color:var(--ink-dim);font-size:13px;margin-top:4px">칭호: ' + (S.titles.length ? esc(S.titles.join(', ')) : '없음') + '</div></div></div>'
+    + '<div class="stat"><div><b>' + S.stats.correct + '</b>모은 별빛</div><div><b>' + S.merit + '</b>길드 공적</div><div><b>+' + A.attackBonus(S, D) + '</b>공격 보너스</div></div>'
+    + '<h3>🎒 이야기 아이템</h3>' + (rows ? '<div class="loot">' + rows + '</div>' : '<p style="color:var(--ink-dim)">서브 퀘스트를 하면 이곳에 아이템이 모여요.</p>')
+    + '<div style="text-align:center;margin-top:10px"><button class="btn" id="ok">닫기</button></div></div>', 'center');
+  el.querySelector('#ok').onclick = closeLayer;
+}
+function openSettings(){
+  const units = window.QUIZ ? window.QUIZ.unitsOf(cfg.grade, cfg.term).map(u => u.name).join(', ') : '';
+  const el = layer('<div class="frame panel settings"><h3>⚙️ 선생님 설정</h3>'
+    + '<p style="color:var(--ink-dim);font-size:13px;margin:0 0 6px;font-family:Gowun Batang,serif">이야기는 모든 학년이 같아요. 여기서는 문제만 바뀌어요.</p>'
+    + '<label>과목 <select id="c-sub"><option value="math">수학</option><option value="english">영단어</option></select></label>'
+    + '<label>학년 <select id="c-grade">' + [3,4,5,6].map(g => '<option value="' + g + '">' + g + '학년</option>').join('') + '</select></label>'
+    + '<label>학기 <select id="c-term"><option value="1">1학기</option><option value="2">2학기</option></select></label>'
+    + '<label>난이도 <select id="c-tier"><option value="1">기초</option><option value="2">표준</option><option value="3">도전</option></select></label>'
+    + '<label>정답 표시 (미리보기용) <input type="checkbox" id="c-hint"></label>'
+    + '<p style="color:var(--ink-dim);font-size:12px;line-height:1.6">출제 단원: ' + esc(units || '없음') + '</p>'
+    + '<div style="display:flex;gap:8px;justify-content:space-between;margin-top:10px"><button class="btn ghost" id="reset">진행 초기화</button><button class="btn" id="ok">저장</button></div></div>', 'center');
+  el.querySelector('#c-sub').value = cfg.subject; el.querySelector('#c-grade').value = cfg.grade; el.querySelector('#c-term').value = cfg.term;
+  el.querySelector('#c-tier').value = cfg.tier; el.querySelector('#c-hint').checked = !!cfg.hint;
+  el.querySelector('#ok').onclick = () => {
+    cfg = { subject:el.querySelector('#c-sub').value, grade:+el.querySelector('#c-grade').value, term:+el.querySelector('#c-term').value, tier:+el.querySelector('#c-tier').value, hint:el.querySelector('#c-hint').checked };
+    saveCfg(); closeLayer(); toast('설정을 저장했어요.');
+  };
+  el.querySelector('#reset').onclick = () => { if(!confirm('이 브라우저의 모험 진행을 모두 지울까요?')) return; try{ localStorage.removeItem(SAVE_KEY); }catch(e){} location.reload(); };
+}
+
+/* ── 터치 조이스틱 ── */
+let joy = null;
+(function(){
+  const pad = $('joy'), nub = pad.querySelector('i'); let id = null;
+  const move = e => {
+    const r = pad.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    let dx = e.clientX - cx, dy = e.clientY - cy; const max = r.width / 2 - 14, len = Math.hypot(dx, dy);
+    if(len > max){ dx = dx / len * max; dy = dy / len * max; }
+    nub.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'; joy = { x:dx / max, y:dy / max };
+  };
+  const end = e => { if(e.pointerId !== id) return; id = null; joy = null; nub.style.transform = ''; };
+  pad.addEventListener('pointerdown', e => { id = e.pointerId; pad.setPointerCapture(id); move(e); });
+  pad.addEventListener('pointermove', e => { if(e.pointerId === id) move(e); });
+  pad.addEventListener('pointerup', end); pad.addEventListener('pointercancel', end);
+})();
+boot();
+</script>
+</body>
+</html>
