@@ -133,3 +133,9 @@ test('a cheaper server price charges the server price, never more than shown',as
   await f.c.buyStockPesk('ABC','테스트',100);
   assert.equal(f.docs['tesk-students'][0].points,840);assert.equal(f.docs['pesk-portfolios'].one[0].qty,2);
 });
+test('example prices (no class prices on the server yet) never show a buy list',()=>{
+  const f=setup();f.run('stockPrices=_defaultStockPrices()');
+  assert.ok(f.run('Object.keys(stockPrices).length')>0,'예시 가격은 화면 계산에는 남는다');
+  assert.match(f.c.buildTradeView({points:1000}),/시세 데이터가 없어요/);assert.doesNotMatch(f.c.buildTradeView({points:1000}),/buyStockPesk/);
+  f.run('stockPrices={ABC:100}');assert.match(f.c.buildTradeView({points:1000}),/buyStockPesk/);
+});

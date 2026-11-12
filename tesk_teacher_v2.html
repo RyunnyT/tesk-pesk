@@ -8280,9 +8280,13 @@ async function forceBuyStudentStock(){
     const db=window._db;
     const studentsRef=window._fsDoc(db,'classrooms',TESK_ROOM,'data','tesk-students');
     const portsRef=window._fsDoc(db,'classrooms',TESK_ROOM,'data','pesk-portfolios');
+    const pricesRef=window._fsDoc(db,'classrooms',TESK_ROOM,'data','tesk-stock-prices');
     let out=null;
     await window._fsRunTxn(db, async (txn)=>{
-      const [studSnap, portSnap]=await Promise.all([txn.get(studentsRef), txn.get(portsRef)]);
+      const [studSnap, portSnap, priceSnap]=await Promise.all([txn.get(studentsRef), txn.get(portsRef), txn.get(pricesRef)]);
+      // 화면에 떠 있던 가격이 아니라 서버의 지금 가격으로 — 다르면 멈추고 다시 확인받는다
+      const serverPrice=Number(((priceSnap.exists()?priceSnap.data().value:null)||{})[code]);
+      if(Number.isFinite(serverPrice) && serverPrice>0 && serverPrice!==price) throw new Error('PRICE_CHANGED:'+serverPrice);
       const allStudents=studSnap.exists() ? (studSnap.data().value||[]) : students.slice();
       const allPorts=portSnap.exists() ? (portSnap.data().value||{}) : {};
       const idx=allStudents.findIndex(s=>Number(s.num)===Number(stuNum));
@@ -8313,6 +8317,7 @@ async function forceBuyStudentStock(){
     renderStocks(); renderStudents(); renderEconLog();
     showToast(`📈 ${stu.name} ${stock.name} ${qty}주 강제 매수 완료`);
   }catch(e){
+    if(forceTradePriceChanged(e, code)) return;
     showToast('❌ 강제 매수 실패: '+e.message);
   }
 }
@@ -8332,9 +8337,13 @@ async function forceSellStudentStock(){
     const db=window._db;
     const studentsRef=window._fsDoc(db,'classrooms',TESK_ROOM,'data','tesk-students');
     const portsRef=window._fsDoc(db,'classrooms',TESK_ROOM,'data','pesk-portfolios');
+    const pricesRef=window._fsDoc(db,'classrooms',TESK_ROOM,'data','tesk-stock-prices');
     let out=null;
     await window._fsRunTxn(db, async (txn)=>{
-      const [studSnap, portSnap]=await Promise.all([txn.get(studentsRef), txn.get(portsRef)]);
+      const [studSnap, portSnap, priceSnap]=await Promise.all([txn.get(studentsRef), txn.get(portsRef), txn.get(pricesRef)]);
+      // 화면에 떠 있던 가격이 아니라 서버의 지금 가격으로 — 다르면 멈추고 다시 확인받는다
+      const serverPrice=Number(((priceSnap.exists()?priceSnap.data().value:null)||{})[code]);
+      if(Number.isFinite(serverPrice) && serverPrice>0 && serverPrice!==price) throw new Error('PRICE_CHANGED:'+serverPrice);
       const allStudents=studSnap.exists() ? (studSnap.data().value||[]) : students.slice();
       const allPorts=portSnap.exists() ? (portSnap.data().value||{}) : {};
       const idx=allStudents.findIndex(s=>Number(s.num)===Number(stuNum));
@@ -8360,8 +8369,19 @@ async function forceSellStudentStock(){
   }catch(e){
     const msg=String(e?.message||'');
     if(msg==='INSUFFICIENT_HOLDING') return showToast('⚠️ 보유 수량이 부족해요');
+    if(forceTradePriceChanged(e, code)) return;
     showToast('❌ 강제 매도 실패: '+e.message);
   }
+}
+// 강제 매매 중 서버 가격이 화면과 달랐으면: 화면 가격을 고치고 다시 누르게 한다 (돈은 움직이지 않았다)
+function forceTradePriceChanged(e, code){
+  const msg=String(e?.message||'');
+  if(!msg.startsWith('PRICE_CHANGED:')) return false;
+  const now=Number(msg.split(':')[1]);
+  const was=Number(stockPrices[code]||0);
+  stockPrices[code]=now; saveLocal('tesk-stock-prices',stockPrices); renderStocks();
+  showToast(`⚠️ 주가가 바뀌어 있었어요 (${was.toLocaleString()} → ${now.toLocaleString()}${C()}). 새 가격을 확인하고 다시 눌러 주세요`);
+  return true;
 }
 async function buyStock(){
   const code=document.getElementById('stock-select').value;

@@ -1259,6 +1259,9 @@ const _DEFAULT_STOCKS = [
 function _defaultStockPrices(){
   const o={};
   _DEFAULT_STOCKS.forEach(([code,,price])=>{ o[code]=Number(price); });
+  // 서버에 학급 시세가 아직 없을 때 쓰는 예시 가격이라는 표시 (목록 순회에는 나오지 않는다).
+  // 이 가격으로는 살 수 없다 — 매수는 서버 가격으로만 되므로 주식 매매 화면을 막아 둔다.
+  Object.defineProperty(o,'__fallback',{value:true});
   return o;
 }
 
@@ -4839,7 +4842,7 @@ function _legacyBankPanelDisabled(me){
 function buildTradeView(me){
   const coins = me ? me.points : 0;
   const prices = Object.keys(stockPrices);
-  if(prices.length === 0){
+  if(prices.length === 0 || stockPrices.__fallback){
     return '<div class="empty-state"><span class="empty-icon">📊</span>주식 시세 데이터가 없어요<br>선생님이 학급 경제를 설정하면 이용할 수 있어요.</div>';
   }
   const KOSPI_MAP = {};
@@ -8366,38 +8369,21 @@ function rpgBattleHtml(me){
   const rev=!!(rpgQ && rpgQ.isReview && !g.pendingAttack && g.hp>0);
   const petBar='';
 
-  const head = '<div class="rpg-head">'
-    + '<div class="rpg-lv"><span class="rpg-lv-badge">⚔️ Lv.' + lv + '</span>'
-    +   '<div class="rpg-lv-bar"><i style="width:' + Math.round(inLv / per * 100) + '%"></i></div>'
-    +   '<span class="rpg-lv-xp">' + inLv + ' / ' + per + '</span></div>'
-    + '<div class="rpg-kills">쓰러뜨린 몬스터 <b>' + total + '</b></div>'
-    + '</div>'
-    + (function(){
+  // 레벨 막대는 위의 🎓 학습 레벨 하나만 둔다. 전투 레벨·처치 수·칭호는 한 줄로 (2026-11-12 화면 단순화)
+  const head = (function(){
         const cur = G.titleOf(g.gxp), nxt = G.nextTitle(g.gxp);
-        if(!cur && !nxt) return '';
-        return '<div class="rpg-title">'
-          + (cur ? '🏅 <b>' + escHtml(cur) + '</b>' : '<span class="rpg-title-none">아직 칭호가 없어요</span>')
-          + (nxt ? '<span> · Lv.' + nxt.lv + ' 에 「' + escHtml(nxt.name) + '」</span>' : '<span> · 마지막 칭호예요</span>')
+        return '<div class="rpg-title" title="전투 경험치 ' + inLv + ' / ' + per + '">⚔️ 전투 Lv.' + lv + ' · 쓰러뜨린 몬스터 <b>' + total + '</b>'
+          + (cur ? ' · 🏅 <b>' + escHtml(cur) + '</b>' : '')
+          + (nxt ? '<span> · Lv.' + nxt.lv + ' 에 「' + escHtml(nxt.name) + '」</span>' : cur ? '<span> · 마지막 칭호예요</span>' : '')
           + '</div>';
       })()
     + petBar;
 
-  // 몬스터 도감 — 고르는 버튼이 아니라 지금까지 잡은 기록만 보여준다
-  // 지역별로 묶는다. 열린 지역의 몬스터만 무작위로 나오고, 처치 수가 쌓이면 다음 지역이 열린다
+  // 몬스터는 학생이 고르지 않고 무작위로 나온다. 예전 몬스터 도감(목록)은 고르는 버튼처럼 보여서 없애고,
+  // 다음 지역까지 남은 수만 한 줄로 알려 준다 (2026-11-12 화면 단순화)
   const nextReg = G.nextRegionInfo(g);
-  const dex = '<div class="rpg-dex"><div class="rpg-region-head">📖 몬스터 도감 <span class="rpg-lockmsg">열린 지역의 몬스터가 무작위로 나타나요'
-    + (nextReg ? ' · ' + nextReg.region.icon + ' ' + escHtml(nextReg.region.name) + '까지 ' + nextReg.remain + '마리' : '') + '</span></div>'
-    + G.REGIONS.map(r => {
-      const open = G.regionUnlocked(r.id, g);
-      return '<div class="rpg-region-row' + (open ? '' : ' closed') + '"><small>' + r.icon + ' ' + escHtml(r.name) + (open ? '' : ' · 🔒 ' + r.need + '마리 처치하면 열려요') + '</small>'
-        + '<div class="rpg-mons">' + G.monstersOf(r.id).map(m => {
-          const kills = g.kills[m.id] || 0;
-          return '<span class="rpg-mon' + (m.id === g.monsterId ? ' on' : '') + (kills ? '' : ' lock') + '">'
-            + '<span class="rpg-mon-icon">' + (kills || m.id === g.monsterId ? m.icon : '❔') + '</span>'
-            + '<span class="rpg-mon-name">' + (kills || m.id === g.monsterId ? escHtml(m.name) : '???') + '</span>'
-            + '<span class="rpg-mon-sub">' + G.monsterRank(m).label + (kills ? ' · ×' + kills : '') + '</span></span>';
-        }).join('') + '</div></div>';
-    }).join('') + '</div>';
+  const dex = '<p class="rpg-hint">🎲 몬스터는 무작위로 나타나요'
+    + (nextReg ? ' · ' + nextReg.region.icon + ' ' + escHtml(nextReg.region.name) + ' 지역까지 ' + nextReg.remain + '마리' : '') + '</p>';
 
   const fromPct = rpgAnim.prevPct >= 0 ? rpgAnim.prevPct : hpPct;
   const stage = '<div class="rpg-stage' + (rev ? ' revenge' : '') + '" style="--mc:' + mon.color + '">'
@@ -8463,8 +8449,7 @@ function rpgBattleHtml(me){
     + '<div class="qz-q">' + escHtml(q.q).replace(/\n/g,'<br>') + '</div>'
     + (q.responseMode==='short'?rpgShortAnswerHtml(q,answered):'<div class="qz-opts">'+opts+'</div>')+'</div>'
     + fb
-    + dex
-    + '<p class="rpg-hint">정답은 공격권 +1 · 틀리면 몬스터 반격으로 모험 체력 −' + mySetFx().wrongDmg + '. 학습 경험치는 유지돼요.<br>여기서 모은 공격권은 모험 몬스터에게만 써요. 우리 반 보스는 🗿 보스 탭에서 하루 한 번 따로 도전해요.</p>';
+    + dex;
 }
 
 /* QRATE 문항을 quiz-bank 문항 모양으로 맞춘다.
@@ -9864,13 +9849,6 @@ waitFirebase(async()=>{
 .rpg-diag-head span{font-size:12px;color:var(--sub);font-weight:800;}
 .rpg-diag-bar{height:7px;border-radius:99px;background:var(--border);overflow:hidden;margin-bottom:10px;}
 .rpg-diag-bar i{display:block;height:100%;background:var(--pesk);transition:width .3s;}
-.rpg-head{display:flex;align-items:center;gap:10px;margin:12px 0 10px;flex-wrap:wrap;}
-.rpg-lv{display:flex;align-items:center;gap:7px;flex:1;min-width:180px;}
-.rpg-lv-badge{font-size:12px;font-weight:800;color:#fff;background:#7c5cd6;border-radius:99px;padding:3px 9px;}
-.rpg-lv-bar{flex:1;height:8px;border-radius:99px;background:var(--border);overflow:hidden;}
-.rpg-lv-bar i{display:block;height:100%;background:linear-gradient(90deg,#a78bfa,#7c5cd6);transition:width .4s;}
-.rpg-lv-xp{font-size:10.5px;font-weight:800;color:var(--sub);white-space:nowrap;}
-.rpg-kills{font-size:11.5px;font-weight:700;color:var(--sub);}
 .rpg-stage{background:var(--card);border:1.5px solid var(--border);border-radius:14px;
   padding:16px;text-align:center;margin-bottom:12px;}
 .rpg-mon-big{font-size:56px;line-height:1.1;filter:drop-shadow(0 4px 6px rgba(0,0,0,.18));
@@ -9966,20 +9944,6 @@ waitFirebase(async()=>{
 .rpg-hp i{display:block;height:100%;border-radius:99px;background:var(--mc,#e88a8a);transition:width .4s;}
 .rpg-hp-num{font-size:11px;font-weight:800;color:var(--sub);}
 .rpg-fx{margin-top:8px;font-size:12.5px;font-weight:800;color:var(--pesk);}
-.rpg-regions{margin-top:14px;}
-.rpg-region{margin-bottom:12px;}
-.rpg-region.lock{opacity:.55;}
-.rpg-region-head{font-size:12px;font-weight:800;color:var(--sub);margin-bottom:6px;}
-.rpg-lockmsg{font-weight:700;color:var(--hint);font-size:11px;}
-.rpg-mons{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:6px;}
-.rpg-mon{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 4px;
-  border-radius:11px;border:1.5px solid var(--border);background:var(--card);
-  cursor:pointer;font-family:inherit;}
-.rpg-mon.on{border-color:var(--pesk);background:var(--pesk-l,#eef3ff);}
-.rpg-mon.lock{opacity:.45;cursor:not-allowed;}
-.rpg-mon-icon{font-size:22px;line-height:1.1;}
-.rpg-mon-name{font-size:10.5px;font-weight:800;text-align:center;line-height:1.25;}
-.rpg-mon-sub{font-size:9.5px;font-weight:700;color:var(--hint);}
 .rpg-hint{font-size:11px;color:var(--hint);line-height:1.65;margin-top:10px;}
 .rpg-pet{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px;padding:8px 11px;
   border-radius:11px;background:var(--pesk-l,#eef3ff);font-size:11.5px;font-weight:800;color:var(--pesk);}
@@ -10017,13 +9981,6 @@ waitFirebase(async()=>{
 .boss-cont.me{background:var(--pesk-l,#eef3ff);color:var(--pesk);}
 .boss-cont b{font-weight:800;}
 .rpg-mon.boss{border-color:var(--pesk);}
-/* 📖 몬스터 도감 — 고르는 버튼이 아니라 기록 */
-.rpg-dex{margin-top:14px;}
-.rpg-dex .rpg-mon{cursor:default;}
-.rpg-dex .rpg-mon.lock{cursor:default;}
-.rpg-region-row{margin-top:8px;}
-.rpg-region-row>small{display:block;margin:0 0 4px;font-size:11px;font-weight:700;color:#5b7065;}
-.rpg-region-row.closed .rpg-mons{opacity:.45;}
 .rpg-rank{display:inline-block;margin-left:4px;padding:1px 8px;border-radius:99px;font-size:10.5px;font-weight:800;vertical-align:middle;}
 .rpg-rank.easy{background:#e7f7ec;color:#15803d;}
 .rpg-rank.mid{background:#fff5d6;color:#a16207;}

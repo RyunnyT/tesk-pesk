@@ -1,4 +1,4 @@
-const PESK_CACHE = 'pesk-shell-v64-auction-qty';
+const PESK_CACHE = 'pesk-shell-v65-no-monster-list';
 const PESK_ASSETS = [
   './landing.html',
   './pesk.html',
