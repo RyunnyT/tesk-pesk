@@ -885,3 +885,32 @@ body.mobile .btns button {
   width: 58px;
   height: 58px;
 }
+/* ── 싸울 때 문제 상자는 화면 아래쪽 (src/08-ui.js) ── */
+.bt.battle {
+  top: auto;
+  bottom: 2%;
+  transform: translateX(-50%);
+  padding: 6px 12px 8px;
+}
+.bt.battle .bq {
+  font-size: clamp(16px, 3.4vw, 22px);
+  margin-bottom: 4px;
+}
+.bt .bm {
+  white-space: pre-line;
+}
+.wq {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 4px 0;
+}
+.wq summary {
+  cursor: pointer;
+}
+.wq summary small {
+  display: block;
+  color: #a59ec6;
+}
+.wq p {
+  margin: 4px 0 2px 14px;
+  color: #f5e3a3;
+}

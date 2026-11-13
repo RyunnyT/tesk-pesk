@@ -548,6 +548,7 @@ function endDlg() {
 }
 function nextDlg() {
   if (!dl) return;
+  if (typeof sfx === "function") sfx("talk");
   if (dl.ch && dl.i === dl.lines.length - 1) return;
   dl.i++;
   if (dl.i >= dl.lines.length) {
@@ -570,6 +571,7 @@ function gain(ex, gd, du) {
     up = true;
   }
   if (up) {
+    if (typeof sfx === "function") setTimeout(() => sfx("lvl"), 900);
     pl.hp = maxHp();
     setTimeout(
       () =>
@@ -648,6 +650,7 @@ function talk(n) {
       store();
       hud();
       toast("퀘스트를 받았어요: " + q.title);
+      if (typeof sfx === "function") sfx("quest");
     });
   if (qCount(q) >= q.n)
     return openDlg(n, qText(q.done), () => {
@@ -659,6 +662,7 @@ function talk(n) {
       }
       save.q[q.id].st = "done";
       gain(q.rw.exp, q.rw.gold, q.rw.dust);
+      if (typeof sfx === "function") sfx("win");
       toast(
         "퀘스트 완료! EXP +" +
           q.rw.exp +
@@ -710,10 +714,12 @@ function quizBox(title, dif, ok, bad) {
     b.onclick = () => {
       if (v === Q2.a) {
         save.solved = (save.solved || 0) + 1;
+        if (typeof sfx === "function") sfx("ok");
         ok();
       }
       else {
         b.disabled = true;
+        if (typeof noteWrong === "function") noteWrong(Q2);
         bad();
       }
     };
@@ -829,6 +835,7 @@ function doFill(p, cost) {
       sp.push({ a: a * T + Math.random() * 16, y: y * T + Math.random() * 16, t: 8 + Math.random() * 10 });
   });
   gain(3, 0, 0);
+  if (typeof sfx === "function") sfx("fill");
   const pi = townPart();
   if (PATCH.every((q) => q.done)) {
     const bc = M.base.getContext("2d");
@@ -933,6 +940,7 @@ $("book").addEventListener("click", (e) => {
   } else if (d.ans != null) {
     if (+d.ans === bk.s.q[bk.qi][2]) {
       save.solved = (save.solved || 0) + 1;
+      if (typeof sfx === "function") sfx("ok");
       bk.qi++;
       if (bk.qi >= bk.s.q.length) finishBook();
       else renderBook();
@@ -945,6 +953,7 @@ $("book").addEventListener("click", (e) => {
 function gather(n) {
   n.g = 500;
   save.inv[n.t] = (save.inv[n.t] || 0) + 1;
+  if (typeof sfx === "function") sfx("pick");
   store();
   for (let i = 0; i < 10; i++)
     sp.push({ a: n.x - 5 + Math.random() * 10, y: n.y - 10 + Math.random() * 8, t: 6 + Math.random() * 8 });
@@ -999,6 +1008,7 @@ function startBattle(m, first) {
   $("toast").hidden = true;
   $("btt").textContent = jo(MI.n, "과", "와") + " 싸워요!";
   $("bt").hidden = false;
+  $("bt").classList.add("battle");
   $("act").hidden = true;
   lastAct = "";
   m.dir = pl.x < m.x ? -1 : 1;
@@ -1077,6 +1087,7 @@ function ask(msg) {
 }
 function hitMonster(d, msg) {
   B.m.hit = 10;
+  if (typeof fxHit === "function") fxHit(d);
   B.hp -= d;
   for (let i = 0; i < 14; i++)
     sp.push({ a: B.m.x - 8 + Math.random() * 16, y: B.m.y - 18 + Math.random() * 16, t: 8 + Math.random() * 8 });
@@ -1111,6 +1122,7 @@ function answer(v, btn) {
       note += " 두 배!";
     }
     B.g = Math.min(3, B.g + 1);
+    if (Q.wrong && Q.ex) note += "\n방금 문제 풀이: " + Q.ex;
     hitMonster(d, "명중! 피해 " + d + "." + note);
     return;
   }
@@ -1129,13 +1141,16 @@ function answer(v, btn) {
     B.mg = 1;
     saved = "시간 늦추기! 다시 생각해 봐요.";
   }
+  if (typeof noteWrong === "function") noteWrong(Q);
   if (saved) {
+    if (typeof fxBlock === "function") fxBlock();
     $("bm").textContent = saved + " 다른 답을 골라 봐요.";
     bhud();
     return;
   }
   pl.hp -= B.MI.dmg;
   shakeT = 10;
+  if (typeof fxHurt === "function") fxHurt(B.MI.dmg);
   bhud();
   if (pl.hp <= 0) {
     B.end = 1;
@@ -1169,6 +1184,7 @@ function useSkill(k) {
 }
 function endBattle() {
   $("bt").hidden = true;
+  $("bt").classList.remove("battle");
   mode = "map";
   B = null;
   busy = false;
@@ -1196,6 +1212,7 @@ function win() {
     if (q.type === "kill" && q.mon === m.type && s0 && s0.st === "active") s0.k++;
   });
   save.kills++;
+  if (typeof sfx === "function") sfx("win");
   endBattle();
   pl.inv = 30;
   gain(ex, gd, MI.dust);
@@ -1234,11 +1251,13 @@ function runAway() {
   const d = pl.x < m.x ? -1 : 1;
   tryMove(pl, d * 18, 0, false);
   toast("무사히 도망쳤어요");
+  if (typeof sfx === "function") sfx("run");
 }
 $("brun").onclick = runAway;
 let tab = "me";
 const TABS = [
   ["me", "내 정보"],
+  ["wrong", "틀린 문제"],
   ["eq", "장비"],
   ["skill", "스킬"],
   ["pet", "펫"],
@@ -1867,7 +1886,7 @@ function drawNPC(n) {
   else person(r, n.mv ? n.f % 2 : (fr + px) % 8 < 4 ? 0 : 1, n.mv ? n.f : fr, n, n.mv, n.face);
 }
 function drawPl() {
-  const px = Math.round(pl.x - cam.x),
+  const px = Math.round(pl.x - cam.x) + (typeof fxLunge === "function" ? fxLunge(pl) : 0),
     py = Math.round(pl.y - cam.y),
     z = Math.round(pl.z);
   if (pl.inv > 0 && tk % 4 < 2 && (M.kind === "route" || M.kind === "dead")) return;
@@ -1901,7 +1920,7 @@ function drawMon(m) {
     if (m.hit % 2) return;
   }
   const MI = MON[m.type],
-    px = Math.round(m.x - cam.x),
+    px = Math.round(m.x - cam.x) + (typeof fxLunge === "function" ? fxLunge(m) : 0),
     py = Math.round(m.y - cam.y),
     S = MI.boss ? 2 : 1;
   MI.dr(mapper(px, py, m.dir < 0, 0, S), m.mv ? m.f % 2 : (fr + px) % 8 < 4 ? 0 : 1, m.mv ? m.f : fr, m.mv);
@@ -1977,8 +1996,11 @@ function drawGoal() {
   x.restore();
 }
 function drawMap() {
-  cam.x = Math.max(0, Math.min(WW - W, Math.round(pl.x - W / 2)));
-  cam.y = Math.max(0, Math.min(WH - H, Math.round(pl.y - H / 2 - 6)));
+  // 싸울 때는 주인공과 몬스터 가운데를 화면 위쪽에 둔다(아래쪽은 문제 상자)
+  const fx0 = B ? (pl.x + B.m.x) / 2 : pl.x,
+    fy0 = B ? (pl.y + B.m.y) / 2 + H * 0.2 : pl.y;
+  cam.x = Math.max(0, Math.min(WW - W, Math.round(fx0 - W / 2)));
+  cam.y = Math.max(0, Math.min(WH - H, Math.round(fy0 - H / 2 - 6)));
   if (WW <= W) cam.x = Math.round((WW - W) / 2);
   if (WH <= H) cam.y = Math.round((WH - H) / 2);
   x.fillStyle = "#14112a";
@@ -2091,6 +2113,7 @@ function drawMap() {
     $("act").textContent = lab;
     $("act").hidden = !lab;
   }
+  if (typeof drawFx === "function") drawFx(); // 피해 숫자·이펙트 → src/08-ui.js
   sp = sp.filter((p) => p.t-- > 0);
   sp.forEach((p) => {
     p.y -= 0.5;

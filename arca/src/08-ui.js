@@ -173,3 +173,115 @@ addEventListener("resize", fitView);
     st.prepend(x2);
   }
 }
+
+/* ════════ 전투 연출 ════════
+   엔진이 부르는 것: fxHit(피해) · fxHurt(피해) · fxBlock() · fxLunge(대상) · drawFx() · noteWrong(문제) */
+const FX = { pops: [], lunge: new Map(), flash: [] };
+function fxPop(wx, wy, txt, col) {
+  FX.pops.push({ x: wx, y: wy, t: 0, txt: String(txt), col: col || "#ffe14a" });
+}
+function fxHit(d) {
+  if (!B) return;
+  FX.lunge.set(pl, { t: 0, dir: B.m.x > pl.x ? 1 : -1 });
+  fxPop(B.m.x, B.m.y - 22 - (MON[B.m.type].boss ? 18 : 0), d, "#ffe14a");
+  FX.flash.push({ x: B.m.x, y: B.m.y - 10, t: 0, col: JOBCOL[save.job || "knight"] });
+  sfx("hit");
+  sfx("ok");
+}
+function fxHurt(d) {
+  if (!B) return;
+  FX.lunge.set(B.m, { t: 0, dir: pl.x > B.m.x ? 1 : -1 });
+  fxPop(pl.x, pl.y - 24, "-" + d + "♥", "#ff8fa3");
+  sfx("bad");
+  setTimeout(() => sfx("hurt"), 120);
+}
+function fxBlock() {
+  if (!B) return;
+  FX.lunge.set(B.m, { t: 0, dir: pl.x > B.m.x ? 1 : -1 });
+  fxPop(pl.x, pl.y - 24, "막음!", "#9fe0ff");
+  sfx("bad");
+}
+/* 달려들기: 10장면 동안 앞으로 10칸 나갔다 돌아온다 */
+function fxLunge(o) {
+  const L = FX.lunge.get(o);
+  if (!L) return 0;
+  return Math.round(Math.sin((L.t / 10) * Math.PI) * 10 * L.dir);
+}
+const JOBCOL = { knight: "#9fd0ff", warrior: "#ffb35a", mage: "#d8b8ff", archer: "#b9f08a" };
+function fxText(t, sx, sy, col) {
+  x.font = "bold 10px sans-serif";
+  x.textAlign = "center";
+  x.lineWidth = 3;
+  x.strokeStyle = "#1e1b3f";
+  x.strokeText(t, sx, sy);
+  x.fillStyle = col;
+  x.fillText(t, sx, sy);
+}
+function drawFx() {
+  FX.lunge.forEach((L, o) => {
+    if (++L.t > 10) FX.lunge.delete(o);
+  });
+  FX.flash = FX.flash.filter((f) => f.t++ < 8);
+  FX.flash.forEach((f) => {
+    const r = 3 + f.t * 2,
+      sx = f.x - cam.x,
+      sy = f.y - cam.y;
+    for (let i = 0; i < 8; i++) {
+      const an = (i / 8) * Math.PI * 2 + f.t * 0.2;
+      P(x, sx + Math.cos(an) * r, sy + Math.sin(an) * r * 0.7, 2, 2, i % 2 ? "#ffffff" : f.col);
+    }
+  });
+  FX.pops = FX.pops.filter((p) => p.t++ < 22);
+  FX.pops.forEach((p) => {
+    x.globalAlpha = p.t < 16 ? 1 : 1 - (p.t - 16) / 6;
+    fxText(p.txt, p.x - cam.x, p.y - cam.y - Math.min(14, p.t * 1.6), p.col);
+    x.globalAlpha = 1;
+  });
+  // 싸우는 몬스터 머리 위 체력 막대
+  if (B && B.m && !B.m.dead) {
+    const big = MON[B.m.type].boss,
+      sx = Math.round(B.m.x - cam.x),
+      sy = Math.round(B.m.y - cam.y) - (big ? 44 : 26),
+      w = big ? 36 : 22,
+      k = Math.max(0, B.hp) / B.MI.hp;
+    P(x, sx - w / 2 - 1, sy - 1, w + 2, 5, "#1e1b3f");
+    P(x, sx - w / 2, sy, w, 3, "#5a2a3a");
+    P(x, sx - w / 2, sy, Math.round(w * k), 3, k > 0.5 ? "#7ee07a" : k > 0.25 ? "#ffd86b" : "#ff6b7a");
+  }
+}
+
+/* ════════ 틀린 문제 모음 ════════ */
+function noteWrong(q) {
+  if (!q || !q.q) return;
+  q.wrong = 1;
+  const L = (save.wrong = save.wrong || []);
+  const i = L.findIndex((w) => w.q === q.q);
+  if (i >= 0) L.splice(i, 1);
+  L.unshift({ q: q.q, a: String(q.a), u: q.unit || "", ex: q.ex || "" });
+  if (L.length > 40) L.length = 40;
+  store();
+}
+PANEL.wrong = function () {
+  const L = save.wrong || [];
+  if (!L.length) return '<p class="hint">아직 틀린 문제가 없어요. 싸우다 틀린 문제가 여기에 모여요.</p>';
+  return (
+    '<p class="hint">최근에 틀린 문제 ' + L.length + "개예요. 눌러서 정답과 풀이를 확인해요.</p>" +
+    L.map(
+      (w) =>
+        '<details class="wq"><summary>' +
+        (w.u ? "<small>" + esc(w.u) + "</small>" : "") +
+        "<span>" + esc(w.q).replace(/\n/g, "<br>") + "</span></summary><p><b>정답 " + esc(w.a) + "</b>" +
+        (w.ex ? "<br>" + esc(w.ex).replace(/\n/g, "<br>") : "") +
+        "</p></details>",
+    ).join("") +
+    '<div class="it"><span></span><button type="button" data-wclear="1">목록 비우기</button></div>'
+  );
+};
+$("panel").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (b && b.dataset.wclear) {
+    save.wrong = [];
+    store();
+    renderPanel();
+  }
+});

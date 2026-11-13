@@ -66,7 +66,7 @@ function studyQ(d) {
   const wrong = [...new Set(q.options.map(String))].filter((v) => v !== a);
   if (wrong.length < 2) return null;
   const pickW = wrong.sort(() => Math.random() - 0.5).slice(0, 2);
-  return { q: q.q, a, ch: [a, ...pickW].sort(() => Math.random() - 0.5), unit: q.unit };
+  return { q: q.q, a, ch: [a, ...pickW].sort(() => Math.random() - 0.5), unit: q.unit, ex: q.explain || "" };
 }
 
 /* 부마다 먼저 넣을 지문 (전체 줄거리 문서의 서브 퀘스트 지문). 고른 수준에 없는 제목은 건너뛴다. */
