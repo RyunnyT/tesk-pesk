@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>아르카 연대기 · 새 그림 견본</title>
+<style>
+  body { margin: 0; padding: 16px; background: #f4f1fb; color: #2b2540; font-family: "Gowun Dodum", "Malgun Gothic", sans-serif; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 18px 0 6px; }
+  p { margin: 0 0 8px; font-size: 14px; color: #5a5470; }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  canvas, img { width: 100%; height: auto; display: block; border-radius: 12px; border: 2px solid #2b2540; background: #fff; }
+  img { image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>아르카 연대기 · 새 그림 견본 (방법 A: 위에서 보는 방식 그대로)</h1>
+  <p>게임 본체에는 아직 적용하지 않은 견본이에요. 그림은 모두 코드로 그렸고 외부 그림 파일은 쓰지 않았어요. 만드는 법은 <code>docs/그림_업그레이드_기록.md</code> 에 있어요.</p>
+  <h2>1. 마을 장면 (움직여요)</h2>
+  <canvas id="scene" width="960" height="540"></canvas>
+  <h2>2. 캐릭터 모음: 직업 4가지 · 표정 · 펫 · 몬스터</h2>
+  <canvas id="lineup" width="960" height="300"></canvas>
+  <h2>3. 지금 게임의 그림 (비교용)</h2>
+  <img src="../docs/견본_지금그림.png" alt="지금 게임 화면" />
+</div>
+<script>
+"use strict";
+/* ───────────────────────── 공통 도우미 ─────────────────────────
+   OL: 모든 그림에 두르는 테두리 색(진한 갈색). 검정보다 부드럽다.
+   shape(): 길(path)을 만들고 → 색을 채우고 → 테두리를 두른다. 이 견본의 그림은 거의 전부 이 함수 하나로 그린다. */
+const OL = "#4a3426";
+function shape(c, fill, path, lw) {
+  c.beginPath();
+  path(c);
+  if (fill) { c.fillStyle = fill; c.fill(); }
+  if (lw !== 0) { c.lineWidth = lw || 2.5; c.strokeStyle = OL; c.lineJoin = "round"; c.lineCap = "round"; c.stroke(); }
+}
+const ell = (x, y, rx, ry, rot) => (c) => c.ellipse(x, y, rx, ry, rot || 0, 0, Math.PI * 2);
+const box = (x, y, w, h, r) => (c) => c.roundRect(x, y, w, h, r);
+function soft(c, col, x, y, rx, ry, a) { c.globalAlpha = a; shape(c, col, ell(x, y, rx, ry), 0); c.globalAlpha = 1; }
+function rnd(seed) { let s = seed; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+
+/* ───────────────────────── 사람 (2등신) ─────────────────────────
+   기준점 (0,0) = 발바닥 가운데. 위쪽이 −y.  키 약 82: 다리 14 · 몸 26 · 머리 42.
+   늘 오른쪽 3/4 방향으로 그리고, 왼쪽을 볼 때는 통째로 좌우를 뒤집는다(dir = -1).
+   겹치는 순서: 그림자 → 망토·뒷머리 → 뒷팔 → 다리 → 몸 → 머리 → 앞머리 → 얼굴 → 모자 → 앞팔+무기 */
+function chibi(c, x, y, o, t) {
+  const walk = o.walk ? Math.sin(t * 9) : 0;                       // 걷는 박자 (−1~1)
+  const bob = o.walk ? Math.abs(Math.sin(t * 9)) * -2.5 : Math.sin(t * 2.2 + (o.ph || 0)) * 1.2; // 통통 / 숨쉬기
+  const blink = (t * 1.3 + (o.ph || 0)) % 4 > 3.85;
+  c.save();
+  c.translate(x, y);
+  const s = o.s || 1;
+  soft(c, "#2b2540", 0, 0, 21 * s, 6.5 * s, 0.22);                 // 그림자는 뒤집지 않는다
+  c.scale(s * (o.dir || 1), s);
+
+  if (o.cape) shape(c, o.cape, (c) => { c.moveTo(-10, -40); c.quadraticCurveTo(-24, -24, -19 - walk * 2, -6); c.lineTo(-2, -10); c.closePath(); });
+  // 뒷팔
+  c.save(); c.translate(-9, -36 + bob); c.rotate(walk * 0.5);
+  // 검·도끼·지팡이는 뒷손에 든다: 앞손에 들면 얼굴을 가린다
+  if (o.wp === "sword") { c.save(); c.translate(0, 15); c.rotate(-0.95);
+    shape(c, "#eef3f8", (c) => { c.moveTo(-3, -4); c.lineTo(-3, -38); c.lineTo(0, -45); c.lineTo(3, -38); c.lineTo(3, -4); c.closePath(); }); soft(c, "#ffffff", -1, -22, 0.8, 14, 0.9);
+    shape(c, "#ffcf5a", box(-7, -6, 14, 4, 2), 1.8); shape(c, "#8a5a35", box(-2, -2, 4, 7, 2), 1.5); c.restore(); }
+  if (o.wp === "axe") { c.save(); c.translate(0, 15); c.rotate(-0.8);
+    shape(c, "#8a5a35", box(-2, -44, 4, 50, 2), 1.8);
+    shape(c, "#d5dbe4", (c) => { c.moveTo(-2, -44); c.quadraticCurveTo(-22, -50, -20, -26); c.quadraticCurveTo(-10, -30, -2, -28); c.closePath(); }); c.restore(); }
+  if (o.wp === "staff") { c.save(); c.translate(0, 15); c.rotate(-0.7);
+    shape(c, "#a8743f", box(-2, -56, 4, 64, 2), 1.8); shape(c, "#bfa8ff", ell(0, -61, 8, 8)); star(c, 0, -61, 4.5, "#fff6c9"); c.restore(); }
+  shape(c, o.sleeve || o.top, box(-4, 0, 8, 15, 4)); shape(c, o.skin, ell(0, 16, 3.6, 3.6)); c.restore();
+  // 다리 (로브를 입으면 신발만)
+  [[-6, -walk], [5, walk]].forEach(([lx, w]) => {
+    c.save(); c.translate(lx + w * 4, 0);
+    if (!o.robe) shape(c, o.bot, box(-5, -17, 10, 13, 4));
+    shape(c, o.shoe || "#6b4a32", box(-6, -7 - Math.max(0, w) * 2, 13, 7, 3.5)); c.restore();
+  });
+  // 몸
+  c.save(); c.translate(0, bob);
+  if (o.robe) shape(c, o.top, (c) => { c.moveTo(-11, -40); c.lineTo(11, -40); c.quadraticCurveTo(17, -20, 16, -5); c.lineTo(-16, -5); c.quadraticCurveTo(-17, -20, -11, -40); });
+  else shape(c, o.top, box(-13, -40, 26, 27, 8));
+  soft(c, "#ffffff", -4, -33, 5, 3, 0.28);                          // 옷 윤기
+  if (o.trim) { shape(c, o.trim, box(-13, -21, 26, 4.5, 2), 0); shape(c, "#ffe08a", box(-3, -22, 6, 6.5, 2), 1.5); }
+  if (o.chest) shape(c, o.chest, box(-7, -37, 14, 11, 4), 1.8);
+  if (o.apron) shape(c, "#fff8ea", box(-9, -33, 18, 26, 5), 1.8);
+  // 머리
+  c.translate(0, bob * 0.6);
+  const H = o.hair;
+  if (o.hs === "long") shape(c, H, (c) => { c.moveTo(-25, -62); c.quadraticCurveTo(-32, -34, -20, -26); c.lineTo(-8, -34); c.closePath(); });
+  if (o.hs === "bun") shape(c, H, ell(-6, -85, 9, 8));
+  if (o.hs === "pony") shape(c, H, (c) => { c.moveTo(-20, -68); c.quadraticCurveTo(-40, -62, -30, -38); c.quadraticCurveTo(-24, -52, -18, -56); c.closePath(); });
+  shape(c, H, ell(-2, -59, 27, 24));                                // 뒷머리
+  shape(c, o.skin, ell(1, -56, 23, 20));                            // 얼굴
+  // 앞머리
+  if (o.hs === "spiky") shape(c, H, (c) => { c.moveTo(-24, -54); c.lineTo(-30, -74); c.lineTo(-17, -72); c.lineTo(-16, -92); c.lineTo(-3, -78); c.lineTo(5, -95); c.lineTo(11, -77); c.lineTo(25, -86); c.lineTo(24, -58); c.lineTo(17, -67); c.lineTo(10, -61); c.lineTo(4, -69); c.lineTo(-4, -62); c.lineTo(-11, -69); c.lineTo(-17, -60); c.closePath(); });
+  else shape(c, H, (c) => { c.moveTo(-24, -54); c.bezierCurveTo(-29, -88, 27, -92, 25, -58); c.lineTo(19, -67); c.lineTo(12, -60); c.lineTo(6, -69); c.lineTo(-3, -61); c.lineTo(-11, -69); c.lineTo(-17, -59); c.closePath(); });
+  soft(c, "#ffffff", -6, -77, 9, 3.5, 0.3);                         // 머리 윤기
+  // 얼굴: 눈 두 개(오른쪽 눈이 조금 좁다 = 3/4 방향) · 볼터치 · 입
+  const ex = o.face === "wow" ? 1.25 : 1, ey = blink ? 0.9 : 5.2 * ex;
+  [[3, 3.3], [15, 2.8]].forEach(([px, rw]) => {
+    shape(c, "#3a2a22", ell(px, -54, rw * ex, ey), 0);
+    if (!blink) shape(c, "#ffffff", ell(px + 1, -56.5, 1.2, 1.6), 0);
+  });
+  soft(c, "#ff8fa3", -5, -46, 4.5, 2.6, 0.5); soft(c, "#ff8fa3", 19, -47, 3.5, 2.4, 0.5);
+  c.lineWidth = 1.8; c.strokeStyle = OL; c.lineCap = "round"; c.beginPath();
+  if (o.face === "wow") c.ellipse(9.5, -44, 2.2, 2.8, 0, 0, Math.PI * 2);
+  else if (o.face === "sad") { c.arc(9.5, -41.5, 3.2, Math.PI * 1.15, Math.PI * 1.85); c.moveTo(-1, -63); c.lineTo(5, -61.5); c.moveTo(18, -62); c.lineTo(13, -61); }
+  else c.arc(9.5, -47, 3.2, Math.PI * 0.15, Math.PI * 0.85);
+  c.stroke();
+  if (o.beard) shape(c, o.beard, (c) => { c.moveTo(-8, -46); c.quadraticCurveTo(8, -26, 22, -47); c.quadraticCurveTo(8, -40, -8, -46); });
+  // 모자
+  if (o.hat === "helm") {
+    shape(c, "#c9d2de", (c) => { c.moveTo(-25, -66); c.bezierCurveTo(-27, -95, 27, -95, 26, -66); c.closePath(); });
+    shape(c, "#8f9bb0", box(-26, -71, 53, 7, 3)); soft(c, "#ffffff", -8, -79, 8, 4, 0.5);
+    shape(c, "#e8554e", (c) => { c.moveTo(-2, -88); c.quadraticCurveTo(-16, -106, 2, -104); c.quadraticCurveTo(10, -100, 5, -88); c.closePath(); });
+  }
+  if (o.hat === "band") { shape(c, "#e8554e", box(-25, -70, 50, 6.5, 3)); shape(c, "#e8554e", (c) => { c.moveTo(-24, -67); c.lineTo(-37, -60 + walk * 2); c.lineTo(-33, -70); c.closePath(); }); }
+  if (o.hat === "witch") {
+    shape(c, "#7b63d1", (c) => { c.moveTo(-19, -72); c.quadraticCurveTo(-8, -104, 12, -116 + bob); c.quadraticCurveTo(8, -92, 21, -72); c.closePath(); });
+    shape(c, "#6650b8", ell(1, -71, 32, 7.5)); shape(c, "#ffe08a", box(-17, -80, 35, 5, 2), 1.5); star(c, 8, -98, 4.5, "#ffe08a");
+  }
+  if (o.hat === "cap") {
+    shape(c, "#5aa86a", (c) => { c.moveTo(-25, -64); c.bezierCurveTo(-24, -92, 22, -94, 26, -66); c.quadraticCurveTo(38, -64, 40, -60); c.quadraticCurveTo(10, -66, -25, -64); });
+    shape(c, "#fff8ea", (c) => { c.moveTo(-10, -84); c.quadraticCurveTo(-26, -106, -30, -92); c.quadraticCurveTo(-22, -90, -12, -80); c.closePath(); });
+  }
+  c.restore();
+  // 앞팔 + 무기
+  c.save(); c.translate(10, -36 + bob); c.rotate(-walk * 0.5 + (o.arm || 0));
+  if (o.wp === "bow") { c.save(); c.translate(3, 14);
+    c.lineWidth = 6.5; c.strokeStyle = OL; c.beginPath(); c.arc(-4, -6, 21, -1.15, 1.15); c.stroke();
+    c.lineWidth = 3; c.strokeStyle = "#c9894a"; c.beginPath(); c.arc(-4, -6, 21, -1.15, 1.15); c.stroke();
+    c.lineWidth = 1.2; c.strokeStyle = "#fff8ea"; c.beginPath(); c.moveTo(4.6, -25.2); c.lineTo(4.6, 13.2); c.stroke(); c.restore(); }
+  if (o.wp === "bread") shape(c, "#e8b56a", box(-2, 10, 16, 9, 4.5));
+  shape(c, o.sleeve || o.top, box(-4, 0, 8, 15, 4)); shape(c, o.skin, ell(0, 16, 3.8, 3.8));
+  c.restore();
+  c.restore();
+}
+function star(c, x, y, r, col) {
+  shape(c, col, (c) => { for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r * 0.45 : r; c[i ? "lineTo" : "moveTo"](x + Math.cos(a) * rr, y + Math.sin(a) * rr); } c.closePath(); }, 1.5);
+}
+
+/* 등장인물 설정: 같은 chibi() 에 색·머리·모자·무기만 바꿔 넣는다 (옷 입히기 방식) */
+const SKIN = "#ffe0c2";
+const CAST = {
+  knight: { skin: SKIN, hair: "#8a5a3a", top: "#5b8fe0", sleeve: "#c9d2de", bot: "#44506e", trim: "#3d6bc0", chest: "#c9d2de", hat: "helm", wp: "sword", cape: "#e8554e" },
+  warrior: { skin: "#f6cfa8", hair: "#c0563f", hs: "spiky", top: "#d98a4a", bot: "#6b4a32", trim: "#8a5a35", hat: "band", wp: "axe" },
+  mage: { skin: SKIN, hair: "#f3e7ff", hs: "long", top: "#8f7be0", robe: 1, trim: "#6650b8", hat: "witch", wp: "staff" },
+  archer: { skin: SKIN, hair: "#e0b25a", hs: "pony", top: "#6fbf7a", bot: "#7a5a3a", trim: "#4f9a5c", hat: "cap", wp: "bow" },
+  marta: { skin: SKIN, hair: "#f4f0ea", hs: "bun", top: "#e58fb0", robe: 1, apron: 1, wp: "bread" },
+  kai: { skin: SKIN, hair: "#2f3d66", hs: "spiky", top: "#3f5fa8", bot: "#2b2f45", trim: "#26386e", cape: "#26386e" },
+};
+
+/* ───────────────────────── 펫 · 부엉이 · 몬스터 ───────────────────────── */
+function fox(c, x, y, t, dir, walk, s) {
+  const w = walk ? Math.sin(t * 12) : 0, wag = Math.sin(t * 6) * 0.35, hop = walk ? Math.abs(Math.sin(t * 12)) * -3 : Math.sin(t * 2.5) * 0.8;
+  c.save(); c.translate(x, y); soft(c, "#2b2540", 0, 0, 17 * (s || 1), 5 * (s || 1), 0.22); c.scale((s || 1) * dir, s || 1); c.translate(0, hop);
+  c.save(); c.translate(-12, -14); c.rotate(-0.7 + wag);                                   // 꼬리
+  shape(c, "#f08a3c", ell(-9, 0, 13, 7.5)); shape(c, "#fff8ea", ell(-17, 0, 6, 5), 0); c.restore();
+  [[-8, w], [-2, -w], [6, -w], [11, w]].forEach(([lx, k]) => shape(c, "#c96a2a", box(lx - 2.5 + k * 2.5, -8, 5.5, 9, 2.5), 2));
+  shape(c, "#f08a3c", ell(0, -14, 15, 10)); shape(c, "#fff8ea", ell(7, -10, 7, 5), 0);
+  shape(c, "#f08a3c", (c) => { c.moveTo(5, -36); c.lineTo(6, -49); c.lineTo(15, -39); c.closePath(); });   // 귀
+  shape(c, "#f08a3c", (c) => { c.moveTo(18, -39); c.lineTo(25, -48); c.lineTo(27, -35); c.closePath(); });
+  shape(c, "#f08a3c", ell(15, -27, 13.5, 12));
+  shape(c, "#fff8ea", ell(21, -22, 8.5, 6.5), 0); shape(c, "#3a2a22", ell(28.5, -24, 2.2, 1.8), 0);         // 주둥이·코
+  shape(c, "#3a2a22", ell(17, -29, 2.2, 3.4), 0); shape(c, "#fff", ell(17.7, -30.5, 0.9, 1.1), 0);
+  soft(c, "#ff8fa3", 12, -22, 3.2, 2, 0.5);
+  c.restore();
+}
+function owl(c, x, y, t) {
+  const b = Math.sin(t * 2.4) * 1.5, blink = (t * 1.1) % 4 > 3.85;
+  c.save(); c.translate(x, y); soft(c, "#2b2540", 0, 0, 20, 6, 0.22); c.translate(0, b);
+  shape(c, "#a8743f", (c) => { c.moveTo(-18, -44); c.lineTo(-22, -58); c.lineTo(-10, -52); c.closePath(); });
+  shape(c, "#a8743f", (c) => { c.moveTo(18, -44); c.lineTo(22, -58); c.lineTo(10, -52); c.closePath(); });
+  shape(c, "#a8743f", (c) => { c.moveTo(0, -56); c.bezierCurveTo(-30, -56, -28, -2, 0, -2); c.bezierCurveTo(28, -2, 30, -56, 0, -56); });
+  shape(c, "#f3dcc0", ell(0, -20, 14, 15), 0);
+  for (let i = 0; i < 3; i++) { c.lineWidth = 1.6; c.strokeStyle = "#c9a67a"; c.beginPath(); c.arc(-6 + i * 6, -18, 3, 0.2, Math.PI - 0.2); c.stroke(); }
+  shape(c, "#8a5a35", ell(-22, -24, 6, 12, 0.25)); shape(c, "#8a5a35", ell(22, -24, 6, 12, -0.25));
+  [-9, 9].forEach((ex) => { shape(c, "#fff8ea", ell(ex, -38, 8.5, 8.5), 2); shape(c, "#3a2a22", ell(ex, -38, 4, blink ? 0.8 : 4.6), 0); if (!blink) shape(c, "#fff", ell(ex + 1.2, -40, 1.3, 1.5), 0); });
+  c.lineWidth = 2; c.strokeStyle = "#e0a93a"; [-9, 9].forEach((ex) => { c.beginPath(); c.arc(ex, -38, 9.5, 0, Math.PI * 2); c.stroke(); }); c.beginPath(); c.moveTo(-1, -38); c.lineTo(1, -38); c.stroke();
+  shape(c, "#f0a43c", (c) => { c.moveTo(-3.5, -32); c.lineTo(3.5, -32); c.lineTo(0, -26); c.closePath(); }, 1.8);
+  shape(c, "#f0a43c", box(-9, -4, 7, 5, 2), 1.8); shape(c, "#f0a43c", box(2, -4, 7, 5, 2), 1.8);
+  c.restore();
+}
+function fogSlime(c, x, y, t, hit) {
+  const sq = 1 + Math.sin(t * 5) * 0.07, hop = Math.max(0, Math.sin(t * 5)) * -9;
+  c.save(); c.translate(x, y); soft(c, "#2b2540", 0, 0, 22, 6, 0.2); c.translate(0, hop); c.scale(1 / sq, sq);
+  for (let i = 0; i < 4; i++) soft(c, "#ffffff", Math.cos(t * 1.3 + i * 1.7) * 28, -16 + Math.sin(t * 1.7 + i) * 10, 9, 6, 0.45);   // 안개
+  shape(c, hit ? "#ffffff" : "#cfc6f2", (c) => { c.moveTo(-23, -2); c.bezierCurveTo(-29, -40, 29, -40, 23, -2); c.quadraticCurveTo(0, 6, -23, -2); });
+  soft(c, "#a99ae0", 0, -5, 18, 5, 0.5); soft(c, "#ffffff", -9, -27, 6, 3.5, 0.75);
+  [-8, 8].forEach((ex) => { shape(c, "#3a2a22", ell(ex, -17, 2.6, 4), 0); shape(c, "#fff", ell(ex + 0.8, -18.6, 1, 1.2), 0); });
+  soft(c, "#ff8fa3", -14, -11, 3.5, 2, 0.5); soft(c, "#ff8fa3", 14, -11, 3.5, 2, 0.5);
+  c.lineWidth = 1.8; c.strokeStyle = OL; c.beginPath(); c.arc(0, -12, 2.6, 0.15, Math.PI - 0.15); c.stroke();
+  c.restore();
+}
+function jelly(c, x, y, t) {
+  const f = Math.sin(t * 2.6) * 6;
+  c.save(); c.translate(x, y); soft(c, "#2b2540", 0, 0, 16, 5, 0.16); c.translate(0, -18 + f);
+  for (let i = 0; i < 4; i++) { const tx = -12 + i * 8; c.lineWidth = 6; c.strokeStyle = OL; c.lineCap = "round"; c.beginPath(); c.moveTo(tx, -4); c.quadraticCurveTo(tx + Math.sin(t * 4 + i) * 5, 8, tx + Math.sin(t * 4 + i + 1) * 3, 16); c.stroke(); c.lineWidth = 3; c.strokeStyle = "#ffb3dd"; c.stroke(); }
+  shape(c, "#ffc9e8", (c) => { c.moveTo(-20, -4); c.bezierCurveTo(-24, -40, 24, -40, 20, -4); c.quadraticCurveTo(10, 2, 0, -3); c.quadraticCurveTo(-10, 2, -20, -4); });
+  soft(c, "#ffffff", -8, -26, 6, 3.5, 0.8);
+  [-7, 7].forEach((ex) => { shape(c, "#3a2a22", ell(ex, -15, 2.3, 3.4), 0); shape(c, "#fff", ell(ex + 0.7, -16.4, 0.9, 1.1), 0); });
+  soft(c, "#ff7fb0", -13, -10, 3.2, 2, 0.5); soft(c, "#ff7fb0", 13, -10, 3.2, 2, 0.5);
+  c.restore();
+}
+
+/* ───────────────────────── 배경 ─────────────────────────
+   배경은 한 번만 그려 두고(bg 캔버스) 매 장면마다 그대로 붙인다. */
+function tree(c, x, y) {
+  c.save(); c.translate(x, y); soft(c, "#2b2540", 0, 0, 30, 8, 0.2);
+  shape(c, "#a8743f", (c) => { c.moveTo(-8, 0); c.quadraticCurveTo(-5, -20, -7, -34); c.lineTo(7, -34); c.quadraticCurveTo(5, -20, 9, 0); c.closePath(); });
+  [[-22, -50, 22], [22, -52, 22], [0, -74, 26], [0, -46, 24]].forEach(([a, b, r]) => shape(c, "#5fbf6a", ell(a, b, r, r * 0.9)));
+  [[-22, -50, 22], [22, -52, 22], [0, -74, 26], [0, -46, 24]].forEach(([a, b, r]) => shape(c, "#5fbf6a", ell(a, b, r - 2, r * 0.9 - 2), 0));
+  soft(c, "#a6e88f", -8, -84, 12, 7, 0.75); soft(c, "#a6e88f", -26, -58, 8, 5, 0.65); soft(c, "#3f9a55", 12, -40, 16, 8, 0.45);
+  c.restore();
+}
+function house(c, x, y) {
+  c.save(); c.translate(x, y); soft(c, "#2b2540", 0, 2, 96, 12, 0.2);
+  shape(c, "#fff3dc", box(-84, -92, 168, 92, 6)); soft(c, "#f0d9b0", 0, -8, 82, 8, 0.6);
+  shape(c, "#c97a5a", box(34, -176, 20, 40, 3));                                                     // 굴뚝
+  shape(c, "#f0685a", (c) => { c.moveTo(-100, -88); c.lineTo(-62, -160); c.quadraticCurveTo(0, -172, 62, -160); c.lineTo(100, -88); c.quadraticCurveTo(0, -78, -100, -88); });
+  c.lineWidth = 2; c.strokeStyle = "#c94a45";
+  for (let r = 0; r < 3; r++) for (let i = -4; i <= 4; i++) { c.beginPath(); c.arc(i * 19 + (r % 2) * 9, -144 + r * 20, 9, 0.15, Math.PI - 0.15); c.stroke(); }
+  soft(c, "#ffb3a8", -40, -150, 26, 5, 0.6);
+  shape(c, "#a8743f", (c) => { c.moveTo(-17, 0); c.lineTo(-17, -42); c.quadraticCurveTo(0, -60, 17, -42); c.lineTo(17, 0); c.closePath(); });
+  shape(c, "#ffcf5a", ell(9, -22, 2.6, 2.6), 1.5);
+  [-56, 56].forEach((wx) => { shape(c, "#aee3ff", box(wx - 15, -68, 30, 28, 5)); soft(c, "#ffffff", wx - 5, -60, 5, 7, 0.75); c.lineWidth = 2; c.strokeStyle = OL; c.beginPath(); c.moveTo(wx, -68); c.lineTo(wx, -40); c.moveTo(wx - 15, -54); c.lineTo(wx + 15, -54); c.stroke(); shape(c, "#e58fb0", box(wx - 18, -42, 36, 7, 3)); });
+  shape(c, "#ffe9b8", box(-30, -84, 60, 16, 5)); c.fillStyle = OL; c.font = "bold 11px sans-serif"; c.textAlign = "center"; c.fillText("마르타 빵집", 0, -72);
+  c.restore();
+}
+function sign(c, x, y) {
+  c.save(); c.translate(x, y); soft(c, "#2b2540", 0, 0, 16, 4, 0.2);
+  shape(c, "#a8743f", box(-3, -26, 6, 26, 2)); shape(c, "#e8c48a", box(-22, -46, 44, 24, 5));
+  c.lineWidth = 2; c.strokeStyle = "#a8743f"; c.beginPath(); c.moveTo(-14, -38); c.lineTo(14, -38); c.moveTo(-14, -31); c.lineTo(8, -31); c.stroke(); c.restore();
+}
+function paintBg() {
+  const bg = document.createElement("canvas"); bg.width = 960; bg.height = 540;
+  const c = bg.getContext("2d"), R = rnd(7);
+  c.fillStyle = "#a5dd85"; c.fillRect(0, 0, 960, 540);
+  for (let i = 0; i < 46; i++) soft(c, i % 2 ? "#b9e89a" : "#93cf76", R() * 960, R() * 540, 40 + R() * 70, 18 + R() * 26, 0.55);   // 풀 얼룩
+  // 흙길: 같은 선을 굵기만 달리해 세 번 긋는다 (테두리 → 가장자리 → 속)
+  const road = (w, col) => { c.lineWidth = w; c.strokeStyle = col; c.lineCap = "round"; c.lineJoin = "round"; c.beginPath(); c.moveTo(-40, 372); c.bezierCurveTo(240, 350, 430, 420, 660, 388); c.bezierCurveTo(800, 368, 880, 392, 1000, 380); c.moveTo(706, 380); c.quadraticCurveTo(700, 310, 704, 262); c.stroke(); };
+  road(92, "#8fbf6a"); road(84, "#d9b77a"); road(74, "#f0d9a8");
+  for (let i = 0; i < 60; i++) soft(c, "#e3c48c", R() * 960, 348 + R() * 56, 3 + R() * 5, 1.5 + R() * 2, 0.8);
+  // 풀 포기·꽃
+  for (let i = 0; i < 150; i++) { const gx = R() * 960, gy = R() * 540; if (gy > 328 && gy < 428) continue; c.lineWidth = 2; c.strokeStyle = "#6fb85c"; c.lineCap = "round"; c.beginPath(); c.moveTo(gx - 4, gy - 5); c.lineTo(gx, gy); c.lineTo(gx + 4, gy - 6); c.stroke(); }
+  for (let i = 0; i < 40; i++) { const fx = R() * 960, fy = R() * 540; if (fy > 322 && fy < 434) continue; const col = ["#ffffff", "#ffd86b", "#ff9fc0", "#b7a6ff"][i % 4]; for (let k = 0; k < 5; k++) shape(c, col, ell(fx + Math.cos(k * 1.257) * 3.4, fy + Math.sin(k * 1.257) * 3.4, 2.6, 2.6), 0); shape(c, "#ffb02e", ell(fx, fy, 1.8, 1.8), 0); }
+  // 연못
+  shape(c, "#8fd3ff", (c) => { c.moveTo(60, 470); c.bezierCurveTo(40, 420, 170, 410, 210, 440); c.bezierCurveTo(250, 470, 200, 520, 130, 516); c.bezierCurveTo(90, 514, 68, 500, 60, 470); });
+  soft(c, "#c9ecff", 120, 452, 44, 12, 0.8); soft(c, "#ffffff", 100, 446, 14, 4, 0.9);
+  // 울타리
+  for (let i = 0; i < 7; i++) shape(c, "#e8c48a", box(300 + i * 34, 150, 9, 30, 3));
+  shape(c, "#e8c48a", box(296, 158, 222, 7, 3)); shape(c, "#e8c48a", box(296, 170, 222, 7, 3));
+  return bg;
+}
+/* 지워진 곳: 흰 종이 + 연필 밑그림 + 반짝임 (이 게임의 핵심 장치) */
+function erased(c, x, y, t) {
+  c.save(); c.translate(x, y);
+  c.shadowColor = "rgba(255,255,255,0.9)"; c.shadowBlur = 18;
+  shape(c, "#fffdf6", (c) => { c.moveTo(-70, -40); c.lineTo(-20, -48); c.lineTo(40, -42); c.lineTo(76, -30); c.lineTo(70, 30); c.lineTo(20, 44); c.lineTo(-50, 38); c.lineTo(-78, 8); c.closePath(); }, 0);
+  c.shadowBlur = 0;
+  c.setLineDash([7, 6]); c.lineDashOffset = -t * 12; c.lineWidth = 2.2; c.strokeStyle = "#e6b84a";
+  c.beginPath(); c.moveTo(-70, -40); c.lineTo(-20, -48); c.lineTo(40, -42); c.lineTo(76, -30); c.lineTo(70, 30); c.lineTo(20, 44); c.lineTo(-50, 38); c.lineTo(-78, 8); c.closePath(); c.stroke(); c.setLineDash([]);
+  c.lineWidth = 1.6; c.strokeStyle = "#c9c2b4";                                                       // 연필로 그린 나무 밑그림
+  c.beginPath(); c.arc(0, -8, 20, 0, Math.PI * 2); c.moveTo(-5, 12); c.lineTo(-5, 28); c.moveTo(5, 12); c.lineTo(5, 28); c.stroke();
+  for (let i = 0; i < 5; i++) { const a = t * 1.5 + i * 1.26, r = 4 + Math.sin(t * 4 + i) * 2; star(c, Math.cos(a) * 56, Math.sin(a) * 30, r, "#ffe08a"); }
+  c.restore();
+}
+
+/* ───────────────────────── 글자 표시 ───────────────────────── */
+function tag(c, text, x, y, col) {
+  c.font = "bold 13px 'Gowun Dodum', 'Malgun Gothic', sans-serif"; const w = c.measureText(text).width + 14;
+  c.globalAlpha = 0.82; shape(c, col || "#2b2540", box(x - w / 2, y, w, 19, 6), 0); c.globalAlpha = 1;
+  c.fillStyle = "#fff"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(text, x, y + 10);
+}
+function bubble(c, text, x, y) {
+  c.font = "14px 'Gowun Dodum', 'Malgun Gothic', sans-serif"; const w = c.measureText(text).width + 24;
+  shape(c, "#ffffff", (c) => { c.roundRect(x - w / 2, y - 34, w, 30, 12); c.moveTo(x - 6, y - 5); c.lineTo(x, y + 6); c.lineTo(x + 7, y - 5); });
+  shape(c, "#ffffff", box(x - 8, y - 9, 17, 6, 0), 0);
+  c.fillStyle = OL; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(text, x, y - 19);
+}
+function hpbar(c, x, y, r) { shape(c, "#3a2a22", box(x - 24, y, 48, 8, 4), 0); shape(c, "#ff6b7a", box(x - 22, y + 1.5, 44 * r, 5, 2.5), 0); }
+function dmg(c, x, y, n, k) {      // k: 0→1 로 가며 튀어 오르고 사라진다
+  c.save(); c.globalAlpha = 1 - k * k; c.font = "bold 30px sans-serif"; c.textAlign = "center";
+  const yy = y - 46 * Math.sin(k * Math.PI * 0.7);
+  c.lineWidth = 6; c.strokeStyle = OL; c.lineJoin = "round"; c.strokeText(n, x, yy); c.fillStyle = "#ffe14a"; c.fillText(n, x, yy); c.restore();
+}
+
+/* ───────────────────────── 1. 마을 장면 ───────────────────────── */
+const sc = document.getElementById("scene").getContext("2d"), BG = paintBg();
+function drawScene(t) {
+  sc.drawImage(BG, 0, 0);
+  erased(sc, 420, 250, t);
+  // 주인공(기사)이 길을 왔다 갔다 하고 여우가 조금 뒤에서 따라온다
+  const ph = (t * 0.11) % 2, going = ph < 1, k = going ? ph : 2 - ph, hx = 120 + k * 430, hy = 384 + Math.sin(k * 3) * 8, dir = going ? 1 : -1;
+  const k2 = Math.sin(t * 5) > 0;                                   // 슬라임이 맞는 순간
+  const hitK = (t * 0.6) % 1;
+  const list = [
+    [140, () => tree(sc, 110, 140)], [178, () => tree(sc, 860, 178)], [262, () => house(sc, 704, 262)],
+    [306, () => { chibi(sc, 566, 306, { ...CAST.marta, ph: 1 }, t); tag(sc, "마르타 할머니", 566, 312); bubble(sc, "따끈한 빵 하나 남겨 뒀단다.", 540, 206); }],
+    [246, () => { owl(sc, 250, 246, t); tag(sc, "모모", 250, 252); }],
+    [330, () => { chibi(sc, 830, 330, { ...CAST.kai, dir: -1, ph: 2 }, t); tag(sc, "카이", 830, 336); }],
+    [470, () => { fogSlime(sc, 520, 470, t, hitK < 0.12); hpbar(sc, 520, 420 - 0, 0.6); tag(sc, "안개 슬라임", 520, 476, "#7a4a8a"); dmg(sc, 520, 420, "12", hitK); }],
+    [492, () => { jelly(sc, 700, 492, t); tag(sc, "안개 해파리", 700, 498, "#7a4a8a"); }],
+    [520, () => tree(sc, 900, 520)], [322, () => sign(sc, 318, 322)],
+    [hy, () => { fox(sc, hx - dir * 46, hy + 6, t, dir, true); chibi(sc, hx, hy, { ...CAST.knight, dir, walk: 1 }, t); tag(sc, "나 (견습 기사)", hx, hy + 6, "#3d6bc0"); }],
+  ];
+  list.sort((a, b) => a[0] - b[0]).forEach((e) => e[1]());           // 아래쪽에 있는 것이 위에 그려지게
+  // 화면 위 표시줄
+  shape(sc, "rgba(43,37,64,0.82)", box(16, 14, 312, 34, 17), 0);
+  sc.fillStyle = "#fff"; sc.font = "bold 15px 'Gowun Dodum', sans-serif"; sc.textAlign = "left"; sc.textBaseline = "middle";
+  sc.fillText("1부 루멘 마을", 32, 31); sc.fillStyle = "#ff8fa3"; sc.fillText("♥♥♥♥♥", 140, 31); sc.fillStyle = "#ffe08a"; sc.fillText("★ 별빛 가루 9", 218, 31);
+}
+
+/* ───────────────────────── 2. 캐릭터 모음 ───────────────────────── */
+const lc = document.getElementById("lineup").getContext("2d");
+function drawLineup(t) {
+  const g = lc.createLinearGradient(0, 0, 0, 300); g.addColorStop(0, "#e9f6ff"); g.addColorStop(1, "#fdf3ff");
+  lc.fillStyle = g; lc.fillRect(0, 0, 960, 300);
+  shape(lc, "#d9ecc8", box(20, 232, 920, 44, 22), 0);
+  const S = 1.45;
+  [["knight", "기사"], ["warrior", "전사"], ["mage", "마법사"], ["archer", "궁수"]].forEach(([k, n], i) => { chibi(lc, 80 + i * 118, 250, { ...CAST[k], s: S, ph: i }, t); tag(lc, n, 80 + i * 118, 262); });
+  [["", "웃음"], ["wow", "놀람"], ["sad", "울상"]].forEach(([f, n], i) => { chibi(lc, 560 + i * 92, 250, { skin: SKIN, hair: "#8a5a3a", top: "#ffd27a", bot: "#6b7fb0", face: f, s: 1.2, ph: i + 5 }, t); tag(lc, n, 560 + i * 92, 262); });
+  fox(lc, 836, 250, t, 1, false, 1.3); tag(lc, "펫", 836, 262);
+  fogSlime(lc, 916, 150, t, false); jelly(lc, 836, 150, t);
+  lc.fillStyle = "#5a5470"; lc.font = "13px 'Gowun Dodum', sans-serif"; lc.textAlign = "left";
+  lc.fillText("같은 몸에 머리 모양 · 모자 · 옷 색 · 무기만 바꿔 입혀요", 26, 26); lc.fillText("표정 3가지", 540, 26);
+}
+
+let T0 = null;
+function loop(ms) { if (T0 === null) T0 = ms; const t = (ms - T0) / 1000 + 2; drawScene(t); drawLineup(t); requestAnimationFrame(loop); }
+window.__draw = (t) => { drawScene(t); drawLineup(t); };            // 화면 확인용
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
