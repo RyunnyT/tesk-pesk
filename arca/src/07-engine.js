@@ -207,7 +207,7 @@ function qOf(id) {
 function qCount(q) {
   const s0 = save.q[q.id];
   if (!s0) return 0;
-  return Math.min(q.n, q.type === "kill" ? s0.k : save.inv[q.item] || 0);
+  return Math.min(q.n, q.type === "gather" ? save.inv[q.item] || 0 : s0.k || 0);
 }
 function nearestIn(list) {
   let b = null,
@@ -625,6 +625,17 @@ function talk(n) {
     }
   };
   if (n.mj && !save.job) return masterTalk(n);
+  // 전하기 퀘스트(type "talk"): 받는 사람에게 말을 걸면 전해진다
+  const dq = QS.find(
+    (q) => q.type === "talk" && q.to === n.id && q.toMap === M.id && save.q[q.id] && save.q[q.id].st === "active" && !save.q[q.id].k,
+  );
+  if (dq)
+    return openDlg(n, qText(dq.got), () => {
+      save.q[dq.id].k = 1;
+      store();
+      hud();
+      toast(dq.title + " · 전했어요! " + D[dq.npc].n + "에게 알려요");
+    });
   if (n.id === "momo" && !save.job)
     return openDlg(
       n,
@@ -650,6 +661,7 @@ function talk(n) {
       store();
       hud();
       toast("퀘스트를 받았어요: " + q.title);
+      if (q.type === "solve") setTimeout(() => solveRun(n, q), 400);
       if (typeof sfx === "function") sfx("quest");
     });
   if (qCount(q) >= q.n)
@@ -673,7 +685,28 @@ function talk(n) {
           (q.rw.item ? " · " + q.rw.item : ""),
       );
     });
+  if (q.type === "solve") return solveRun(n, q);
   openDlg(n, qText([q.prog + " (" + qCount(q) + " / " + q.n + ")"]));
+}
+/* 문제 풀어 주기 퀘스트(type "solve"): 부탁한 사람 앞에서 문제 n개를 맞힌다 */
+function solveRun(n, q) {
+  const s0 = save.q[q.id];
+  if (!s0 || busy) return;
+  quizBox(
+    q.title + " " + (s0.k + 1) + " / " + q.n,
+    q.dif || 2,
+    () => {
+      closeBox();
+      s0.k++;
+      store();
+      hud();
+      if (s0.k < q.n) solveRun(n, q);
+      else talk(n);
+    },
+    () => {
+      $("bm").textContent = "괜찮아, 다시 생각해 보자.";
+    },
+  );
 }
 function masterTalk(n) {
   openDlg(n, MLINES[n.id], null, [

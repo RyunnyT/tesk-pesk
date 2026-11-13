@@ -26,6 +26,7 @@
 | `src/06b-study.js` | 공부 연결: 선생님 설정 `studyCfg`(localStorage `arca-study`), 맵→부 `MAP_PART`·`mapPart`, 단원 문제 `studyQ`(makeQ 가 먼저 부름), 지문 채우기 `fillPassages`·부별 추천 지문 `PART_PICKS` |
 | `src/06c-story.js` | 이야기 장면(1~12부): 새 인물(핀·바르그·리토), 메인 지문 `STORY_BOOKS`, 서브 퀘스트 `side:1`(핵심 자리 조건·길 안내에서 빠짐)·펫 퀘스트 `pet:1`(펫이 있을 때만), 2학기 퀘스트, 스승 대사 `MLINES`·`storyJobLines`·`MENTOR_TALK`(직업별·진행별), 마을 사람 대사 `NPCL`(되살리기 전/후), 장면 `SC`(첫 방문)·`SC_BOSS`(보스 직전)·`SC_DONE`(마을 완료), 재생 `playScene`, 7부 나를 잊은 스승 `MENTOR_FORGOT`·`MENTOR_REMEMBER`, 마지막 결말 `storyFinale`(맞힌 문제 수 `save.solved` 를 보여 주고 `save.fin`). 본 장면은 `save.st` 에 기록 |
 | `src/07-engine.js` | 지워진 곳(패치)·별빛 가루, 맵 불러오기 `loadMap`, 메인 퀘스트 길찾기 `rawGoal`·`goal`·`hop`, 대화·선택지, 전투, 마이룸 패널, 입력, 그리기 루프 `frame` |
+| `src/08-ui.js` | 엔진 뒤에 붙는 화면·게임 요소: 휴대폰 화면 맞춤 `fitView`(W×H 를 바꿈)·메뉴(☰), 효과음 `sfx`(Web Audio, 끄기 `UI.mute`), 전투 연출 `fxHit`·`fxHurt`·`fxLunge`·`drawFx`·체력 막대, 틀린 문제 `noteWrong`·`PANEL.wrong`, 대화 얼굴 `drawPortrait`(openDlg 를 감쌈), 나침반 조각 `shardCount`·알림, 바랜 마을 `drawFade`·`fxRestore`, 마을 꾸미기 `decoMap`(간판·차양·굴뚝·소품), 스킬 이펙트 `fxSkill`, 건물 안 `bRoom`(lib1·lh1), 새 퀘스트(`talk` 전하기·`solve` 문제 풀어 주기), 일지·지도 칸, 시작 화면 |
 | `docs/그림_업그레이드_기록.md` | 그림을 2등신 캐주얼풍으로 바꾸는 작업의 기록(결정·그리는 방법·적용 계획). **그림 작업은 이 문서를 먼저 읽는다.** 견본은 `prototypes/4_메이플풍_그림_견본.html` |
 | `prototypes/` | 이전 시안(참고용). 옆에서 본 풍경 그림 12장은 나중에 이야기 장면 그림으로 재사용 가능 |
 | `../quiz-bank.js` | Pesk 와 같은 수학 문제 은행 (학년·학기·단원·난이도). N부 = 그 학기 N단원 |
@@ -50,7 +51,8 @@
 - 길목 추가: `RSPEC` 에 항목 추가(`theme`, `tier`, `mons`, `node`, `prev`/`next`, 막다른 길이면 `dead`), `CHAIN` 과 `DEADS` 갱신. 출입 좌표는 `wireEntries()` 가 자동 연결.
 - 마을 추가: `TSPEC` 에 추가(`lm` 랜드마크, `blds`, `npcs`, `spots` 6개 중 첫째가 메인 지문), `PARTS` 와 `PARTTOWN` 에 부 정보 추가. 랜드마크 그림은 `LMD` 에.
 - 몬스터: `MON` 에 `{n,hp,dmg,dif,exp,dust,gold,spd,dr}`; 길목 단계에 따른 강화는 `mstat()`.
-- 퀘스트: `QS.push({id,map,npc,type:'kill'|'gather',mon|item,n,title,where,offer,prog,done,rw})`. `side:1` 이면 서브(핵심 자리를 여는 데 필요 없음).
+- 퀘스트: `QS.push({id,map,npc,type:'kill'|'gather'|'talk'|'solve',mon|item,n,title,where,offer,prog,done,rw})`. `side:1` 이면 서브(핵심 자리를 여는 데 필요 없음). `talk` 는 `to`(받는 사람)·`toMap`·`got`(받는 사람 대사), `solve` 는 `dif` 난이도로 부탁한 사람 앞에서 문제 n개.
+- 건물 안: `bRoom(id, 이름, 돌아갈 마을, 돌아갈 좌표, 가구, 사람)` 후 마을 건물에 `to`·`at` 를 붙인다(`src/08-ui.js`).
 - 이야기 장면: `06c-story.js` 의 한 줄 = `[누가, 대사, 조건]`. 누가는 `nar`·`me`·`pet`·`mentor`·인물 id, 대사는 문자열 또는 직업별 객체, 조건 `warm`/`cool` 은 1부 카이 선택. 엔진은 `storyEnter`·`storyBoss`·`storyPartDone`·`storyTalk`·`storyLines`·`storyJobLines` 만 부른다.
 - 지문: 각 맵의 `spots`. 번호는 `CHAIN` 순서로 자동(1년 105자리). 학년 수준 75편을 다 쓰면 한 단계 위 수준(`LEVEL_NEXT`)에서 이어 채운다. 본문 `p` 가 있거나 `main` 인 자리는 이야기 전용이라 그대로 두고, 나머지는 `fillPassages()` 가 지문 은행에서 채운다(부별 추천 `PART_PICKS` 먼저, 그다음 분야를 돌아가며). 문제 `q` 는 `[질문, 보기들, 정답 번호(0부터)]` 목록.
 - 문제: `makeQ(dif)` 가 `studyQ(dif)` 를 먼저 부른다. 길목 단계 dif 1~2→은행 tier 1, 3→2, 4~5→3. 보기는 3개(정답+오답 2).
@@ -67,4 +69,6 @@
 - 마을 패치의 연필 밑그림은 맵 전체 가장자리 검출이라, 큰 맵에서 첫 진입 때 잠깐 걸릴 수 있다.
 - 한 사람이 퀘스트를 여러 개 줄 수 있다: `qFor(n)` 이 끝나지 않은 것부터 준다. 퀘스트 대사의 `{pet}` 은 `storyText` 가 펫 이름으로 바꾼다.
 - `curPart()`(07-engine)는 이야기 진행 단계(0부터)이고, `mapPart()`(06b)는 지금 서 있는 맵의 부(1부터)다. 헷갈리지 않게.
+- 화면 크기 `W`·`H` 는 `let` 이다(휴대폰에서 바뀜). 화면 좌표 계산에 320·180 을 직접 쓰지 않는다.
+- 엔진 함수 `openDlg`·`hud`·`drawFx`·`storyTalk` 등은 뒤 파일이 감싸서(원래 함수를 부른 뒤 덧붙임) 기능을 더한다. 고칠 때 감싼 쪽도 확인한다.
 - 전역 이름이 많다. 새 전역을 만들 때 기존 이름(`M`, `G`, `O`, `B`, `T`, `W`, `H`, `x` 등)과 겹치지 않게 한다.

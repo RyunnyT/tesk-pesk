@@ -604,3 +604,213 @@ function fxSkill(t, nm) {
     });
   };
 }
+
+/* ════════ 건물 안 (루멘 도서관 · 루멘 등대) ════════ */
+Object.assign(FURD, {
+  desk(c, X, Y) {
+    P(c, X, Y + 2, 32, 12, "#5e3f29");
+    P(c, X + 1, Y + 3, 30, 9, "#8a5a3b");
+    P(c, X + 4, Y - 2, 8, 5, "#f5efe2");
+    P(c, X + 5, Y - 1, 6, 1, "#c9c2b4");
+    P(c, X + 20, Y - 4, 3, 7, "#FAC775");
+    P(c, X + 21, Y - 6, 1, 2, "#ff9f43");
+  },
+  lens(c, X, Y) {
+    disc(c, X + 16, Y + 8, 14, "#3a3c4a");
+    disc(c, X + 16, Y + 8, 12, "#bfe6ff");
+    disc(c, X + 16, Y + 8, 8, "#e8f6ff");
+    disc(c, X + 12, Y + 4, 3, "#ffffff");
+    P(c, X + 13, Y + 20, 6, 10, "#3a3c4a");
+  },
+  globe(c, X, Y) {
+    disc(c, X + 8, Y + 4, 6, "#3a7ac0");
+    P(c, X + 5, Y + 2, 4, 3, "#5a9e3a");
+    P(c, X + 9, Y + 5, 3, 2, "#5a9e3a");
+    P(c, X + 7, Y + 10, 2, 5, "#8a5a35");
+    P(c, X + 4, Y + 15, 8, 1, "#5e3f29");
+  },
+});
+function bRoom(id, name, back, backAt, fur, npcs, floor) {
+  const m = nm(18, 12, floor || "F"),
+    G = m.G,
+    O = m.O;
+  Object.assign(m, { id, n: name, short: name, kind: "room", theme: "town", spawn: [8, 9] });
+  FL(G, 0, 0, 17, 2, "W");
+  FL(G, 0, 11, 17, 11, "W");
+  FL(G, 0, 0, 0, 11, "W");
+  FL(G, 17, 0, 17, 11, "W");
+  G[11][8] = floor || "F";
+  G[11][9] = floor || "F";
+  m.fur = fur;
+  fur.forEach((f) => f.w && FL(O, f.x, f.y, f.x + f.w - 1, f.y + f.h - 1, "U"));
+  Object.assign(m, { bld: [], spots: [], npcs, mons: [], locks: [], nodes: [] });
+  m.exits = [{ x0: 8, y0: 11, x1: 9, y1: 11, to: back, at: backAt, d: "d" }];
+  MAPS[id] = m;
+  CNAME[id] = name;
+  MAP_PART[id] = MAP_PART[back] || 1;
+  return m;
+}
+D.lumi = { n: "사서 루미", hair: "#3a2a5a", ht: "long", top: "#7F77DD", top2: "#f5e3a3", robe: 1 };
+bRoom(
+  "lib1",
+  "루멘 도서관",
+  "t1",
+  [19, 27],
+  [
+    { id: "window", x: 2, y: 0 },
+    { id: "shelf", x: 1, y: 3, w: 3, h: 1 },
+    { id: "shelf", x: 5, y: 3, w: 3, h: 1 },
+    { id: "shelf", x: 10, y: 3, w: 3, h: 1 },
+    { id: "shelf", x: 14, y: 3, w: 3, h: 1 },
+    { id: "rug", x: 5, y: 6 },
+    { id: "desk", x: 12, y: 7, w: 2, h: 1 },
+    { id: "globe", x: 2, y: 7, w: 1, h: 1 },
+  ],
+  [["lumi", 13, 9, ["모모 선생님은 늘 바쁘셔. 그래서 내가 책장을 지키지.", "도서관 맨 위 받침대, 보이지? 별의 나침반이 놓여 있던 자리야."]]],
+);
+bRoom(
+  "lh1",
+  "루멘 등대 안",
+  "t1",
+  [34, 7],
+  [
+    { id: "window", x: 2, y: 0 },
+    { id: "window", x: 12, y: 0 },
+    { id: "lens", x: 7, y: 3, w: 2, h: 2 },
+    { id: "desk", x: 12, y: 7, w: 2, h: 1 },
+    { id: "plant", x: 2, y: 4, w: 1, h: 1 },
+  ],
+  [["oscar", 4, 8, ["등대 렌즈는 별빛으로 닦는다네. 30년 동안 하루도 거르지 않았지.", "젊은 시절 자네 스승을 이 등대에서 처음 만났다네. 「새벽의 넷」… 허허, 그립구먼."]]],
+);
+{
+  const lib = MAPS.t1.bld.find((b) => b.n === "루멘 도서관"),
+    lh = MAPS.t1.bld.find((b) => b.n === "등대");
+  if (lib) Object.assign(lib, { to: "lib1", at: [8, 9] });
+  if (lh) Object.assign(lh, { to: "lh1", at: [8, 9] });
+}
+
+/* ════════ 새 퀘스트 형식: 전하기(talk) · 문제 풀어 주기(solve) ════════ */
+QS.push(
+  { id: "s14", side: 1, map: "t1", npc: "fin", type: "talk", to: "oscar", toMap: "lh1", n: 1, title: "등대로 가는 편지",
+    where: "lh1", offer: ["또 부탁해서 미안! 항구에 사는 소라가 오스카 할아버지께 편지를 보냈대.", "등대 안에 계실 거야. 대신 전해 줄래?"],
+    prog: "오스카 할아버지는 등대 안에 계셔.", got: ["오, 손녀 소라의 편지로구먼! 「할아버지, 등대가 꺼져서 무서워요」라…", "핀에게 고맙다고 전해 주게. 답장은 내가 직접 가져가겠네."],
+    done: ["전해 줬구나! 우체부 친구, 고마워!"], rw: { exp: 15, gold: 15, dust: 3 } },
+  { id: "s15", side: 1, map: "lib1", npc: "lumi", type: "solve", n: 3, dif: 1, title: "뒤섞인 책장 정리",
+    where: "lib1", offer: ["책 번호가 뒤섞여 버렸어! 번호를 맞춰야 제자리에 꽂을 수 있는데…", "문제 3개만 같이 풀어 줄래?"],
+    prog: "책 번호 문제를 같이 풀자!", done: ["책장이 반듯해졌어! 이 책갈피 가져가."], rw: { exp: 20, gold: 10, dust: 4, item: "도서관 책갈피" } },
+  { id: "s16", side: 1, map: "t2", npc: "goldwin", type: "solve", n: 3, dif: 2, title: "공정한 값 계산",
+    where: "t2", offer: ["…좋아, 인정하지. 값을 너무 올렸어. 그런데 공정한 값이 얼마인지 계산을 못 하겠어.", "계산 3개만 도와주면 오늘부터 바른 값에 팔지."],
+    prog: "계산을 도와주게.", done: ["이제 손님들이 다시 오는군. 흥, 고맙네."], rw: { exp: 30, gold: 30, dust: 4 } },
+  { id: "s17", side: 1, map: "t5", npc: "popo", type: "solve", n: 3, dif: 3, title: "포포의 시험 공부",
+    where: "t5", offer: ["내일 시험인데 하나도 모르겠어… 같이 풀어 줄래?", "딱 3문제만!"],
+    prog: "같이 풀자! 천천히!", done: ["다 맞았다! 나도 할 수 있구나!"], rw: { exp: 40, gold: 20, dust: 4 } },
+  { id: "s18", side: 1, map: "t8", npc: "harold", type: "solve", n: 4, dif: 3, title: "창고 장부 다시 쓰기",
+    where: "t8", offer: ["장부의 지워진 숫자를 다시 셈해야 하네.", "4줄만 함께 계산해 주겠나?"],
+    prog: "장부 숫자를 함께 셈해 보세.", done: ["장부가 다시 바르게 쓰였어! 이웃끼리 다툴 일이 없겠군."], rw: { exp: 70, gold: 40, dust: 5 } },
+  { id: "s19", side: 1, map: "t9", npc: "momone", type: "talk", to: "luke", toMap: "t9", n: 1, title: "루크에게 줄 별자리 책",
+    where: "t9", offer: ["루크가 별 그림을 그리는데 별자리 책이 필요하대요.", "이 책을 루크에게 전해 줄래요?"],
+    prog: "루크는 도서관 마당에서 그림을 그리고 있어요.", got: ["우와, 별자리 책이다! 형한테 보여 줄 그림을 더 잘 그릴 수 있겠다!"],
+    done: ["전해 줬군요. 루크가 웃는 얼굴, 오래 기억하고 싶어요."], rw: { exp: 70, gold: 30, dust: 4 } },
+);
+EQ.c_mark = { s: "c", n: "도서관 책갈피", exp: 0.1, d: "경험치 +10%" };
+if (typeof I2E === "object") I2E["도서관 책갈피"] = "c_mark";
+
+/* ════════ 일지 · 세계 지도 (마이룸 창 칸) ════════ */
+TABS.push(["log", "일지"], ["world", "지도"]);
+function sceneList() {
+  const L = [];
+  PARTTOWN.forEach((id, k) => {
+    if (save.st["in_" + id]) L.push(["in_" + id, k + 1 + "부 · " + MAPS[id].short + "에 오다"]);
+    if (save.st["boss_" + k]) L.push(["boss_" + k, k + 1 + "부 · 보스 앞"]);
+    if (save.st["done_" + k]) L.push(["done_" + k, k + 1 + "부 · 마을을 되살리다"]);
+  });
+  if (save.st.finale) L.push(["finale", "12부 · 졸업식"]);
+  return L;
+}
+function sceneLines(key) {
+  if (key === "finale") return SC_FINALE;
+  const [kind, k] = key.split("_");
+  return kind === "in" ? SC[k] : kind === "boss" ? SC_BOSS[k] : SC_DONE[k];
+}
+PANEL.log = function () {
+  const act = QS.filter((q) => save.q[q.id] && save.q[q.id].st === "active"),
+    done = QS.filter((q) => save.q[q.id] && save.q[q.id].st === "done").length,
+    g = goal(),
+    tagOf = (q) => (q.pet ? "펫" : q.side ? "서브" : "메인"),
+    where = (q) => CNAME[q.type === "talk" ? q.toMap : q.where] || "";
+  return (
+    "<h4>지금 할 일</h4>" +
+    (g ? '<div class="it"><span><small>메인</small><b>' + esc(g.t) + "</b></span></div>" : '<p class="hint">메인 이야기를 모두 끝냈어요!</p>') +
+    "<h4>받은 부탁 " + act.length + "개 · 끝낸 부탁 " + done + "개</h4>" +
+    (act.length
+      ? act.map((q) => '<div class="it"><span><small>' + tagOf(q) + " · " + esc(where(q)) + "</small><b>" + esc(storyText(q.title)) + "</b></span><em>" + qCount(q) + " / " + q.n + "</em></div>").join("")
+      : '<p class="hint">머리 위에 ! 가 있는 사람에게 말을 걸면 부탁을 받아요.</p>') +
+    "<h4>지난 이야기 다시 보기</h4>" +
+    (sceneList().length
+      ? sceneList().map(([k, n]) => '<div class="it"><span><b>' + n + '</b></span><button type="button" data-replay="' + k + '">다시 보기</button></div>').join("")
+      : '<p class="hint">아직 본 이야기가 없어요.</p>')
+  );
+};
+PANEL.world = function () {
+  const now = curPart();
+  return (
+    '<p class="hint">별의 나침반으로 가 본 마을 사이를 오갈 수 있어요(마을 안 「별의 나침반 · 순간이동」).</p>' +
+    compassHTML(shardCount()) +
+    '<div class="wmap">' +
+    PARTTOWN.map((id, k) => {
+      const st = partDone(k) ? "done" : save.vis[id] ? "seen" : k === now ? "next" : "lock";
+      const lab = { done: "되살림", seen: "가 봄", next: "다음 목적지", lock: "아직" }[st];
+      return (
+        '<div class="wn ' + st + (M.id === id ? " here" : "") + '"><small>' + (k + 1) + "부" + (k === 5 ? " · 1학기 끝" : "") + "</small><b>" +
+        (save.vis[id] ? esc(MAPS[id].short) : "???") + "</b><em>" + (M.id === id ? "지금 여기" : lab) + "</em></div>"
+      );
+    }).join("") +
+    "</div>"
+  );
+};
+$("panel").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b || !b.dataset.replay) return;
+  const L = sceneLines(b.dataset.replay);
+  closePanel();
+  if (L) setTimeout(() => playScene(L, () => {}), 100);
+});
+
+/* ════════ 시작 화면 ════════ */
+{
+  const tl = document.createElement("div"),
+    started = !!(save.met.momo || save.job);
+  tl.className = "titlebox";
+  tl.innerHTML =
+    '<div class="tin"><small>ARCA CHRONICLES</small><h2>아르카 연대기</h2><p>배운 것이 별빛이 되는 왕국의 1년</p>' +
+    (started
+      ? '<button type="button" data-t="go">이어하기</button><button type="button" class="ghost" data-t="new">처음부터</button><small class="tsave">' +
+        esc(save.name || "견습생") + " · " + esc(MAPS[save.map] ? MAPS[save.map].n : "") + " · Lv " + save.lv + "</small>"
+      : '<label>견습생 이름 <input id="tname" maxlength="8" value="' + esc(save.name || "") + '" placeholder="이름을 적어요"></label><button type="button" data-t="start">모험 시작</button>') +
+    "</div>";
+  $("stage").appendChild(tl);
+  busy = true;
+  const close = () => {
+    tl.remove();
+    busy = false;
+    sfx("restore");
+    $("stage").focus();
+    if (typeof storyEnter === "function") storyEnter(M.id);
+  };
+  tl.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    const t = b.dataset.t;
+    if (t === "go") close();
+    else if (t === "new") $("reset").click();
+    else if (t === "start") {
+      const v = ($("tname").value || "").trim().slice(0, 8);
+      save.name = v || "견습생";
+      store();
+      close();
+    }
+  });
+  tl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") (tl.querySelector("[data-t=start]") || tl.querySelector("[data-t=go]")).click();
+  });
+}
