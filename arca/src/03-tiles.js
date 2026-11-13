@@ -315,6 +315,7 @@ function paintMap(m) {
   for (let y = 0; y < MH; y++) for (let a = 0; a < MW; a++) ground(bc, a, y);
   for (let y = 0; y < MH; y++) for (let a = 0; a < MW; a++) objDraw(bc, oc, a, y);
   m.bld.forEach((b) => (b.lm && b.lm !== "tower" ? LMD[b.lm](bc, oc, b) : bldDraw(bc, b)));
+  if (typeof decoMap === "function") decoMap(m, bc); // 간판·차양·굴뚝·마을 소품 → src/08-ui.js
   m.spots.forEach((s) => spotDraw(bc, s));
   (m.fur || []).forEach((f) => FURD[f.id](bc, f.x * T, f.y * T));
 }

@@ -410,3 +410,197 @@ function fxRestore() {
     });
   };
 }
+
+/* ════════ 마을 꾸미기 ════════
+   paintMap 이 지도를 처음 그릴 때 부른다(decoMap). 건물 이름을 보고 간판 그림·차양·굴뚝을 붙이고,
+   마을 풀밭 빈자리에 지형에 맞는 소품을 놓는다. 소품은 그림일 뿐 길을 막지 않는다. */
+const ICON = {
+  bread: (c, x0, y0) => (P(c, x0, y0 + 1, 6, 3, "#c98a3a"), P(c, x0 + 1, y0, 4, 1, "#e0a85a"), P(c, x0 + 1, y0 + 2, 1, 1, "#f5e3a3"), P(c, x0 + 4, y0 + 2, 1, 1, "#f5e3a3")),
+  fish: (c, x0, y0) => (P(c, x0, y0 + 1, 4, 2, "#5aa6dc"), P(c, x0 + 4, y0, 2, 4, "#3a7ac0"), P(c, x0 + 1, y0 + 1, 1, 1, "#1e1b3f")),
+  hammer: (c, x0, y0) => (P(c, x0, y0, 5, 2, "#5F5E5A"), P(c, x0 + 2, y0 + 2, 1, 3, "#8a5a35")),
+  book: (c, x0, y0) => (P(c, x0, y0, 6, 4, "#534AB7"), P(c, x0 + 1, y0 + 1, 4, 2, "#f5efe2"), P(c, x0 + 3, y0, 1, 4, "#3C3489")),
+  coin: (c, x0, y0) => (P(c, x0 + 1, y0, 4, 4, "#d9a63a"), P(c, x0 + 2, y0 + 1, 2, 2, "#ffd86b")),
+  bed: (c, x0, y0) => (P(c, x0, y0 + 2, 6, 2, "#3a7ac0"), P(c, x0, y0 + 1, 2, 1, "#ffffff"), P(c, x0, y0, 1, 4, "#5e3f29")),
+  flag: (c, x0, y0) => (P(c, x0, y0, 1, 5, "#5e3f29"), P(c, x0 + 1, y0, 4, 3, "#E24B4A")),
+  wheat: (c, x0, y0) => (P(c, x0 + 2, y0 + 1, 1, 4, "#8a7a2a"), P(c, x0 + 1, y0, 3, 2, "#e8c56a"), P(c, x0, y0 + 2, 2, 1, "#e8c56a"), P(c, x0 + 3, y0 + 2, 2, 1, "#e8c56a")),
+  note: (c, x0, y0) => (P(c, x0 + 3, y0, 1, 4, "#1e1b3f"), P(c, x0 + 1, y0 + 3, 3, 2, "#1e1b3f"), P(c, x0 + 4, y0, 2, 1, "#1e1b3f")),
+  star: (c, x0, y0) => (P(c, x0 + 2, y0, 2, 5, "#ffd86b"), P(c, x0, y0 + 2, 6, 1, "#ffd86b")),
+  tent: (c, x0, y0) => (P(c, x0 + 2, y0, 2, 1, "#c0563f"), P(c, x0 + 1, y0 + 1, 4, 2, "#c0563f"), P(c, x0, y0 + 3, 6, 1, "#c0563f")),
+};
+function bldKind(n) {
+  const has = (...k) => k.some((w) => n.includes(w));
+  if (has("빵")) return { i: "bread", awn: 1, smoke: 1 };
+  if (has("생선", "조개")) return { i: "fish", awn: 1 };
+  if (has("대장", "공장", "공방")) return { i: "hammer", smoke: 1 };
+  if (has("도서", "서고", "서점", "기록", "책")) return { i: "book", awn: has("서점") };
+  if (has("상점", "가게", "기념품", "매표", "골드윈")) return { i: "coin", awn: 1 };
+  if (has("숙소", "여관", "기숙사")) return { i: "bed" };
+  if (has("길드", "본부", "군대", "무대")) return { i: "flag", flag: 1 };
+  if (has("창고", "곡식", "촌장", "콩순", "팥돌")) return { i: "wheat" };
+  if (has("노래", "악기")) return { i: "note" };
+  if (has("천막", "막사")) return { i: "tent", flag: 1 };
+  return { i: "star" };
+}
+const PROPS = {
+  barrel: (c, X, Y) => (P(c, X + 4, Y + 5, 8, 10, "#7a4e2d"), P(c, X + 4, Y + 7, 8, 1, "#4a3020"), P(c, X + 4, Y + 12, 8, 1, "#4a3020"), P(c, X + 5, Y + 5, 2, 10, "#9a6a40")),
+  crate: (c, X, Y) => (P(c, X + 3, Y + 6, 10, 9, "#a8742a"), P(c, X + 3, Y + 6, 10, 1, "#7a5220"), P(c, X + 7, Y + 6, 2, 9, "#7a5220")),
+  net: (c, X, Y) => { for (let i = 0; i < 4; i++) (P(c, X + 2 + i * 3, Y + 6, 1, 8, "#c9b48a"), P(c, X + 2, Y + 7 + i * 2, 11, 1, "#c9b48a")); },
+  lamp: (c, X, Y) => (P(c, X + 7, Y + 4, 2, 11, "#3a3a44"), P(c, X + 5, Y + 1, 6, 4, "#3a3a44"), P(c, X + 6, Y + 2, 4, 2, "#ffd86b"), P(c, X + 5, Y + 14, 6, 1, "#3a3a44")),
+  hay: (c, X, Y) => (P(c, X + 2, Y + 7, 12, 8, "#d9b84a"), P(c, X + 4, Y + 5, 8, 2, "#e8c56a"), P(c, X + 2, Y + 10, 12, 1, "#a8892a")),
+  pumpkin: (c, X, Y) => (P(c, X + 4, Y + 9, 8, 6, "#e07a2a"), P(c, X + 7, Y + 9, 1, 6, "#b85a1a"), P(c, X + 7, Y + 7, 2, 2, "#3B6D11")),
+  mush: (c, X, Y) => (P(c, X + 3, Y + 9, 6, 3, "#c0563f"), P(c, X + 5, Y + 12, 2, 3, "#efe2c8"), P(c, X + 9, Y + 11, 4, 2, "#e0a040"), P(c, X + 10, Y + 13, 2, 2, "#efe2c8")),
+  log: (c, X, Y) => (P(c, X + 1, Y + 10, 14, 5, "#7a573b"), P(c, X + 1, Y + 10, 3, 5, "#c9a67a"), P(c, X + 2, Y + 11, 1, 3, "#a8845a")),
+  pot: (c, X, Y) => (P(c, X + 5, Y + 10, 6, 5, "#c0563f"), P(c, X + 4, Y + 9, 8, 2, "#a8342e"), P(c, X + 5, Y + 6, 2, 3, "#ff9fc0"), P(c, X + 9, Y + 5, 2, 4, "#ffd86b"), P(c, X + 7, Y + 7, 2, 2, "#5a9e3a")),
+  bench: (c, X, Y) => (P(c, X + 1, Y + 8, 14, 2, "#8a5a35"), P(c, X + 1, Y + 11, 14, 2, "#8a5a35"), P(c, X + 2, Y + 13, 2, 3, "#5e3f29"), P(c, X + 12, Y + 13, 2, 3, "#5e3f29")),
+  snowman: (c, X, Y) => (P(c, X + 4, Y + 9, 8, 6, "#f6f8fb"), P(c, X + 5, Y + 4, 6, 5, "#f6f8fb"), P(c, X + 6, Y + 6, 1, 1, "#1e1b3f"), P(c, X + 9, Y + 6, 1, 1, "#1e1b3f"), P(c, X + 7, Y + 7, 2, 1, "#e07a2a"), P(c, X + 5, Y + 3, 6, 1, "#c0563f")),
+  crystal: (c, X, Y) => (P(c, X + 6, Y + 4, 3, 11, "#9fd0f0"), P(c, X + 3, Y + 8, 3, 7, "#bfe6ff"), P(c, X + 10, Y + 9, 3, 6, "#bfe6ff"), P(c, X + 7, Y + 5, 1, 4, "#ffffff")),
+  lantern: (c, X, Y) => (P(c, X + 7, Y + 2, 2, 13, "#9a93a8"), P(c, X + 5, Y + 4, 6, 5, "#f6f3ea"), P(c, X + 6, Y + 5, 4, 3, "#fff6c9")),
+  paper: (c, X, Y) => (P(c, X + 2, Y + 8, 10, 7, "#fffdf6"), P(c, X + 3, Y + 10, 6, 1, "#c9c2b4"), P(c, X + 3, Y + 12, 4, 1, "#c9c2b4")),
+  fbook: (c, X, Y) => (P(c, X + 3, Y + 4, 9, 6, "#534AB7"), P(c, X + 4, Y + 5, 7, 4, "#f5efe2"), P(c, X + 7, Y + 4, 1, 6, "#3C3489"), P(c, X + 5, Y + 14, 6, 1, "rgba(0,0,0,0.15)")),
+  star: (c, X, Y) => (P(c, X + 7, Y + 3, 2, 8, "#ffd86b"), P(c, X + 4, Y + 6, 8, 2, "#ffd86b"), P(c, X + 7, Y + 6, 2, 2, "#fff6d0")),
+};
+const PROPSET = {
+  coast: ["barrel", "crate", "net", "lamp"],
+  stone: ["crate", "lamp", "barrel", "crate"],
+  gold: ["hay", "pumpkin", "hay", "crate"],
+  forest: ["mush", "log", "mush", "pot"],
+  garden: ["pot", "bench", "lamp", "pot"],
+  town: ["pot", "bench", "barrel", "lamp"],
+  snow: ["snowman", "crystal", "lamp", "crystal"],
+  white: ["lantern", "paper", "lantern", "paper"],
+  dream: ["fbook", "star", "fbook", "lamp"],
+  dead: ["log", "mush", "lantern", "log"],
+};
+function decoMap(m, bc) {
+  (m.bld || []).forEach((b) => {
+    if (b.lm || b.tower || !b.n) return;
+    const k = bldKind(b.n),
+      X = b.x * T,
+      Y = b.y * T,
+      w = b.w * T,
+      h = b.h * T,
+      rh = Math.round(h * 0.5),
+      wy = Y + rh,
+      dxp = b.dx * T + 3;
+    // 간판 그림
+    P(bc, dxp, Y + rh - 8, 10, 6, "#f5e3a3");
+    ICON[k.i](bc, dxp + 2, Y + rh - 7);
+    // 차양(줄무늬)
+    if (k.awn)
+      for (let a = X + 3; a < X + w - 3; a++) {
+        P(bc, a, wy + 1, 1, 3, Math.floor((a - X) / 3) % 2 ? "#ffffff" : b.roof);
+        if ((a - X) % 3 === 1) P(bc, a, wy + 4, 1, 1, b.roofD);
+      }
+    // 굴뚝
+    if (k.smoke) {
+      P(bc, X + w - 15, Y + 1, 7, 10, "#3a2418");
+      P(bc, X + w - 14, Y + 2, 5, 9, "#a8574a");
+      b.smoke = [X + w - 12, Y];
+    }
+    // 지붕 깃발
+    if (k.flag) {
+      P(bc, X + w / 2, Y - 8, 1, 10, "#3a2418");
+      P(bc, X + w / 2 + 1, Y - 8, 6, 4, b.roofD || "#E24B4A");
+    }
+  });
+  if (m.kind !== "town") return;
+  const set = PROPSET[m.theme] || PROPSET.town;
+  let n = 0;
+  for (let y = 2; y < m.h - 2 && n < 14; y++)
+    for (let a = 2; a < m.w - 2 && n < 14; a++) {
+      const g = m.G[y][a];
+      if ((g !== "." && g !== ",") || m.O[y][a]) continue;
+      let free = true;
+      for (let dy = -1; dy <= 1 && free; dy++)
+        for (let dx = -1; dx <= 1; dx++) {
+          const o = (m.O[y + dy] || [])[a + dx],
+            g2 = (m.G[y + dy] || [])[a + dx];
+          if (o || g2 === ":" || g2 === "b") {
+            free = false;
+            break;
+          }
+        }
+      if (!free || hsh(a * 31, y * 17 + m.w) % 23) continue;
+      PROPS[set[n % set.length]](bc, a * T, y * T);
+      n++;
+    }
+}
+
+/* ════════ 스킬 이펙트 ════════ */
+FX.sk = [];
+function fxSkill(t, nm) {
+  if (!B) return;
+  sfx("skill");
+  FX.sk.push({ t: 0, job: save.job || "knight", eff: t, nm });
+  if (t === "heal") fxPop(pl.x, pl.y - 26, "+2♥", "#7ee07a");
+}
+{
+  const fx1 = drawFx;
+  drawFx = function () {
+    fx1();
+    // 굴뚝 연기
+    (M.bld || []).forEach((b) => {
+      if (!b.smoke) return;
+      for (let i = 0; i < 3; i++) {
+        const k = (fr + i * 7) % 21,
+          sx = b.smoke[0] - cam.x + Math.sin((fr + i * 5) / 4) * 2,
+          sy = b.smoke[1] - cam.y - k;
+        x.globalAlpha = 0.55 * (1 - k / 21);
+        P(x, sx - 2, sy, 4 + (k >> 3), 3, "#e9e6f0");
+        x.globalAlpha = 1;
+      }
+    });
+    FX.sk = FX.sk.filter((s) => s.t++ < 24);
+    FX.sk.forEach((s) => {
+      if (!B) return;
+      const k = s.t,
+        mx = B.m.x - cam.x,
+        my = B.m.y - cam.y - 8,
+        px = pl.x - cam.x,
+        py = pl.y - cam.y - 8,
+        col = JOBCOL[s.job],
+        atk = s.eff === "hit2" || s.eff === "hit3" || s.eff === "ult";
+      if (s.eff === "guard") {
+        for (let i = 0; i < 16; i++) {
+          const an = (i / 16) * Math.PI * 2;
+          P(x, px + Math.cos(an) * 12, py + Math.sin(an) * 12, 2, 2, k % 4 < 2 ? col : "#ffffff");
+        }
+      } else if (s.eff === "heal") {
+        for (let i = 0; i < 4; i++) P(x, px - 8 + i * 5, py - k - i * 3, 2, 2, "#7ee07a");
+      } else if (s.eff === "double") {
+        for (let i = 0; i < 6; i++) P(x, px - 6 + i * 2, py - 14 - (k % 6), 1, 4, col);
+      } else if (atk && s.job === "archer") {
+        const q = Math.min(1, k / 8);
+        for (let j = 0; j < 3; j++) {
+          const ax = px + (mx - px) * q,
+            ay = py + (my - py) * q - j * 4 + 4;
+          P(x, ax - 6, ay, 7, 1, col);
+          P(x, ax, ay - 1, 2, 3, "#ffffff");
+        }
+      } else if (atk && s.job === "mage") {
+        for (let j = 0; j < 5; j++) {
+          const sx = mx - 12 + j * 6,
+            sy = my - 40 + Math.min(40, k * 4) - j * 3;
+          P(x, sx, sy, 3, 3, "#ffd86b");
+          P(x, sx + 1, sy - 3, 1, 3, "#fff6d0");
+        }
+      } else if (atk && s.job === "warrior") {
+        const r = k * 2;
+        for (let i = 0; i < 20; i++) {
+          const an = (i / 20) * Math.PI * 2;
+          P(x, mx + Math.cos(an) * r, my + 8 + Math.sin(an) * r * 0.4, 2, 2, i % 2 ? col : "#ffffff");
+        }
+      } else if (atk) {
+        for (let i = -6; i <= 6; i++) {
+          P(x, mx + i, my + i, 2, 2, k % 4 < 2 ? "#ffffff" : col);
+          P(x, mx + i, my - i, 2, 2, k % 4 < 2 ? col : "#ffffff");
+        }
+      }
+      if (k < 18) {
+        x.globalAlpha = k < 12 ? 1 : 1 - (k - 12) / 6;
+        fxText(s.nm + "!", W / 2, 30, col);
+        x.globalAlpha = 1;
+      }
+    });
+  };
+}

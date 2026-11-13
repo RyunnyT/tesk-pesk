@@ -49,6 +49,79 @@ Object.assign(MON, {
   },
 });
 
+/* ── 2학기 길목 몬스터 ── */
+function scareD(r, b, f, mv) {
+  r(3, 18, 10, 1, "rgba(0,0,0,0.2)");
+  const sw = mv && f % 2 ? 1 : 0;
+  r(7, 10, 2, 8, "#8a5a35");
+  r(1, 9 + b - sw, 14, 2, "#8a5a35");
+  r(4, 9 + b, 8, 6, "#c9a24a");
+  r(5, 11 + b, 6, 1, "#a8742a");
+  r(0, 8 + b - sw, 2, 3, "#e8c56a");
+  r(14, 8 + b + sw, 2, 3, "#e8c56a");
+  r(5, 3 + b, 6, 6, "#d9c49a");
+  r(6, 5 + b, 1, 1, "#2b2b2b");
+  r(9, 5 + b, 1, 1, "#2b2b2b");
+  r(6, 7 + b, 4, 1, "#7a5a3a");
+  r(3, 2 + b, 10, 1, "#a8742a");
+  r(5, 0 + b, 6, 2, "#a8742a");
+  if (f % 6 < 3) r(12, 1 + b, 3, 1, "rgba(246,243,234,0.7)");
+  else r(1, 3 + b, 3, 1, "rgba(246,243,234,0.7)");
+}
+function mothD(r, b, f) {
+  const up = f % 4 < 2,
+    y = b - 3 + (f % 8 < 4 ? 0 : 1);
+  r(6, 18, 5, 1, "rgba(0,0,0,0.15)");
+  if (up) {
+    r(1, 4 + y, 6, 6, "#9a93e6");
+    r(10, 4 + y, 6, 6, "#9a93e6");
+    r(2, 5 + y, 2, 2, "#ffd86b");
+    r(13, 5 + y, 2, 2, "#ffd86b");
+  } else {
+    r(2, 8 + y, 5, 4, "#9a93e6");
+    r(10, 8 + y, 5, 4, "#9a93e6");
+  }
+  r(7, 6 + y, 3, 8, "#534AB7");
+  r(7, 7 + y, 1, 1, "#ffffff");
+  r(9, 7 + y, 1, 1, "#ffffff");
+  r(6, 3 + y, 1, 3, "#3C3489");
+  r(10, 3 + y, 1, 3, "#3C3489");
+}
+function iceD(r, b, f) {
+  r(4, 18, 9, 1, "rgba(0,0,0,0.18)");
+  const y = b - (f % 8 < 4 ? 1 : 0);
+  r(7, 2 + y, 3, 2, "#e8f6ff");
+  r(5, 4 + y, 7, 4, "#bfe6ff");
+  r(4, 8 + y, 9, 5, "#9fd0f0");
+  r(5, 13 + y, 7, 3, "#7fb6e0");
+  r(7, 16 + y, 3, 1, "#7fb6e0");
+  r(6, 5 + y, 2, 1, "#ffffff");
+  r(6, 9 + y, 1, 2, "#1e3a5a");
+  r(10, 9 + y, 1, 2, "#1e3a5a");
+  if (f % 6 < 2) r(2, 6 + y, 1, 1, "#ffffff");
+  else if (f % 6 < 4) r(14, 10 + y, 1, 1, "#ffffff");
+}
+function eraserD(r, b, f, mv) {
+  r(2, 18, 13, 1, "rgba(0,0,0,0.2)");
+  const sq = mv && f % 2 ? 1 : 0;
+  r(2, 8 + b + sq, 13, 9 - sq, "#f3c6cf");
+  r(2, 8 + b + sq, 13, 3, "#7f77dd");
+  r(3, 9 + b + sq, 4, 1, "#a8a2ee");
+  r(5, 12 + b + sq, 1, 2, "#2b2b2b");
+  r(10, 12 + b + sq, 1, 2, "#2b2b2b");
+  r(7, 15 + b, 3, 1, "#c9909a");
+  if (f % 4 < 2) {
+    r(0, 16, 1, 1, "#f6f3ea");
+    r(15, 15, 1, 1, "#f6f3ea");
+  }
+}
+Object.assign(MON, {
+  scare: { n: "안개 허수아비", hp: 5, dmg: 1, dif: 3, exp: 14, dust: 2, gold: 8, spd: 0.35, dr: scareD },
+  moth: { n: "꿈 나비", hp: 4, dmg: 1, dif: 3, exp: 13, dust: 2, gold: 8, spd: 0.7, dr: mothD },
+  ice: { n: "얼음 정령", hp: 5, dmg: 2, dif: 4, exp: 16, dust: 2, gold: 10, spd: 0.5, dr: iceD },
+  eraser: { n: "지우개 덩어리", hp: 6, dmg: 2, dif: 4, exp: 18, dust: 3, gold: 10, spd: 0.45, dr: eraserD },
+});
+
 /* ── 2학기 인물 모양 ── */
 Object.assign(D, {
   harold: { n: "해롤드 촌장", hair: "#c9b48a", ht: "short", top: "#BA7517", top2: "#633806", bot: "#5F5E5A" },
@@ -138,19 +211,19 @@ RSPEC.push(
   { id: "r15", n: "길목 15 · 여름 바닷길", theme: "coast", tier: 3, mons: [["jelly", 3], ["crab", 3]], node: "shell", prev: "t6", next: "r16" },
   { id: "r16", n: "길목 16 · 펫과 걷는 언덕", theme: "forest", tier: 3, mons: [["slime", 3], ["mush", 3]], node: "flower", prev: "r15", next: "t7", gate: "gate" },
   { id: "r17", n: "길목 17 · 황금 들길", theme: "gold", tier: 4, mons: [["bog", 3], ["mush", 3]], node: "herb", prev: "t7", next: "r18" },
-  { id: "r18", n: "길목 18 · 허수아비 언덕", theme: "gold", tier: 4, mons: [["wolf", 3], ["fire", 2]], node: "flower", prev: "r17", next: "r19", dead: "d6" },
-  { id: "d6", isDead: 1, n: "막다른 길 · 버려진 방앗간", theme: "dead", tier: 4, mons: [["shade", 3], ["mush", 2]], from: "r18" },
+  { id: "r18", n: "길목 18 · 허수아비 언덕", theme: "gold", tier: 4, mons: [["wolf", 3], ["scare", 3]], node: "flower", prev: "r17", next: "r19", dead: "d6" },
+  { id: "d6", isDead: 1, n: "막다른 길 · 버려진 방앗간", theme: "dead", tier: 4, mons: [["scare", 3], ["mush", 2]], from: "r18" },
   { id: "r19", n: "길목 19 · 추수 강둑", theme: "coast", tier: 4, mons: [["crab", 3], ["bog", 3]], node: "shell", prev: "r18", next: "t8", gate: "gate" },
-  { id: "r20", n: "길목 20 · 별빛 계단", theme: "stone", tier: 4, mons: [["gear", 3], ["shade", 2]], node: "cog", prev: "t8", next: "r21" },
-  { id: "r21", n: "길목 21 · 꿈길", theme: "dream", tier: 4, mons: [["shade", 3], ["jelly", 3]], node: "herb", prev: "r20", next: "r22", dead: "d7" },
-  { id: "d7", isDead: 1, n: "막다른 길 · 꿈속 서고 귀퉁이", theme: "dead", tier: 5, mons: [["shade", 4]], from: "r21" },
-  { id: "r22", n: "길목 22 · 구름 다리", theme: "dream", tier: 5, mons: [["fire", 3], ["wolf", 3]], node: "spark", prev: "r21", next: "t9", gate: "gate" },
-  { id: "r23", n: "길목 23 · 하얀 들판", theme: "white", tier: 5, mons: [["shade", 3], ["wolf", 3]], node: "herb", prev: "t9", next: "r24" },
-  { id: "r24", n: "길목 24 · 지워진 고개", theme: "stone", tier: 5, mons: [["gear", 3], ["shade", 3]], node: "cog", prev: "r23", next: "t10", gate: "gate", dead: "d8" },
-  { id: "d8", isDead: 1, n: "막다른 길 · 지워진 우물", theme: "dead", tier: 5, mons: [["shade", 4], ["wolf", 1]], from: "r24" },
-  { id: "r25", n: "길목 25 · 얼어붙은 들", theme: "snow", tier: 5, mons: [["wolf", 3], ["shade", 3]], node: "cog", prev: "t10", next: "r26" },
-  { id: "r26", n: "길목 26 · 설원의 끝", theme: "snow", tier: 5, mons: [["shade", 3], ["gear", 3]], node: "spark", prev: "r25", next: "t11", gate: "gate" },
-  { id: "r27", n: "길목 27 · 하얀 세상", theme: "white", tier: 5, mons: [["shade", 4], ["fire", 2]], node: "spark", prev: "t11", next: "t12", gate: "gate" },
+  { id: "r20", n: "길목 20 · 별빛 계단", theme: "stone", tier: 4, mons: [["gear", 3], ["moth", 3]], node: "cog", prev: "t8", next: "r21" },
+  { id: "r21", n: "길목 21 · 꿈길", theme: "dream", tier: 4, mons: [["shade", 3], ["moth", 3]], node: "herb", prev: "r20", next: "r22", dead: "d7" },
+  { id: "d7", isDead: 1, n: "막다른 길 · 꿈속 서고 귀퉁이", theme: "dead", tier: 5, mons: [["moth", 2], ["shade", 2]], from: "r21" },
+  { id: "r22", n: "길목 22 · 구름 다리", theme: "dream", tier: 5, mons: [["moth", 3], ["wolf", 3]], node: "spark", prev: "r21", next: "t9", gate: "gate" },
+  { id: "r23", n: "길목 23 · 하얀 들판", theme: "white", tier: 5, mons: [["shade", 3], ["ice", 3]], node: "herb", prev: "t9", next: "r24" },
+  { id: "r24", n: "길목 24 · 지워진 고개", theme: "stone", tier: 5, mons: [["gear", 3], ["eraser", 3]], node: "cog", prev: "r23", next: "t10", gate: "gate", dead: "d8" },
+  { id: "d8", isDead: 1, n: "막다른 길 · 지워진 우물", theme: "dead", tier: 5, mons: [["eraser", 3], ["shade", 2]], from: "r24" },
+  { id: "r25", n: "길목 25 · 얼어붙은 들", theme: "snow", tier: 5, mons: [["wolf", 3], ["ice", 3]], node: "cog", prev: "t10", next: "r26" },
+  { id: "r26", n: "길목 26 · 설원의 끝", theme: "snow", tier: 5, mons: [["shade", 3], ["ice", 3]], node: "spark", prev: "r25", next: "t11", gate: "gate" },
+  { id: "r27", n: "길목 27 · 하얀 세상", theme: "white", tier: 5, mons: [["shade", 3], ["fire", 2], ["eraser", 2]], node: "spark", prev: "t11", next: "t12", gate: "gate" },
 );
 
 /* ── 마을 ── */

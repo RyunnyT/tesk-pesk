@@ -1171,6 +1171,7 @@ function useSkill(k) {
     return;
   }
   B.g -= ef.c;
+  if (typeof fxSkill === "function") fxSkill(t, nm);
   if (t === "hit2" || t === "hit3" || t === "ult") {
     const d = { hit2: 2, hit3: 3, ult: 5 }[t];
     shakeT = 4;
