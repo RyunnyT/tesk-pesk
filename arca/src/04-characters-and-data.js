@@ -1,7 +1,62 @@
 const SK = "#f6d2b0",
   EY = "#2b2b2b",
   CH = "#f2a7a0";
+/* 옆모습(face "s"): 오른쪽을 보는 모습. 왼쪽은 mapper 가 좌우를 뒤집는다 */
+function personSide(r, b, f, p, mv) {
+  const skin = p.skin || SK,
+    h = p.hair,
+    o = p.small ? 2 : 0,
+    B = b + o,
+    st = mv ? [0, 1, 0, -1][f % 4] : 0,
+    blink = (f + p.n.length * 7) % 40 === 0;
+  if (!p.noSh) r(4, 18, 8, 1, "rgba(0,0,0,0.22)");
+  if (p.robe) {
+    r(5, 13 + B, 6, Math.max(1, 4 - B), p.top);
+    r(6 + st, 17, 2, 1, "#2C2C2A");
+    r(8 - st, 17, 2, 1, "#2C2C2A");
+  } else {
+    r(7 - st, 14 + o, 2, Math.max(0, 3 - o), p.bot);
+    r(7 - st, 17, 2, 1, "#1b1b1a");
+    r(7 + st, 14 + o, 2, Math.max(0, 3 - o), p.bot);
+    r(7 + st, 17, 2, 1, "#2C2C2A");
+  }
+  r(5, 8 + B, 6, 6, p.top);
+  if (p.top2) r(9, 8 + B, 1, 6, p.top2);
+  const ac = p.arm || p.top;
+  r(7 + st, 9 + B, 2, 4, ac);
+  r(7 + st, 13 + B, 2, 1, skin);
+  if (p.ht === "long") r(5, 2 + B, 2, 8, h);
+  r(6, 2 + B, 6, 6, skin);
+  r(12, 5 + B, 1, 1, skin);
+  r(10, 5 + B, 1, 1, blink ? "#b07a5a" : EY);
+  if (p.beard) r(9, 6 + B, 3, 2, p.beard);
+  else r(10, 6 + B, 1, 1, CH);
+  const t = p.ht;
+  if (t !== "none") {
+    if (t === "bald") r(6, 3 + B, 1, 2, h);
+    else {
+      r(6, 1 + B, 6, 2, h);
+      r(6, 3 + B, 2, 3, h);
+      r(11, 3 + B, 1, 1, h);
+    }
+    if (t === "spiky") {
+      r(5, 1 + B, 1, 3, h);
+      r(7, 0 + B, 1, 1, h);
+      r(10, 0 + B, 1, 1, h);
+    }
+    if (t === "bun") {
+      r(5, 0 + B, 2, 2, h);
+      r(5, 2 + B, 1, 3, h);
+    }
+    if (t === "pony") {
+      r(4, 3 + B, 2, 1, h);
+      r(4, 4 + B, 1, 4, h);
+    }
+  }
+  if (p.ex) p.ex(r, B, f, false);
+}
 function person(r, b, f, p, mv, face) {
+  if (face === "s") return personSide(r, b, f, p, mv);
   const skin = p.skin || SK,
     h = p.hair,
     o = p.small ? 2 : 0,
@@ -178,7 +233,14 @@ const PSK = [
   [10, "별짐승 각성", "정체가 밝혀지며 공격 기술을 써요"],
   [11, "새 모습", "펫이 진화해요"],
 ];
-const PETS = { dog: "강아지", cat: "고양이", fox: "여우" };
+const PETS = { dog: "강아지", cat: "고양이", fox: "여우", rabbit: "토끼", chick: "병아리" };
+/* 펫 성장: 1 아기 · 2 4부를 되살리면 목걸이 · 3 11부(정체 공개) 별 표식과 반짝임 · 4 12부 별날개 */
+function petStage() {
+  if (partDone(11)) return 4;
+  if (partDone(10)) return 3;
+  if (partDone(3)) return 2;
+  return 1;
+}
 const WN = {
   none: ["나무 막대", "강철 무기", "별빛 무기"],
   knight: ["견습 검", "강철 검", "별빛 검"],
@@ -290,6 +352,8 @@ function petDraw(r, sp, f, mv) {
       dog: ["#d9a066", "#a8743f", "#f3dcc0"],
       cat: ["#9aa3b0", "#6e7684", "#e6e9ee"],
       fox: ["#e07a3a", "#a8521f", "#ffffff"],
+      rabbit: ["#efe9e4", "#c9bfb8", "#ffd1dc"],
+      chick: ["#ffd84a", "#e0a92a", "#fff3b0"],
     }[sp],
     l = mv && f % 2 ? 1 : 0,
     w = f % 4 < 2 ? 0 : 1;
@@ -317,9 +381,41 @@ function petDraw(r, sp, f, mv) {
   r(11, 10, 1, 1, EY);
   r(11, 8, 1, 1, "#ffd86b");
   if (sp === "dog") r(9, 7, 2, 4, C[1]);
-  else {
+  else if (sp === "rabbit") {
+    r(10, 2, 1, 6, C[0]);
+    r(12, 3, 1, 5, C[0]);
+    r(10, 3, 1, 3, C[2]);
+    r(3, 12, 2, 2, "#ffffff");
+  } else if (sp === "chick") {
+    r(14, 10, 2, 1, "#f08a2a");
+    r(13, 11, 2, 1, "#f08a2a");
+    r(10, 7, 1, 1, C[1]);
+    r(5, 12, 3, 2, C[1]);
+  } else {
     r(9, 6, 1, 2, sp === "fox" ? C[1] : C[0]);
     r(12, 6, 1, 2, sp === "fox" ? C[1] : C[0]);
+  }
+  // 성장 단계 표시 (petStage)
+  const st = typeof petStage === "function" ? petStage() : 1;
+  if (st >= 2) {
+    r(9, 12, 4, 1, "#E24B4A");
+    r(10, 13, 1, 1, "#ffd86b");
+  }
+  if (st >= 3) {
+    r(10, 7, 3, 1, "#ffd86b");
+    r(11, 6, 1, 3, "#ffd86b");
+    if (f % 8 < 4) {
+      r(2, 6, 1, 1, "#fff6d0");
+      r(15, 5, 1, 1, "#fff6d0");
+    } else {
+      r(1, 9, 1, 1, "#fff6d0");
+      r(15, 8, 1, 1, "#fff6d0");
+    }
+  }
+  if (st >= 4) {
+    r(5, 9, 3, 2, "#fff6d0");
+    r(4, 8, 2, 1, "#fff6d0");
+    r(6, 10, 2, 1, "#ffd86b");
   }
 }
 
