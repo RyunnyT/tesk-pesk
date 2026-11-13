@@ -914,3 +914,70 @@ body.mobile .btns button {
   margin: 4px 0 2px 14px;
   color: #f5e3a3;
 }
+/* ── 대화 창 얼굴 · 나침반 (src/08-ui.js) ── */
+.dlg .dpf {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  width: 64px;
+  height: 59px;
+  image-rendering: pixelated;
+  background: rgba(245, 227, 163, 0.12);
+  border: 1px solid #6f64b0;
+  border-radius: 8px;
+}
+.dlg.pf {
+  padding-left: 86px;
+  min-height: 82px;
+}
+#hsh {
+  color: #bfe6ff;
+}
+.cmp {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  margin: 6px auto;
+  border-radius: 50%;
+  background: radial-gradient(circle, #2e3a66 55%, #c9a24a 57%, #c9a24a 62%, transparent 63%);
+}
+.cmp i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px;
+  border-radius: 50%;
+  background: #4a4f6a;
+  transform: rotate(var(--a)) translateY(-30px);
+}
+.cmp i.on {
+  background: #ffd86b;
+  box-shadow: 0 0 6px #ffd86b;
+}
+.cmp b {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff6d0;
+  font-weight: 400;
+  font-size: 15px;
+}
+.box.banner {
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  padding: 10px 22px;
+  text-align: center;
+  pointer-events: none;
+}
+.banner p {
+  margin: 0;
+  color: #f5e3a3;
+  font-size: 16px;
+}
+.banner small {
+  color: #cfc6ee;
+}

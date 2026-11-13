@@ -285,3 +285,128 @@ $("panel").addEventListener("click", (e) => {
     renderPanel();
   }
 });
+
+/* ════════ 대화 창 얼굴 그림 ════════
+   말하는 사람의 모습(person·owl·petDraw)을 3배로 키워 대화 창 왼쪽에 그린다. 이야기(해설)는 그림 없음. */
+function drawPortrait(n) {
+  const c = $("dpf"),
+    q = c.getContext("2d"),
+    dlg = $("dlg");
+  q.clearRect(0, 0, c.width, c.height);
+  const S = 3,
+    r = (a, y, w, h, col) => P(q, a * S, y * S, w * S, h * S, col);
+  let ok = true;
+  if (n.owl) owl((a, y, w, h, col) => P(q, (a + 0.5) * S, (y - 2) * S, w * S, h * S, col), 0, fr);
+  else if (n.petSp) petDraw((a, y, w, h, col) => P(q, (a - 1) * S, (y - 4) * S, w * S, h * S, col), n.petSp, fr, false);
+  else if (n.hair || n.top) person(r, 0, 0, { ...n, noSh: 1 }, false, "d");
+  else ok = false;
+  c.hidden = !ok;
+  dlg.classList.toggle("pf", ok);
+}
+{
+  const open0 = openDlg;
+  openDlg = function (n, lines, cb, ch) {
+    open0(n, lines, cb, ch);
+    try {
+      drawPortrait(n);
+    } catch (e) {
+      $("dpf").hidden = true;
+      $("dlg").classList.remove("pf");
+    }
+  };
+}
+
+/* ════════ 별의 나침반 조각 ════════
+   이야기 흐름: 2~5부 마을을 되살릴 때마다 1개(4개) → 6부 끝에 카이가 4개를 가져감(0개)
+   → 7·8·9부 1개씩 → 10부 1개 + 카이가 돌려준 4개 → 11부 1개 → 12부 마지막 1개 = 10개 */
+function shardCount() {
+  let n = 0;
+  for (let k = 1; k <= 4; k++) if (partDone(k)) n++;
+  if (partDone(5)) n = 0;
+  for (let k = 6; k <= 8; k++) if (partDone(k)) n++;
+  if (partDone(9)) n += 5;
+  if (partDone(10)) n++;
+  if (partDone(11)) n++;
+  return n;
+}
+function compassHTML(n) {
+  let h = '<div class="cmp" aria-label="별의 나침반 조각 ' + n + "개 / 10개\">";
+  for (let i = 0; i < 10; i++) h += '<i class="' + (i < n ? "on" : "") + '" style="--a:' + i * 36 + 'deg"></i>';
+  return h + "<b>" + n + "/10</b></div>";
+}
+{
+  const hs = document.createElement("span");
+  hs.id = "hsh";
+  $("hud").insertBefore(hs, $("h4"));
+  const hud0 = hud;
+  hud = function () {
+    hud0();
+    const n = shardCount(),
+      seen = partDone(0);
+    hs.hidden = !seen;
+    hs.textContent = "◈ 나침반 조각 " + n + "/10";
+  };
+  // 조각 수가 바뀌면(이야기 장면이 끝난 뒤) 크게 알린다
+  if (save.shards == null) save.shards = shardCount();
+  const banner = document.createElement("div");
+  banner.className = "box banner";
+  banner.hidden = true;
+  $("stage").appendChild(banner);
+  setInterval(() => {
+    if (busy || mode !== "map") return;
+    const n = shardCount();
+    if (n === save.shards) return;
+    const up = n > save.shards;
+    save.shards = n;
+    store();
+    hud();
+    banner.innerHTML =
+      compassHTML(n) +
+      "<p>" +
+      (up ? "별의 나침반 조각을 찾았어요!" : "카이가 나침반 조각을 가져갔어요…") +
+      "</p><small>" +
+      (n === 10 ? "열 조각이 모두 모였어요." : "모은 조각 " + n + " / 10") +
+      "</small>";
+    banner.hidden = false;
+    sfx(up ? "shard" : "hurt");
+    setTimeout(() => (banner.hidden = true), 3200);
+  }, 700);
+  const me0 = PANEL.me;
+  PANEL.me = function () {
+    return me0() + "<h4>별의 나침반</h4>" + compassHTML(shardCount());
+  };
+}
+
+/* ════════ 되살리기 연출 ════════
+   마을은 지워진 곳이 남은 만큼 색이 바래 있다가, 다시 쓸 때마다 색이 돌아온다. 모두 되살리면 별빛이 쏟아진다. */
+function drawFade() {
+  if (!M || !M.patch || !PATCH.length) return;
+  const left = PATCH.filter((p) => !p.done).length;
+  if (!left) return;
+  x.save();
+  x.globalCompositeOperation = "saturation";
+  x.globalAlpha = 0.7 * (left / PATCH.length);
+  x.fillStyle = "#808080";
+  x.fillRect(0, 0, W, H);
+  x.restore();
+}
+FX.burst = [];
+function fxRestore() {
+  sfx("restore");
+  for (let i = 0; i < 90; i++)
+    FX.burst.push({ x: Math.random() * W, y: -Math.random() * H, v: 0.8 + Math.random() * 1.6, t: 60 + Math.random() * 40, c: i % 3 });
+  shakeT = 6;
+}
+{
+  const fx0 = drawFx;
+  drawFx = function () {
+    fx0();
+    FX.burst = FX.burst.filter((b) => b.t-- > 0);
+    FX.burst.forEach((b) => {
+      b.y += b.v;
+      const col = ["#ffd86b", "#fff6d0", "#ff9fc0"][b.c];
+      P(x, b.x - 1, b.y, 3, 1, col);
+      P(x, b.x, b.y - 1, 1, 3, col);
+    });
+  };
+}

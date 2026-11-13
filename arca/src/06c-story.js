@@ -509,13 +509,14 @@ const SC_DONE = {
 };
 
 /* ── 장면 재생 ── */
+/* 말하는 사람: 이름 + 모습(대화 창 얼굴 그림에 쓴다) */
 function storyWho(w) {
   if (w === "nar") return { n: "이야기" };
-  if (w === "me") return { n: "나" };
-  if (w === "pet") return { n: save.pet ? save.pet.name : "작은 별짐승" };
-  if (w === "mentor") return { n: D[MENTOR_OF[save.job || "knight"]].n };
-  if (w === "nox") return { n: "녹스" };
-  return { n: (D[w] && D[w].n) || w };
+  if (w === "me") return { ...JL[save.job || "none"], n: save.name || "나" };
+  if (w === "pet") return { petSp: save.pet ? save.pet.sp : "dog", n: save.pet ? save.pet.name : "작은 별짐승" };
+  if (w === "mentor") return { ...D[MENTOR_OF[save.job || "knight"]] };
+  if (w === "nox") return { ...P_NOX, n: "녹스" };
+  return { ...(D[w] || {}), n: (D[w] && D[w].n) || w };
 }
 function storyText(t) {
   if (typeof t === "object") t = t[save.job || "knight"];

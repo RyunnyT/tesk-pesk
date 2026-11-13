@@ -855,6 +855,7 @@ function doFill(p, cost) {
     }
     toast(msg);
     hud();
+    if (typeof fxRestore === "function") fxRestore();
     if (pi === 5) setTimeout(ending, 1500);
     else if (typeof storyPartDone === "function") setTimeout(() => storyPartDone(pi), 1500);
   } else toast("별빛 가루 " + cost + "개로 다시 썼어요");
@@ -2006,6 +2007,7 @@ function drawMap() {
   x.fillStyle = "#14112a";
   x.fillRect(0, 0, W, H);
   x.drawImage(M.base, -cam.x, -cam.y);
+  if (typeof drawFade === "function") drawFade(); // 되살리기 전 바랜 마을 → src/08-ui.js
   const tx0 = Math.floor(cam.x / T),
     ty0 = Math.floor(cam.y / T);
   for (let y = Math.max(0, ty0); y <= ty0 + Math.ceil(H / T) && y < MH; y++)
