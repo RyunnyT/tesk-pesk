@@ -77,7 +77,15 @@ const PART_PICKS = {
   4: ["교통수단은 어떻게 바뀌었을까", "그림자로 시각을 알려 준 앙부일구", "비의 양을 잰 측우기", "우리나라 산업은 어떻게 바뀌었을까", "세종 시대의 과학 기술"],
   5: ["모두를 위해 일하는 공공기관", "옛날 학교, 서당", "다수결과 소수 의견 존중", "법은 왜 필요할까"],
   6: ["여름을 맞는 명절, 단오", "조상의 숨결, 문화유산", "누구나 누려야 할 권리, 인권"],
+  7: ["우리 동네 문제, 우리가 함께", "선거에도 원칙이 있어요", "다시 맑아진 우리 동네 하천"],
+  8: ["세금은 어디에 쓰일까", "닷새마다 열리는 오일장", "가계와 기업이 만나는 시장", "설날과 추석", "남기지 않을 만큼, 음식물 쓰레기"],
+  9: ["박물관을 즐기는 방법", "나무판에 새긴 마음, 팔만대장경", "세계가 인정한 금속 활자, 직지", "누구나 쉽게 배우는 글자, 한글"],
+  10: ["가족의 모습은 다양해요", "세계 여러 나라의 인사법", "편견을 넘어 서로를 존중해요", "마을을 지키던 장승과 솟대"],
+  11: ["소식을 전하는 방법의 변화", "세계의 평화를 위한 국제 연합", "사라질 위기의 동물들", "도시에서 사는 새들"],
+  12: ["땅 이름에 숨은 이야기", "모두가 편한 거리, 점자 블록"],
 };
+/* 학년 수준 지문을 다 쓰면 한 단계 위 수준에서 이어 쓴다 (2학기는 조금 더 어려운 글) */
+const LEVEL_NEXT = { 34: "56", 56: "심화", 심화: "56" };
 function bankQs(x, bank, k) {
   const out = [];
   if (x.g && x.g.length) {
@@ -121,6 +129,7 @@ function fillPassages() {
     order.push(id);
     if (DEADS[id]) order.push(DEADS[id]);
   });
+  const extra = ((window.ARCA_BANK || {})[LEVEL_NEXT[studyLevel()]] || []).filter((x) => !byTitle[x.t]);
   const used = new Set();
   order.forEach((id) => {
     const part = MAP_PART[id] || 1,
@@ -128,12 +137,13 @@ function fillPassages() {
     MAPS[id].spots.forEach((s) => {
       if (s.fromBank === undefined) s.fromBank = !s.p && !s.main;
       if (!s.fromBank) return;
-      let x = picks.find((y) => !used.has(y)) || pool.find((y) => !used.has(y));
+      let x = picks.find((y) => !used.has(y)) || pool.find((y) => !used.has(y)) || extra.find((y) => !used.has(y));
       if (!x) return;
       used.add(x);
+      const src = bank.includes(x) ? bank : extra;
       s.t = x.t;
       s.p = x.p;
-      s.q = bankQs(x, bank, bank.indexOf(x));
+      s.q = bankQs(x, src, src.indexOf(x));
       s.src = x.id;
     });
   });

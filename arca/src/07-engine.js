@@ -44,6 +44,12 @@ function setupPatches(m) {
   });
 }
 function masters() {
+  if (M.id === "t7" && save.job) {
+    // 7부: 내 스승이 다시 찾은 루멘에 와 있다 (처음엔 나를 기억하지 못함)
+    const id7 = ["bran", "gord", "iset", "pila"].find((k) => D[k].mj === save.job);
+    npcs.push({ ...D[id7], id: id7, x: 17 * T + 8, y: 12 * T + 14, hx: 17 * T + 8, hy: 12 * T + 14, tx: 17 * T + 8, ty: 12 * T + 14, lines: MPOST, wait: 0, dir: 1, face: "d", f: 0, mv: false, talk: 0 });
+    return;
+  }
   if (M.id !== "t1") return;
   const mk2 = (id, a, y, lines) => ({
     ...D[id],
@@ -219,8 +225,8 @@ function allSpots() {
   return Object.values(MAPS).flatMap((m) => m.spots);
 }
 function curPart() {
-  for (let p = 0; p < 6; p++) if (!partDone(p)) return p;
-  return 6;
+  for (let p = 0; p < PARTS.length; p++) if (!partDone(p)) return p;
+  return PARTS.length;
 }
 function rawGoal() {
   const npcAt = (map, id) => {
@@ -237,11 +243,11 @@ function rawGoal() {
         if (s) return { map: k, x: s.tx * T + 8, y: s.ty * T + 6, t: s.t };
       }
     };
-  if (save.sem1) return null;
+  if (save.fin) return null;
   if (!save.met.momo) return { t: "모모와 이야기하기", ...npcAt("t1", "momo") };
   if (!save.job) return { t: "수련장에서 스승님 고르기", map: "t1", x: 31 * T, y: 13 * T };
   const p = curPart();
-  if (p >= 6) return null;
+  if (p >= PARTS.length) return null;
   const P0 = PARTS[p],
     tn = P0.town;
   if (p > 0 && !save.vis[tn]) {
@@ -257,7 +263,7 @@ function rawGoal() {
     const s = spotAt(P0.main);
     return { ...s, t: "「" + s.t + "」 읽기" };
   }
-  for (const q of QS.filter((q) => q.map === tn)) {
+  for (const q of QS.filter((q) => q.map === tn && !q.side)) {
     const s0 = save.q[q.id];
     if (s0 && s0.st === "done") continue;
     const nm2 = D[q.npc].n;
@@ -591,11 +597,17 @@ function glyph(ch, col, bx, by) {
     }),
   );
 }
+/* 이 사람이 지금 줄 퀘스트: 끝나지 않은 것 먼저. 펫 퀘스트(pet:1)는 펫이 있을 때만 */
+function qFor(n) {
+  const L = QS.filter((q) => q.npc === n.id && q.map === M.id && (!q.pet || save.pet));
+  return L.find((q) => !(save.q[q.id] && save.q[q.id].st === "done")) || L[0];
+}
+const qText = (a) => (typeof storyText === "function" ? a.map(storyText) : a);
 function qmark(n) {
   if (n.mj && !save.job) return ["!", "#ffd86b"];
   if (n.id === "momo" && !save.met.momo) return ["!", "#ffd86b"];
   if (!save.job) return null;
-  const q = QS.find((q) => q.npc === n.id && q.map === M.id);
+  const q = qFor(n);
   if (!q) return null;
   const s0 = save.q[q.id];
   if (!s0) return ["!", "#ffd86b"];
@@ -621,7 +633,7 @@ function talk(n) {
       ],
       met,
     );
-  const q = QS.find((q) => q.npc === n.id && q.map === M.id),
+  const q = qFor(n),
     s0 = q && save.q[q.id];
   if (q && !save.job) return openDlg(n, ["먼저 수련장에서 스승님을 만나고 오렴. 직업을 정하면 부탁할게."], met);
   if (!q || (s0 && s0.st === "done")) {
@@ -630,7 +642,7 @@ function talk(n) {
     return openDlg(n, (typeof storyLines === "function" && storyLines(n)) || n.lines, met);
   }
   if (!s0)
-    return openDlg(n, q.offer, () => {
+    return openDlg(n, qText(q.offer), () => {
       met();
       save.q[q.id] = { st: "active", k: 0 };
       store();
@@ -638,7 +650,7 @@ function talk(n) {
       toast("퀘스트를 받았어요: " + q.title);
     });
   if (qCount(q) >= q.n)
-    return openDlg(n, q.done, () => {
+    return openDlg(n, qText(q.done), () => {
       if (q.type === "gather") save.inv[q.item] -= q.n;
       if (q.rw.item && !save.items.includes(q.rw.item)) {
         save.items.push(q.rw.item);
@@ -657,7 +669,7 @@ function talk(n) {
           (q.rw.item ? " · " + q.rw.item : ""),
       );
     });
-  openDlg(n, [q.prog + " (" + qCount(q) + " / " + q.n + ")"]);
+  openDlg(n, qText([q.prog + " (" + qCount(q) + " / " + q.n + ")"]));
 }
 function masterTalk(n) {
   openDlg(n, MLINES[n.id], null, [
@@ -696,7 +708,10 @@ function quizBox(title, dif, ok, bad) {
     b.type = "button";
     b.textContent = i + 1 + ". " + v;
     b.onclick = () => {
-      if (v === Q2.a) ok();
+      if (v === Q2.a) {
+        save.solved = (save.solved || 0) + 1;
+        ok();
+      }
       else {
         b.disabled = true;
         bad();
@@ -857,7 +872,7 @@ function renderBook() {
       s.n +
       " · 지문 " +
       s.no +
-      " / 75</p>" +
+      " / " + allSpots().length + "</p>" +
       (s.p ? s.p.map((t) => "<p>" + t + "</p>").join("") : PH.map((t) => '<p class="ph">' + t + "</p>").join("")) +
       '<div class="bkb"><button type="button" data-bq="1">' +
       (s.q ? "다 읽었어요 · 문제 풀기" : "다 읽었어요") +
@@ -917,6 +932,7 @@ $("book").addEventListener("click", (e) => {
     renderBook();
   } else if (d.ans != null) {
     if (+d.ans === bk.s.q[bk.qi][2]) {
+      save.solved = (save.solved || 0) + 1;
       bk.qi++;
       if (bk.qi >= bk.s.q.length) finishBook();
       else renderBook();
@@ -1077,6 +1093,7 @@ function answer(v, btn) {
   const job = save.job || "knight",
     on = skLearned(STUDY[job]);
   if (v === Q.a) {
+    save.solved = (save.solved || 0) + 1;
     let d = atk(),
       note = "";
     B.st = (B.st || 0) + 1;

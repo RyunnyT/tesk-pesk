@@ -22,8 +22,9 @@
 | `src/04-characters-and-data.js` | 사람 스프라이트 `person`(앞/뒤), 직업 `JOB`·스킬 `SKL`·`SKE`·`EFF`, 장비 `EQ`, 펫 `petDraw`, NPC 모양 `D`, 몬스터 `MON`, 문제 생성 `makeQ` |
 | `src/05-player-state.js` | 플레이어·펫·전역 상태, 레벨/하트/스킬 칸 계산 |
 | `src/06-world-semester1.js` | 2~6부 생성기: 길목 `RSPEC`→`genRoute`, 막다른 길 `genDead`, 마을 `TSPEC`→`genTown`, 랜드마크 `LMD`, 보스, 2~6부 퀘스트, 부 정보 `PARTS`, 6부 결말 `ending` |
+| `src/06a-world-semester2.js` | 2학기(7~12부): 지형 색 `TH.gold·dream·white·snow`, 보스 `noxshade`·`warden`·`noxf`, 인물 모양, 랜드마크 `LMD.mill·spire·compass`, 길목 r15~r27·막다른 길 d6~d8, 마을 t7~t12(`TSPEC2`). `PARTS`·`PARTTOWN`·`CHAIN`·`DEADS` 에 이어 붙이고, 6부 왕궁 광장을 동쪽 출구가 있게 다시 만든 뒤 `wireEntries()`·지문 번호를 다시 돌린다 |
 | `src/06b-study.js` | 공부 연결: 선생님 설정 `studyCfg`(localStorage `arca-study`), 맵→부 `MAP_PART`·`mapPart`, 단원 문제 `studyQ`(makeQ 가 먼저 부름), 지문 채우기 `fillPassages`·부별 추천 지문 `PART_PICKS` |
-| `src/06c-story.js` | 이야기 장면: 새 인물(핀·바르그·리토), 서브 퀘스트 `side:1`(핵심 자리 조건에서 빠짐), 스승 대사 `MLINES`·`storyJobLines`·`MENTOR_TALK`(직업별·진행별), 마을 사람 대사 `NPCL`(되살리기 전/후), 장면 `SC`(첫 방문)·`SC_BOSS`(보스 직전)·`SC_DONE`(마을 완료), 재생 `playScene`. 본 장면은 `save.st` 에 기록 |
+| `src/06c-story.js` | 이야기 장면(1~12부): 새 인물(핀·바르그·리토), 메인 지문 `STORY_BOOKS`, 서브 퀘스트 `side:1`(핵심 자리 조건·길 안내에서 빠짐)·펫 퀘스트 `pet:1`(펫이 있을 때만), 2학기 퀘스트, 스승 대사 `MLINES`·`storyJobLines`·`MENTOR_TALK`(직업별·진행별), 마을 사람 대사 `NPCL`(되살리기 전/후), 장면 `SC`(첫 방문)·`SC_BOSS`(보스 직전)·`SC_DONE`(마을 완료), 재생 `playScene`, 7부 나를 잊은 스승 `MENTOR_FORGOT`·`MENTOR_REMEMBER`, 마지막 결말 `storyFinale`(맞힌 문제 수 `save.solved` 를 보여 주고 `save.fin`). 본 장면은 `save.st` 에 기록 |
 | `src/07-engine.js` | 지워진 곳(패치)·별빛 가루, 맵 불러오기 `loadMap`, 메인 퀘스트 길찾기 `rawGoal`·`goal`·`hop`, 대화·선택지, 전투, 마이룸 패널, 입력, 그리기 루프 `frame` |
 | `prototypes/` | 이전 시안(참고용). 옆에서 본 풍경 그림 12장은 나중에 이야기 장면 그림으로 재사용 가능 |
 | `../quiz-bank.js` | Pesk 와 같은 수학 문제 은행 (학년·학기·단원·난이도). N부 = 그 학기 N단원 |
@@ -50,18 +51,19 @@
 - 몬스터: `MON` 에 `{n,hp,dmg,dif,exp,dust,gold,spd,dr}`; 길목 단계에 따른 강화는 `mstat()`.
 - 퀘스트: `QS.push({id,map,npc,type:'kill'|'gather',mon|item,n,title,where,offer,prog,done,rw})`. `side:1` 이면 서브(핵심 자리를 여는 데 필요 없음).
 - 이야기 장면: `06c-story.js` 의 한 줄 = `[누가, 대사, 조건]`. 누가는 `nar`·`me`·`pet`·`mentor`·인물 id, 대사는 문자열 또는 직업별 객체, 조건 `warm`/`cool` 은 1부 카이 선택. 엔진은 `storyEnter`·`storyBoss`·`storyPartDone`·`storyTalk`·`storyLines`·`storyJobLines` 만 부른다.
-- 지문: 각 맵의 `spots`. 번호는 `CHAIN` 순서로 자동(현재 1학기 53자리). 본문 `p` 가 있거나 `main` 인 자리는 이야기 전용이라 그대로 두고, 나머지는 `fillPassages()` 가 지문 은행에서 채운다(부별 추천 `PART_PICKS` 먼저, 그다음 분야를 돌아가며). 문제 `q` 는 `[질문, 보기들, 정답 번호(0부터)]` 목록.
+- 지문: 각 맵의 `spots`. 번호는 `CHAIN` 순서로 자동(1년 105자리). 학년 수준 75편을 다 쓰면 한 단계 위 수준(`LEVEL_NEXT`)에서 이어 채운다. 본문 `p` 가 있거나 `main` 인 자리는 이야기 전용이라 그대로 두고, 나머지는 `fillPassages()` 가 지문 은행에서 채운다(부별 추천 `PART_PICKS` 먼저, 그다음 분야를 돌아가며). 문제 `q` 는 `[질문, 보기들, 정답 번호(0부터)]` 목록.
 - 문제: `makeQ(dif)` 가 `studyQ(dif)` 를 먼저 부른다. 길목 단계 dif 1~2→은행 tier 1, 3→2, 4~5→3. 보기는 3개(정답+오답 2).
 
 ## 다음 할 일
-1. **3단계 · 2학기(7~12부)**: 7부 다시 찾은 루멘(모두가 주인공을 잊음, 스킬을 보여 주며 스승 기억 되살리기), 8부 보리내, 9부 하늘 도서관(모모의 꿈), 10부 하얀 언덕, 11부 망각의 탑(펫 정체 공개), 12부 다시 쓰는 별·졸업식. 6부→7부 사이는 "펫과 단둘이" 여름방학 길.
-2. ~~4단계 · 지문과 단원 문제~~ (연결 완료). 남은 것: 이야기 전용 지문 3곳(t3main·t5main·t6main) 본문 쓰기, 2학기 지문 자리 배치, 문제 은행에 없는 단원(예: 4-1 4·5단원) 보충.
+1. ~~3단계 · 2학기(7~12부)~~ (완료: 마을·길목·보스·장면·결말). 남은 것: 실제로 끝까지 플레이하며 난이도·분량 조정, 2학기 마을 건물 내부.
+2. ~~4단계 · 지문과 단원 문제~~ (연결 완료, 1년 105자리: 이야기 지문 12편 + 지문 은행 93편). 남은 것: 문제 은행에 없는 단원(예: 4-1 4·5단원, 6-2 3단원) 보충 — Pesk 쪽 `quiz-bank.js` 이므로 합칠 때 정한다.
 3. **다른 앱 연결**: 학생 계정·진행 저장·선생님 대시보드. 지금은 기기 브라우저(localStorage)에만 저장된다. `save` 객체가 저장 단위다.
-4. 2~6부 마을 건물 내부, 난이도 실제 플레이 조정. 이야기 장면은 1학기분을 넣었다(`06c-story.js`); 2학기를 만들 때 같은 틀(`SC`·`SC_BOSS`·`SC_DONE`·`NPCL`)에 이어 쓴다.
+4. 2~12부 마을 건물 내부, 난이도 실제 플레이 조정.
 
 ## 알려진 주의점
 - `hsh()` 결과는 32비트 부호 없는 정수. 배열 인덱스로 쓸 때는 `>>>` 를 쓴다(`>>` 는 음수가 나올 수 있음).
 - 맵은 처음 불러올 때 한 번 그려서(`paintMap`) 캐시한다. 지형이 바뀌면 해당 타일만 `ground()` 로 다시 그린다.
 - 마을 패치의 연필 밑그림은 맵 전체 가장자리 검출이라, 큰 맵에서 첫 진입 때 잠깐 걸릴 수 있다.
+- 한 사람이 퀘스트를 여러 개 줄 수 있다: `qFor(n)` 이 끝나지 않은 것부터 준다. 퀘스트 대사의 `{pet}` 은 `storyText` 가 펫 이름으로 바꾼다.
 - `curPart()`(07-engine)는 이야기 진행 단계(0부터)이고, `mapPart()`(06b)는 지금 서 있는 맵의 부(1부터)다. 헷갈리지 않게.
 - 전역 이름이 많다. 새 전역을 만들 때 기존 이름(`M`, `G`, `O`, `B`, `T`, `W`, `H`, `x` 등)과 겹치지 않게 한다.
