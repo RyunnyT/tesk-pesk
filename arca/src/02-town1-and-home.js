@@ -25,6 +25,7 @@ const DEF = {
   q: {},
   sk: [],
   done: {},
+  st: {},
   mm: true,
 };
 function loadSave() {

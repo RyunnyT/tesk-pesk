@@ -144,6 +144,7 @@ function loadMap(id, tx, ty, quiet) {
   mc.width = MW * 2;
   mc.height = MH * 2;
   save.map = id;
+  const firstVisit = !save.vis[id];
   save.vis[id] = 1;
   if (M.kind === "town") {
     save.towns[id] = 1;
@@ -156,6 +157,7 @@ function loadMap(id, tx, ty, quiet) {
   chain();
   drawMini();
   if (!quiet) toast(M.n + (M.rec ? " · 권장 " + M.rec : M.kind === "town" ? " · 안전 구역" : ""));
+  if (firstVisit && typeof storyEnter === "function") storyEnter(id);
 }
 function saveEx() {
   let s = "";
@@ -622,7 +624,11 @@ function talk(n) {
   const q = QS.find((q) => q.npc === n.id && q.map === M.id),
     s0 = q && save.q[q.id];
   if (q && !save.job) return openDlg(n, ["먼저 수련장에서 스승님을 만나고 오렴. 직업을 정하면 부탁할게."], met);
-  if (!q || (s0 && s0.st === "done")) return openDlg(n, n.lines, met);
+  if (!q || (s0 && s0.st === "done")) {
+    // 이야기 진행에 따른 대사 → src/06c-story.js
+    if (typeof storyTalk === "function" && storyTalk(n, met)) return;
+    return openDlg(n, (typeof storyLines === "function" && storyLines(n)) || n.lines, met);
+  }
   if (!s0)
     return openDlg(n, q.offer, () => {
       met();
@@ -667,7 +673,10 @@ function chooseJob(n) {
   hud();
   openDlg(
     n,
-    ["좋다. 오늘부터 너는 견습 " + JOB[n.mj].n + "다.", "배운 것은 별빛이 된다. 문제 세 개를 풀어 보거라."],
+    (typeof storyJobLines === "function" && storyJobLines(n.mj)) || [
+      "좋다. 오늘부터 너는 견습 " + JOB[n.mj].n + "다.",
+      "배운 것은 별빛이 된다. 문제 세 개를 풀어 보거라.",
+    ],
     () => train(n, 0),
   );
 }
@@ -751,7 +760,7 @@ function fillPatch(p) {
       toast("핵심 자리예요. 「" + (ms ? ms.t : "메인 지문") + "」을(를) 먼저 읽어요");
       return;
     }
-    if (!QS.filter((q) => q.map === M.id).every((q) => save.q[q.id] && save.q[q.id].st === "done")) {
+    if (!QS.filter((q) => q.map === M.id && !q.side).every((q) => save.q[q.id] && save.q[q.id].st === "done")) {
       toast("핵심 자리예요. 이 마을 사람들의 부탁을 먼저 끝내요");
       return;
     }
@@ -781,14 +790,16 @@ function fillPatch(p) {
     };
     mons.push(m);
     toast(jo(MON[P0.boss].n, "이", "가") + " 나타났어요!");
-    setTimeout(() => {
+    const go = () => {
       if (busy) {
         mons = mons.filter((x2) => x2 !== m);
         return;
       }
       startBattle(m, false);
       if (B) B.core = p;
-    }, 800);
+    };
+    // 보스 직전 이야기 장면 → src/06c-story.js
+    setTimeout(() => (typeof storyBoss === "function" ? storyBoss(pi, go) : go()), 800);
     return;
   }
   doFill(p, cost);
@@ -823,6 +834,7 @@ function doFill(p, cost) {
     toast(msg);
     hud();
     if (pi === 5) setTimeout(ending, 1500);
+    else if (typeof storyPartDone === "function") setTimeout(() => storyPartDone(pi), 1500);
   } else toast("별빛 가루 " + cost + "개로 다시 썼어요");
 }
 function finishCore(p) {
