@@ -1283,7 +1283,7 @@ const PANEL = {
         ["다시 쓴 별빛", stars + "줄"],
         ["물리친 몬스터", save.kills + "마리"],
         ["끝낸 퀘스트", qd + "개"],
-        ["읽은 지문", Object.keys(save.read).length + " / 75"],
+        ["읽은 지문", Object.keys(save.read).length + " / " + allSpots().length],
       ]
         .map(([a, b]) => '<div class="st"><span>' + a + "</span><b>" + b + "</b></div>")
         .join("") +
@@ -1452,7 +1452,7 @@ const PANEL = {
           "</b><small>" +
           d +
           "</small></span><em>" +
-          (partDone(k2) ? "배움" : "잠김") +
+          (partDone(k2) ? "배움" : k2 + 1 + "부를 되살리면") +
           "</em></div>",
       ).join("")
     );
@@ -1488,7 +1488,7 @@ const PANEL = {
     return (
       '<p class="hint">모험하다 찾은 지문이에요. 지금 ' +
       Object.keys(save.read).length +
-      " / 75개를 읽었어요.</p>" +
+      " / " + allSpots().length + "개를 읽었어요.</p>" +
       all
         .map((s) => {
           const r = save.read[s.id];
@@ -1986,8 +1986,8 @@ function drawMap() {
   x.drawImage(M.base, -cam.x, -cam.y);
   const tx0 = Math.floor(cam.x / T),
     ty0 = Math.floor(cam.y / T);
-  for (let y = Math.max(0, ty0); y <= ty0 + 12 && y < MH; y++)
-    for (let a = Math.max(0, tx0); a <= tx0 + 20 && a < MW; a++) {
+  for (let y = Math.max(0, ty0); y <= ty0 + Math.ceil(H / T) && y < MH; y++)
+    for (let a = Math.max(0, tx0); a <= tx0 + Math.ceil(W / T) && a < MW; a++) {
       const g = G[y][a],
         X = a * T - cam.x,
         Y = y * T - cam.y;

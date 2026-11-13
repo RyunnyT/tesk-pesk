@@ -1,6 +1,7 @@
-const W = 320,
-  H = 180,
-  T = 16;
+// 화면 크기: 컴퓨터는 320×180 고정. 휴대폰은 src/08-ui.js 의 fitView() 가 화면 비율에 맞춰 바꾼다.
+let W = 320,
+  H = 180;
+const T = 16;
 const cv = document.getElementById("cv"),
   x = cv.getContext("2d");
 const mk = (w, h) => {
