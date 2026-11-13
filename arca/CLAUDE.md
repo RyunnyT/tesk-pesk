@@ -10,6 +10,8 @@
   파일 순서를 바꾸거나 새 파일을 넣을 때는 `index.html` 의 `<script>` 순서를 지킨다(앞 파일의 상수를 뒤 파일이 쓴다).
 - 파일 하나가 필요하면 `python tools/build_single.py` → `dist/arca-chronicles.html`.
 - 외부 의존성은 Google Fonts(Gowun Batang, Gowun Dodum)뿐. 없어도 기본 글꼴로 동작.
+- 저장소(tesk-pesk) 안의 `arca/` 폴더에 있다. 상위 폴더의 `../quiz-bank.js`(Pesk 문제 은행)를 불러오므로 저장소째로 연다. 이 폴더는 Cloudflare 배포 스크립트에 들어가지 않는다.
+- 지문 은행을 고친 뒤에는 `node arca/tools/build_passages.cjs` 로 `data/passages.js` 를 다시 만든다.
 
 ## 파일 지도
 | 파일 | 내용 |
@@ -20,9 +22,12 @@
 | `src/04-characters-and-data.js` | 사람 스프라이트 `person`(앞/뒤), 직업 `JOB`·스킬 `SKL`·`SKE`·`EFF`, 장비 `EQ`, 펫 `petDraw`, NPC 모양 `D`, 몬스터 `MON`, 문제 생성 `makeQ` |
 | `src/05-player-state.js` | 플레이어·펫·전역 상태, 레벨/하트/스킬 칸 계산 |
 | `src/06-world-semester1.js` | 2~6부 생성기: 길목 `RSPEC`→`genRoute`, 막다른 길 `genDead`, 마을 `TSPEC`→`genTown`, 랜드마크 `LMD`, 보스, 2~6부 퀘스트, 부 정보 `PARTS`, 6부 결말 `ending` |
+| `src/06b-study.js` | 공부 연결: 선생님 설정 `studyCfg`(localStorage `arca-study`), 맵→부 `MAP_PART`·`mapPart`, 단원 문제 `studyQ`(makeQ 가 먼저 부름), 지문 채우기 `fillPassages`·부별 추천 지문 `PART_PICKS` |
 | `src/07-engine.js` | 지워진 곳(패치)·별빛 가루, 맵 불러오기 `loadMap`, 메인 퀘스트 길찾기 `rawGoal`·`goal`·`hop`, 대화·선택지, 전투, 마이룸 패널, 입력, 그리기 루프 `frame` |
 | `prototypes/` | 이전 시안(참고용). 옆에서 본 풍경 그림 12장은 나중에 이야기 장면 그림으로 재사용 가능 |
-| `data/passages.example.json` | 지문 75개를 넣을 형식 예시 (아직 게임이 읽지 않음) |
+| `../quiz-bank.js` | Pesk 와 같은 수학 문제 은행 (학년·학기·단원·난이도). N부 = 그 학기 N단원 |
+| `data/passages.js` | 자동 생성. 지문 은행 225편(3~4·5~6·심화 각 75편, `tools/literacy-bank/*.cjs`). `tools/build_passages.cjs` 로 만든다 |
+| `data/passages.example.json` | (옛 형식 예시, 쓰지 않음) |
 
 ## 확정된 설계 (바꾸기 전에 선생님께 확인)
 - 시점: 위에서 내려다보는 탑다운. 카메라가 따라다니는 큰 맵, 위아래 이동, 점프(J/Z)로 울타리·바위·통나무·한 칸 개울 넘기.
@@ -43,11 +48,12 @@
 - 마을 추가: `TSPEC` 에 추가(`lm` 랜드마크, `blds`, `npcs`, `spots` 6개 중 첫째가 메인 지문), `PARTS` 와 `PARTTOWN` 에 부 정보 추가. 랜드마크 그림은 `LMD` 에.
 - 몬스터: `MON` 에 `{n,hp,dmg,dif,exp,dust,gold,spd,dr}`; 길목 단계에 따른 강화는 `mstat()`.
 - 퀘스트: `QS.push({id,map,npc,type:'kill'|'gather',mon|item,n,title,where,offer,prog,done,rw})`.
-- 지문: 각 맵의 `spots`. 번호는 `CHAIN` 순서로 자동(현재 1학기에 51자리). 본문 `p`, 문제 `q` 가 없으면 빈자리 안내가 나온다.
+- 지문: 각 맵의 `spots`. 번호는 `CHAIN` 순서로 자동(현재 1학기 53자리). 본문 `p` 가 있거나 `main` 인 자리는 이야기 전용이라 그대로 두고, 나머지는 `fillPassages()` 가 지문 은행에서 채운다(부별 추천 `PART_PICKS` 먼저, 그다음 분야를 돌아가며). 문제 `q` 는 `[질문, 보기들, 정답 번호(0부터)]` 목록.
+- 문제: `makeQ(dif)` 가 `studyQ(dif)` 를 먼저 부른다. 길목 단계 dif 1~2→은행 tier 1, 3→2, 4~5→3. 보기는 3개(정답+오답 2).
 
 ## 다음 할 일
 1. **3단계 · 2학기(7~12부)**: 7부 다시 찾은 루멘(모두가 주인공을 잊음, 스킬을 보여 주며 스승 기억 되살리기), 8부 보리내, 9부 하늘 도서관(모모의 꿈), 10부 하얀 언덕, 11부 망각의 탑(펫 정체 공개), 12부 다시 쓰는 별·졸업식. 6부→7부 사이는 "펫과 단둘이" 여름방학 길.
-2. **4단계 · 지문 75개와 단원 문제**: 선생님 엑셀(지문 75개, Pesk에도 있음)을 `data/passages.json` 으로 바꿔 `spots` 에 채운다. `makeQ` 의 임시 연산 문제를 실제 단원별 문제 은행으로 바꾼다.
+2. ~~4단계 · 지문과 단원 문제~~ (연결 완료). 남은 것: 이야기 전용 지문 3곳(t3main·t5main·t6main) 본문 쓰기, 2학기 지문 자리 배치, 문제 은행에 없는 단원(예: 4-1 4·5단원) 보충.
 3. **다른 앱 연결**: 학생 계정·진행 저장·선생님 대시보드. 지금은 기기 브라우저(localStorage)에만 저장된다. `save` 객체가 저장 단위다.
 4. 2~6부 마을 건물 내부, 부별 이야기 장면(문서의 끝 장면 대사) 보강, 난이도 실제 플레이 조정.
 
@@ -55,4 +61,5 @@
 - `hsh()` 결과는 32비트 부호 없는 정수. 배열 인덱스로 쓸 때는 `>>>` 를 쓴다(`>>` 는 음수가 나올 수 있음).
 - 맵은 처음 불러올 때 한 번 그려서(`paintMap`) 캐시한다. 지형이 바뀌면 해당 타일만 `ground()` 로 다시 그린다.
 - 마을 패치의 연필 밑그림은 맵 전체 가장자리 검출이라, 큰 맵에서 첫 진입 때 잠깐 걸릴 수 있다.
+- `curPart()`(07-engine)는 이야기 진행 단계(0부터)이고, `mapPart()`(06b)는 지금 서 있는 맵의 부(1부터)다. 헷갈리지 않게.
 - 전역 이름이 많다. 새 전역을 만들 때 기존 이름(`M`, `G`, `O`, `B`, `T`, `W`, `H`, `x` 등)과 겹치지 않게 한다.

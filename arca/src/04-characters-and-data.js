@@ -532,6 +532,9 @@ const MON = {
 
 MON.slime.dust = 1;
 function makeQ(d) {
+  // 문제 은행(quiz-bank.js)이 있으면 단원 문제를 쓴다 → src/06b-study.js
+  const sq = typeof studyQ === "function" ? studyQ(d) : null;
+  if (sq) return sq;
   const R = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
   let q, a;
   if (d <= 1) {

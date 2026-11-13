@@ -20,8 +20,19 @@
       </p>
       <p class="keys">
         이동 방향키·WASD · 조사 스페이스 · 선제공격 Q · 점프 J 또는 Z · 지도 M · 전투 중 답 1·2·3, 스킬 E·R·T·Y, 도망
-        Esc<button id="reset" type="button">처음부터</button>
+        Esc<button id="reset" type="button">처음부터</button
+        ><button id="studyb" type="button">선생님 설정</button>
       </p>
+      <div class="study" id="study" hidden>
+        <div class="srow">
+          <label>학년 <select id="sg"><option value="3">3학년</option><option value="4">4학년</option><option value="5">5학년</option><option value="6">6학년</option></select></label>
+          <label>지문 수준 <select id="sl"><option value="auto">학년에 맞춤</option><option value="adv">심화</option></select></label>
+          <label>문제 범위 <select id="ss"><option value="part">부에 맞춘 단원</option><option value="term">학기 전체 섞기</option></select></label>
+        </div>
+        <p class="snote">N부에서는 그 학기 N단원 문제가 나와요(7~12부는 2학기). 길목이 깊을수록 어려워져요. 설정은 이 기기에 저장돼요.</p>
+        <p class="snote warn" id="sw"></p>
+        <table><tbody id="st"></tbody></table>
+      </div>
       <div class="stage" id="stage" tabindex="0">
         <canvas id="cv" width="320" height="180" aria-label="게임 화면"></canvas>
         <div class="hud" id="hud">
@@ -93,12 +104,15 @@
         </div>
       </div>
     </div>
+    <script src="../quiz-bank.js"></script>
+    <script src="data/passages.js"></script>
     <script src="src/01-core.js"></script>
     <script src="src/02-town1-and-home.js"></script>
     <script src="src/03-tiles.js"></script>
     <script src="src/04-characters-and-data.js"></script>
     <script src="src/05-player-state.js"></script>
     <script src="src/06-world-semester1.js"></script>
+    <script src="src/06b-study.js"></script>
     <script src="src/07-engine.js"></script>
   </body>
 </html>

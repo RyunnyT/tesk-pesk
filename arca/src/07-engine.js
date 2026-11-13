@@ -678,6 +678,7 @@ function quizBox(title, dif, ok, bad) {
   $("bs").hidden = true;
   const Q2 = makeQ(dif);
   $("bq").textContent = Q2.q;
+  $("bq").classList.toggle("long", Q2.q.length > 18);
   $("bm").textContent = "";
   const bc = $("bc");
   bc.innerHTML = "";
@@ -1032,6 +1033,7 @@ function ask(msg) {
     Q.ch.splice(i, 1);
   }
   $("bq").textContent = Q.q;
+  $("bq").classList.toggle("long", Q.q.length > 18);
   $("bm").textContent = msg || "";
   const bc = $("bc");
   bc.innerHTML = "";
@@ -1587,7 +1589,7 @@ $("homeb").onclick = () => {
   loadMap("home", 9, 10);
 };
 addEventListener("keydown", (e) => {
-  if (e.target.tagName === "INPUT") return;
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
   const c = e.code;
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space"].includes(c) && e.target.tagName !== "BUTTON")
     e.preventDefault();
