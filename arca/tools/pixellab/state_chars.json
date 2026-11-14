@@ -51,7 +51,8 @@
  },
  "lumi": {
   "id": "5da1591e-3590-4db1-aa23-ff1a804197fd",
-  "anim": 1
+  "anim": 1,
+  "done": 1
  },
  "merchant": {
   "id": "898d0bc8-4407-4c69-b5de-efc37a02c455",
@@ -75,7 +76,8 @@
  },
  "pila": {
   "id": "471ff765-d678-4d45-857e-1c93c036b995",
-  "anim": 1
+  "anim": 1,
+  "done": 1
  },
  "noxy": {
   "id": "3f79ac66-8b07-43ce-9858-9ab7c03e155c",
@@ -104,7 +106,8 @@
  },
  "lis": {
   "id": "679b30bd-3cbd-441e-8b8a-954cb68852fa",
-  "anim": 1
+  "anim": 1,
+  "done": 1
  },
  "oscar": {
   "id": "7b98bdfe-283f-4722-bfd3-c6201148317d",
@@ -118,61 +121,98 @@
  },
  "barg": {
   "id": "7dbff5dd-0e21-4c75-bfcf-d8ecd495e746",
-  "anim": 1
+  "anim": 1,
+  "done": 1
  },
  "marinda": {
-  "id": "3570bede-9a1c-4566-9b0d-680cebe0f267"
+  "id": "3570bede-9a1c-4566-9b0d-680cebe0f267",
+  "anim": 1,
+  "done": 1
  },
  "deok": {
-  "id": "45d650cb-b0c2-4e8a-853d-77bc50e730a2"
+  "id": "45d650cb-b0c2-4e8a-853d-77bc50e730a2",
+  "anim": 1,
+  "done": 1
  },
  "goldwin": {
-  "id": "8b734bfa-470d-47cb-aae8-db4608303ce9"
+  "id": "8b734bfa-470d-47cb-aae8-db4608303ce9",
+  "anim": 1,
+  "done": 1
  },
  "halmi": {
-  "id": "aa9213e0-a878-4148-afe3-4ad37083793f"
+  "id": "aa9213e0-a878-4148-afe3-4ad37083793f",
+  "anim": 1,
+  "done": 1
  },
  "evan": {
-  "id": "18d90646-0998-42a3-8dd8-238ea54d0746"
+  "id": "18d90646-0998-42a3-8dd8-238ea54d0746",
+  "anim": 1,
+  "done": 1
  },
  "doto": {
-  "id": "66001e1b-d063-4682-b1aa-0e139fb2c53f"
+  "id": "66001e1b-d063-4682-b1aa-0e139fb2c53f",
+  "anim": 1,
+  "done": 1
  },
  "rito": {
-  "id": "c06ecf5f-835e-4793-bcc5-87f0edb636cf"
+  "id": "c06ecf5f-835e-4793-bcc5-87f0edb636cf",
+  "anim": 1,
+  "done": 1
  },
  "kron": {
-  "id": "00d599f0-cc5e-44f9-abe7-2120bd55887d"
+  "id": "00d599f0-cc5e-44f9-abe7-2120bd55887d",
+  "anim": 1,
+  "done": 1
  },
  "brida": {
-  "id": "fc099e98-460b-45e5-bb4f-8dd8652e7223"
+  "id": "fc099e98-460b-45e5-bb4f-8dd8652e7223",
+  "anim": 1,
+  "done": 1
  },
  "layla": {
-  "id": "2dde6a04-759f-4868-81cf-4a7cc0775196"
+  "id": "2dde6a04-759f-4868-81cf-4a7cc0775196",
+  "anim": 1,
+  "done": 1
  },
  "jay": {
-  "id": "82077698-7374-4ca3-8215-b986fc5ca869"
+  "id": "82077698-7374-4ca3-8215-b986fc5ca869",
+  "anim": 1,
+  "done": 1
  },
  "serafin": {
-  "id": "d681afe5-c27b-49aa-80dd-80e3e4fa6227"
+  "id": "d681afe5-c27b-49aa-80dd-80e3e4fa6227",
+  "anim": 1,
+  "done": 1
  },
  "gris": {
-  "id": "34d4b813-997f-465e-9eb9-6842ab7b9855"
+  "id": "34d4b813-997f-465e-9eb9-6842ab7b9855",
+  "anim": 1,
+  "done": 1
  },
  "popo": {
-  "id": "ad0e83ba-e80a-4620-8ef8-6889fd317188"
+  "id": "ad0e83ba-e80a-4620-8ef8-6889fd317188",
+  "anim": 1,
+  "done": 1
  },
  "ruru": {
-  "id": "a3c484d4-240e-4f0f-9f15-dfa155a6cd60"
+  "id": "a3c484d4-240e-4f0f-9f15-dfa155a6cd60",
+  "anim": 1,
+  "done": 1
  },
  "arien": {
-  "id": "59cf6feb-0e22-4acc-b79e-12f0baa9e289"
+  "id": "59cf6feb-0e22-4acc-b79e-12f0baa9e289",
+  "anim": 1,
+  "done": 1
  },
  "pung": {
-  "id": "2f5389bc-26dc-489c-b075-c8bdbd784971"
+  "id": "2f5389bc-26dc-489c-b075-c8bdbd784971",
+  "anim": 1,
+  "done": 1
  },
  "reno": {
-  "id": "7cb8e926-44cb-49e0-8fc2-1bdc72a7df19"
+  "id": "7cb8e926-44cb-49e0-8fc2-1bdc72a7df19",
+  "anim": 1,
+  "done": 1
  },
  "harold": {
   "id": "0f23c47c-128d-4113-b4a0-15f629744459",
@@ -180,18 +220,28 @@
   "done": 1
  },
  "kong": {
-  "id": "73fa7b3e-fe0f-4e4c-9eb1-6554c089468a"
+  "id": "73fa7b3e-fe0f-4e4c-9eb1-6554c089468a",
+  "anim": 1,
+  "done": 1
  },
  "pat": {
-  "id": "1a2f12e6-096d-49f9-a636-59451689688a"
+  "id": "1a2f12e6-096d-49f9-a636-59451689688a",
+  "anim": 1,
+  "done": 1
  },
  "zip": {
-  "id": "62aa75c7-babf-4b9e-b658-a69bbe0549f3"
+  "id": "62aa75c7-babf-4b9e-b658-a69bbe0549f3",
+  "anim": 1,
+  "done": 1
  },
  "momone": {
-  "id": "e22572b3-a598-4613-be7f-ff015eec506f"
+  "id": "e22572b3-a598-4613-be7f-ff015eec506f",
+  "anim": 1,
+  "done": 1
  },
  "serena": {
-  "id": "fddff1da-29c6-4a07-83e8-07a7ba1cca53"
+  "id": "fddff1da-29c6-4a07-83e8-07a7ba1cca53",
+  "anim": 1,
+  "done": 1
  }
 }

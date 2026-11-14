@@ -47,7 +47,12 @@ async function one(k) {
     s.anim = 1;
     saveState(STF, st);
   }
-  await waitChar(s.id, (o) => /walk[^\n]*3 dir/.test(o) && !/processing|pending/i.test(o.split("animations")[1] || ""));
+  await waitChar(s.id, (o) => {
+    // 걷기 방향이 여러 묶음에 나뉘어 있어도 앞·옆·뒤가 다 있으면 된다
+    const got = new Set();
+    for (const m of o.matchAll(/walking[^\n]*?dir \(([^)]*)\)/g)) m[1].split(/,\s*/).forEach((d) => got.add(d.trim()));
+    return ["south", "east", "north"].every((d) => got.has(d)) && !/pending jobs|processing/i.test(o.split(/^animations/m)[1] || "");
+  });
   // 받기
   const z = path.join(TMP, "pl_" + k + ".zip"),
     zd = path.join(TMP, "pl_" + k);
