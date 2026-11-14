@@ -20,7 +20,7 @@
 | `src/02-town1-and-home.js` | 저장 `save`(localStorage `arca-v2`), 1부 퀘스트 `QS`, 1부 루멘 마을 `bT1`, 마이룸 `bHome`·가구 `FURD`, 1부 길목 r1·r2·r3·막다른 숲 d1 (손으로 만든 맵) |
 | `src/03-tiles.js` | 충돌 `blk`, 타일 그리기 `ground`·`objDraw`, 건물 `bldDraw`, 맵 굽기 `paintMap` |
 | `src/04-characters-and-data.js` | 사람 스프라이트 `person`(앞/뒤), 직업 `JOB`·스킬 `SKL`·`SKE`·`EFF`, 장비 `EQ`, 펫 `petDraw`, NPC 모양 `D`, 몬스터 `MON`, 문제 생성 `makeQ` |
-| `src/04b-items.js` | **RPG 아이템 데이터·계산(Pesk 와 같이 쓸 순수 코드)**: 등급 `GRADES`(일반·레어·유니크·레전드), 추가 능력 `SUBS`, 아이템 `ITEMS`(무기 `w_<직업>_<0~6>` 레벨 1·4·7·10·13·16·20, 옷 `o_…` 14벌, 장신구 `c_…`, 마이룸 가구 `d_…`), `makeItem`·`itemStats`·`rollGrade`·`lootPool`·`sellPrice`. 피해 단위 `PWR`=10 |
+| `src/04b-items.js` | **RPG 아이템 데이터·계산(Pesk 와 같이 쓸 순수 코드)**: 등급 `GRADES`(일반·레어·유니크·레전드), 추가 능력 `SUBS`, 아이템 `ITEMS`(무기 `w_<직업>_<0~6>` 레벨 1·3·6·9·12·15·18, 옷 `o_…` 14벌, 장신구 `c_…`, 마이룸 가구 `d_…`), `makeItem`·`itemStats`·`rollGrade`·`lootPool`·`sellPrice`. 피해 단위 `PWR`=10 |
 | `src/04c-rpg-save.js` | 저장 `save.rpg`(`bag`·`eq{w,o,c1,c2}`·`room`·`body`), 옛 장비 한 번 바꾸기, `rpgSum`·`rpgAtk`(무기+레벨×2)·`rpgHp`·`rpgGiveStory`(이야기 보물=유니크 장신구) |
 | `src/05-player-state.js` | 플레이어·펫·전역 상태, 레벨/하트/스킬 칸 계산 |
 | `src/06-world-semester1.js` | 2~6부 생성기: 길목 `RSPEC`→`genRoute`, 막다른 길 `genDead`, 마을 `TSPEC`→`genTown`, 랜드마크 `LMD`, 보스, 2~6부 퀘스트, 부 정보 `PARTS`, 6부 결말 `ending` |
@@ -38,6 +38,7 @@
 | `src/15-play.js` | 틀린 문제 다시 만나기(문제 6개 뒤, 망각 유령·지우개는 늘), 몬스터별 움직임 `MOVE`, 보스 3단계(2/3 부하, 1/3 어려워짐), 이번 부 단원 `unitName`·`unitStory`, 접근성(글자 크게 `UI.big`·읽어 주기 `UI.tts`·흔들림 끄기 `UI.calm`) |
 | `assets/hd/` | PixelLab 그림: `chars/<키>/`(4방향+걷기), `mons`·`pets`·`npc`·`misc`(한 장+움직임 `_0~3`), `props`·`bld`, `icons/<아이템 id>`(32점), 옷 입은 주인공 `chars/av-<m|f>-<옷>`, `tiles/<테마>-path·water·sand·sea`(모서리 16칸)·`solid`. 만드는 법은 `docs/그림_업그레이드_기록.md` 의 'PixelLab 48점 전체 바꾸기' |
 | `tools/pixellab/` | PixelLab 자동 그리기: `run_chars`·`run_objs`·`run_tiles`·`run_bld`(.mjs), 진행 상태 `state_*.json`(다시 실행하면 이어서). 키는 저장소 밖 파일(`PIXELLAB_KEY_FILE`) |
+| `tools/check/` | 검사(Playwright): `econ.cjs` 성장·경제 시뮬레이션(부마다 레벨·금화·공격력·몬스터를 쓰러뜨리는 데 필요한 횟수), `bot.cjs` 1~12부 실제 출구를 따라 끝까지 가는 진행 봇(퀘스트·문지기·잠금 확인). `node arca/tools/check/bot.cjs` |
 | `tools/hd/` | 그림 손질: `fix_borders.py`(타일 흰 테두리), `harmonize.py`(테마별 풀색 맞추기), `build_manifest.py`(목록 만들기) |
 | `docs/그림_업그레이드_기록.md` | 그림을 2등신 캐주얼풍으로 바꾸는 작업의 기록(결정·그리는 방법·적용 계획). **그림 작업은 이 문서를 먼저 읽는다.** 견본은 `prototypes/4_메이플풍_그림_견본.html`(벡터풍)·`prototypes/5_도트_견본.html`(도트풍, 선생님 참고 그림 기반) |
 | `prototypes/` | 이전 시안(참고용). 옆에서 본 풍경 그림 12장은 나중에 이야기 장면 그림으로 재사용 가능 |
@@ -59,6 +60,7 @@
 - 메인 퀘스트 화살표: 다른 맵에 있는 목표도 `hop()` 으로 다음 출구를 가리킨다. 서브(숨은 지문, 막다른 길)는 가리키지 않는다.
 - 미니맵: 걸어간 곳만 밝혀짐. 위쪽에 현재 구간(마을 › 길목들 › 다음 마을, 갈림길)을 표시.
 - 쓰러지면 마이룸에서 회복, 벌칙 없음. 마이룸에서 나가면 들어가기 전 자리로(쓰러졌을 땐 마지막 마을).
+- 균형(2026-11-14): 12부 끝 Lv 20(`expNeed`·`expCum`, 04c), 무기 레벨 1·3·6·9·12·15·18. 몬스터 체력 = 원래 체력 × 그 부의 예상 공격력(`partPow`) × 0.38(보스 0.4) → 일반 2~3번, 보스 5~8번 맞혀야 쓰러짐. 숫자를 바꾸면 `tools/check/econ.cjs` 로 확인.
 - 순간이동: 정복한 맵(되살린 마을, 그 부를 끝냈거나 문지기를 물리친 길목)에서 어디서든. 걷는 속도는 2026-11-14 요청으로 빠르게(2.6/2.2).
 
 ## 콘텐츠 추가하는 법

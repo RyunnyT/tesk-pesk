@@ -88,3 +88,20 @@ function rpgGiveStory(id) {
   return rpgAdd(id, 2, true);
 }
 rpgInit();
+
+/* ── 성장 곡선(2026-11-14 균형 맞추기) ──
+   1~12부를 한 바퀴 돌면 얻는 경험치(약 16,700)로 12부 끝에 Lv 20 이 되도록:
+   Lv L 까지 모은 경험치 = 16700 × ((L-1)/19)^1.53  → 1부 끝 Lv 3, 3부 7, 6부 12, 9부 17, 12부 20.
+   한 레벨에 필요한 경험치 expNeed(lv) 는 그 차이. 계산은 tools 없이 econ 시뮬레이션(검사 스크립트)으로 확인. */
+const EXP_TOTAL = 16700;
+const expCum = (L) => EXP_TOTAL * Math.pow(Math.max(0, L - 1) / 19, 1.53);
+const expNeed = (lv) => Math.max(40, Math.round(expCum(lv + 1) - expCum(lv)));
+// 그 부에서 예상되는 레벨(부의 가운데쯤)과 공격력 → 몬스터 체력을 여기에 맞춘다(일반 2~3번, 보스 6~10번 맞혀야 쓰러짐)
+function partLevel(part) {
+  return Math.max(1, 1 + 19 * Math.pow(Math.min(1, (part - 0.5) / 12), 0.655));
+}
+function partPow(part) {
+  const L = partLevel(part),
+    t = WLV.filter((lv) => lv <= L).length - 1;
+  return 10 + 6 * Math.max(0, t) + 2 * (L - 1);
+}

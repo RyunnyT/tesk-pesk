@@ -30,6 +30,8 @@ const hsh = (a, b) => {
 const $ = (id) => document.getElementById(id);
 const jo = (w, a, b) => {
   const c = w.charCodeAt(w.length - 1) - 0xac00;
+  // '으로'는 받침 ㄹ 뒤에서도 '로'(마을로)
+  if (a === "으로" && c % 28 === 8) return w + b;
   return w + (c >= 0 && c < 11172 && c % 28 ? a : b);
 };
 const BY = [

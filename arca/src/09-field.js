@@ -199,7 +199,7 @@ function fieldSkill(i) {
   const t = SKE[job][k],
     nm = SKL[job][k][0],
     ef = EFF[t];
-  if (!ef) return toast("「" + nm + "」은(는) 늘 저절로 발동하는 스킬이에요");
+  if (!ef) return toast("「" + nm + "」 스킬은 늘 저절로 발동해요");
   if (FLD.g < ef.c) return toast("별빛 게이지가 모자라요(" + "◆".repeat(FLD.g) + "◇".repeat(ef.c - FLD.g) + "). 문제를 맞혀 채워요");
   if (t === "hit2" || t === "hit3" || t === "ult") {
     const reach = job === "archer" || job === "mage" ? 80 : 34;

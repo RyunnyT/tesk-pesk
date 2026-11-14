@@ -142,7 +142,7 @@ const MOVE = {
     if (k <= 2 / 3 && !(m.ph >= 2)) {
       m.ph = 2;
       setTimeout(() => {
-        toast(B && B.MI ? B.MI.n + "이(가) 부하를 불렀어요! (2단계)" : "보스가 부하를 불렀어요! (2단계)");
+        toast(B && B.MI ? jo(B.MI.n, "이", "가") + " 부하를 불렀어요! (2단계)" : "보스가 부하를 불렀어요! (2단계)");
         bossMinions(m, 2);
       }, 500);
     } else if (k <= 1 / 3 && !(m.ph >= 3)) {

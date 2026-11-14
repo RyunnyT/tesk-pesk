@@ -974,7 +974,7 @@ function genRoute(sp, seed) {
           [w - 1, py(w - 1)],
           [w - 1, py(w - 1) + 1],
         ],
-        msg: MON[sp.gate].n + "을(를) 물리쳐야 지나갈 수 있어요",
+        msg: jo(MON[sp.gate].n, "을", "를") + " 물리쳐야 지나갈 수 있어요",
         open: () => !!save.boss[sp.id],
       },
     ];
@@ -1454,7 +1454,7 @@ function wireEntries() {
             "의 지워진 곳을 모두 다시 써야 " +
             (pi + 1) +
             "부로 넘어갈 수 있어요"
-          : MON[sp.gate].n + "을(를) 물리쳐야 지나갈 수 있어요";
+          : jo(MON[sp.gate].n, "을", "를") + " 물리쳐야 지나갈 수 있어요";
     }
   }
   MAPS.r1.exits[0].at = [46, 19];

@@ -262,7 +262,7 @@ function rawGoal() {
       const gpos = gm.gatePos || [40, 13];
       return { t: CNAME[gp] + " 끝 문지기 물리치기", map: gp, x: gpos[0] * T + 8, y: gpos[1] * T };
     }
-    return { t: p + 1 + "부 " + CNAME[tn] + "(으)로", map: tn, x: MAPS[tn].spawn[0] * T, y: MAPS[tn].spawn[1] * T };
+    return { t: p + 1 + "부 " + jo(CNAME[tn], "으로", "로"), map: tn, x: MAPS[tn].spawn[0] * T, y: MAPS[tn].spawn[1] * T };
   }
   if (!save.read[P0.main]) {
     const s = spotAt(P0.main);
@@ -571,8 +571,8 @@ function gain(ex, gd, du) {
   save.gold += gd;
   save.dust += du || 0;
   let up = false;
-  while (save.exp >= save.lv * 30) {
-    save.exp -= save.lv * 30;
+  while (save.exp >= expNeed(save.lv)) {
+    save.exp -= expNeed(save.lv);
     save.lv++;
     up = true;
   }
@@ -817,7 +817,7 @@ function fillPatch(p) {
     }
     const ms = allSpots().find((s) => s.id === P0.main);
     if (!save.read[P0.main]) {
-      toast("핵심 자리예요. 「" + (ms ? ms.t : "메인 지문") + "」을(를) 먼저 읽어요");
+      toast("핵심 자리예요. 「" + (ms ? ms.t : "메인 지문") + "」부터 먼저 읽어요");
       return;
     }
     if (!QS.filter((q) => q.map === M.id && !q.side).every((q) => save.q[q.id] && save.q[q.id].st === "done")) {
@@ -887,7 +887,7 @@ function doFill(p, cost) {
       if (b.lm === "clock") LMD.clock(bc, M.over.getContext("2d"), b);
     });
     const job = save.job;
-    let msg = pi + 1 + "부 " + M.short + "을(를) 모두 되살렸어요!";
+    let msg = pi + 1 + "부 " + jo(M.short, "을", "를") + " 모두 되살렸어요!";
     if (job && pi > 0) {
       msg += " 새 스킬 「" + SKL[job][pi][0] + "」";
       if (pi !== STUDY[job] && save.sk.length < slots() && !save.sk.includes(pi)) save.sk.push(pi);
@@ -1034,7 +1034,7 @@ function interact(t) {
     if (o.to) {
       saveEx();
       loadMap(o.to, o.at[0], o.at[1]);
-    } else toast(o.n + "은(는) 다음 단계에서 안을 들어가 볼 수 있어요");
+    } else toast(jo(o.n, "은", "는") + " 아직 문이 닫혀 있어요");
   } else if (t.type === "lock") toast(o.msg);
   else if (t.type === "mon") typeof fieldStrike === "function" ? fieldStrike(o, null) : startBattle(o, false);
 }
@@ -1321,7 +1321,7 @@ function closePanel() {
 const PANEL = {
   me() {
     const job = save.job,
-      need = save.lv * 30,
+      need = expNeed(save.lv),
       pct = Math.round((save.exp / need) * 100),
       stars = Object.values(save.done).reduce((a, d) => a + d.filter(Boolean).length, 0),
       qd = Object.values(save.q).filter((q) => q.st === "done").length;
@@ -1610,7 +1610,7 @@ $("panel").addEventListener("click", (e) => {
     save.gold -= it.price;
     save.own.push(d.buy);
     save.eq[it.s] = d.buy;
-    toast(eqName(d.buy) + "을(를) 샀어요");
+    toast(jo(eqName(d.buy), "을", "를") + " 샀어요");
   } else if (d.skon != null) {
     if (save.sk.length >= slots()) {
       toast("스킬 칸이 가득 찼어요. 하나를 빼고 장착해요");
@@ -1628,7 +1628,7 @@ $("panel").addEventListener("click", (e) => {
       toast(jo(nm2, "과", "와") + " 함께해요!");
     } else {
       save.pet.name = nm2;
-      toast("이름을 " + nm2 + "(으)로 바꿨어요");
+      toast("이름을 " + jo(nm2, "으로", "로") + " 바꿨어요");
     }
   }
   pl.hp = Math.min(Math.max(pl.hp, 1), maxHp());

@@ -67,7 +67,7 @@ const WEAPON_LINE = {
     ["별빛 활", "bow"],
   ],
 };
-const WLV = [1, 4, 7, 10, 13, 16, 20];
+const WLV = [1, 3, 6, 9, 12, 15, 18];
 const ITEMS = {};
 for (const job in WEAPON_LINE)
   WEAPON_LINE[job].forEach(([n, kind], t) => {
@@ -87,8 +87,8 @@ for (const job in WEAPON_LINE)
   ["o_star", "별자리 로브", 13, 2, 8, ["exp", 8], "dark blue robe covered in glowing constellation patterns"],
   ["o_harvest", "황금 들판 작업복", 16, 3, 10, ["gold", 8], "golden farmer overalls with a straw hat"],
   ["o_dream", "꿈길 잠옷", 16, 3, 9, ["dust", 8], "soft lavender pajamas with stars and a sleeping cap"],
-  ["o_snow", "눈꽃 털옷", 18, 4, 12, null, "white fur winter coat with snowflake patterns"],
-  ["o_hero", "별빛 영웅 갑옷", 20, 5, 15, null, "shining gold and white hero armor with a star emblem and short cape"],
+  ["o_snow", "눈꽃 털옷", 17, 4, 12, null, "white fur winter coat with snowflake patterns"],
+  ["o_hero", "별빛 영웅 갑옷", 18, 5, 15, null, "shining gold and white hero armor with a star emblem and short cape"],
 ].forEach(([id, n, lv, hp, def, fx, art]) => (ITEMS[id] = { s: "o", n, lv, hp, def, fx, art, price: 25 + lv * 20 }));
 // 장신구(상점·전리품). 이야기 보물 장신구는 src/14-rpg.js 에서 옛 EQ 를 읽어 더한다(유니크 고정).
 [
@@ -101,7 +101,7 @@ for (const job in WEAPON_LINE)
   ["c_star", "별 조각 브로치", 10, { dust: 15 }],
   ["c_ring3", "별 반지", 13, { crit: 9 }],
   ["c_neck3", "별빛 목걸이", 13, { hp: 3 }],
-  ["c_crown", "작은 왕관", 18, { exp: 15, gold: 15 }],
+  ["c_crown", "작은 왕관", 17, { exp: 15, gold: 15 }],
 ].forEach(([id, n, lv, b]) => (ITEMS[id] = { s: "c", n, lv, b, price: 20 + lv * 15 }));
 // 마이룸 가구(꾸미기). art = 그림(assets/hd/props), rug 은 밟을 수 있다
 [

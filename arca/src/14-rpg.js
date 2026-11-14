@@ -5,9 +5,11 @@
 rpgMigrateLate();
 {
   const ms0 = mstat;
+  // 몬스터 체력 = 원래 체력 × 그 부의 예상 공격력 × 0.38(보스 0.4) → 부가 달라도 맞혀야 하는 횟수가 비슷하다
   mstat = function (m) {
-    const r = ms0(m);
-    return { ...r, hp: r.hp * PWR };
+    const r = ms0(m),
+      part = (typeof MAP_PART === "object" && MAP_PART[m.map]) || 1;
+    return { ...r, hp: Math.max(PWR, Math.round(r.hp * partPow(part) * (r.boss ? 0.4 : 0.38))) };
   };
 }
 const GCOL = (g) => GRADES[g].col;
@@ -36,7 +38,7 @@ const rpgPlaced = (u) => save.rpg.room.some((r) => r.u === u);
       const it = rpgAdd("w_" + save.job + "_0", 0, true);
       R.eq.w = it.u;
       store();
-      setTimeout(() => toast("「" + itemDef(it.id).n + "」을(를) 받았어요 · 옷은 상점에서 골라요"), 600);
+      setTimeout(() => toast("「" + itemDef(it.id).n + "」 받았어요 · 옷은 상점에서 골라요"), 600);
     }
   };
 }
@@ -113,7 +115,7 @@ function rpgBuy(id, rare) {
   save.gold -= price;
   if (rare) save.rpg.rareDay = Math.floor(Date.now() / 864e5);
   sfx("ok");
-  toast((rare ? "[레어] " : "") + d.n + "을(를) 샀어요");
+  toast((rare ? "[레어] " : "") + jo(d.n, "을", "를") + " 샀어요");
 }
 {
   const it1 = interact;
@@ -146,7 +148,7 @@ function rpgSell(u) {
   if (!p) return toast("이야기 보물은 팔 수 없어요");
   save.rpg.bag = save.rpg.bag.filter((i) => i.u !== u);
   save.gold += p;
-  toast(itemDef(it.id).n + "을(를) 금화 " + p + "에 팔았어요");
+  toast(jo(itemDef(it.id).n, "을", "를") + " 금화 " + p + "에 팔았어요");
 }
 
 /* ── 패널: 내 정보 ── */
@@ -430,7 +432,7 @@ function rpgRoomApply(repaint) {
   furAct = function (f) {
     if (f.act !== "deco") return fa0(f);
     const it = rpgGet(f.u);
-    openDlg({ n: "꾸미기" }, [(it ? itemDef(it.id).n : "가구") + "을(를) 어떻게 할까요?"], null, [
+    openDlg({ n: "꾸미기" }, [jo(it ? itemDef(it.id).n : "가구", "을", "를") + " 어떻게 할까요?"], null, [
       [
         "치워서 가방에 넣기",
         () => {
