@@ -49,7 +49,8 @@ function hdPreload() {
     ["south", "east", "north", "west"].forEach((d) => L.push("chars/" + k + "/" + d + ".png"));
     if (HDA.chars[k].walk) ["south", "east", "north"].forEach((d) => [0, 1, 2, 3].forEach((i) => L.push("chars/" + k + "/walk_" + d + "_" + i + ".png")));
   }
-  ["mons", "pets", "npc", "misc", "props", "bld"].forEach((cat) => {
+  ["mons", "pets", "npc", "misc", "props", "bld", "icons"].forEach((cat) => {
+    if (!HDA[cat]) return;
     for (const k in HDA[cat]) {
       L.push(cat + "/" + k + ".png");
       for (let i = 0; i < (HDA[cat][k].n || 0); i++) L.push(cat + "/" + k + "_" + i + ".png");
@@ -106,7 +107,11 @@ function hdChar(c, key, wx, wy, face, fl, mv, f, sc, shadow, alpha) {
   person = function (r, b, f, p, mv, face) {
     if (HD.on && r && r.hd) {
       const k = hdCharKey(p);
-      if (k && hdChar(x, k, r.hd.px, r.hd.py, face, r.hd.fl, mv, f, r.hd.S, !p.noSh)) return;
+      if (k && hdChar(x, k, r.hd.px, r.hd.py, face, r.hd.fl, mv, f, r.hd.S, !p.noSh)) {
+        // 주인공은 손에 든 무기를 따로 그린다(src/14-rpg.js)
+        if (p.n === "나" && typeof rpgHand === "function") rpgHand(r.hd, face, mv, f);
+        return;
+      }
     }
     person0(r, b, f, p, mv, face);
   };

@@ -1,0 +1,99 @@
+{
+ "av-m-base": {
+  "id": "04220b18-67a9-4bfd-a83f-5fb111ae82c7",
+  "anim": 1,
+  "done": 1
+ },
+ "av-f-base": {
+  "id": "867fe964-c9b3-4bb2-a3c9-0d32e7893b94",
+  "anim": 1,
+  "done": 1
+ },
+ "av-m-travel": {
+  "id": "b5e41183-ed89-4586-a30f-ef4003ae631f",
+  "anim": 1,
+  "done": 1
+ },
+ "av-m-stripe": {
+  "id": "06e805ba-1949-46ce-ad88-9d26d9c8913a",
+  "anim": 1,
+  "done": 1
+ },
+ "av-m-hunter": {
+  "id": "4a41aca2-09f8-4673-91d2-8e6ebc626a56",
+  "anim": 1,
+  "done": 1
+ },
+ "av-m-flower": {
+  "id": "39487358-6181-4323-9781-7fdf06d9289f",
+  "anim": 1,
+  "done": 1
+ },
+ "av-m-guard": {
+  "id": "91c768fd-1b1d-483a-a3d0-1dcd1219ec46",
+  "anim": 1,
+  "done": 1
+ },
+ "av-m-robe": {
+  "id": "19a8f15d-fc7d-4040-8785-1c2419a03bec",
+  "anim": 1,
+  "done": 1
+ },
+ "av-m-festival": {
+  "id": "c2bb47da-64df-4a54-be72-fe33d8459fab",
+  "anim": 1,
+  "done": 1
+ },
+ "av-m-wind": {
+  "id": "1e996ccb-3af9-4adb-b629-0314760d6bfe",
+  "anim": 1,
+  "done": 1
+ },
+ "av-m-royal": {
+  "id": "bd7b7c2a-be1e-4864-bc1c-a74da0d59bdc",
+  "anim": 1,
+  "done": 1
+ },
+ "av-m-star": {
+  "id": "02e724b0-ab74-4649-8520-2c9c92abf04c",
+  "anim": 1,
+  "done": 1
+ },
+ "av-m-harvest": {
+  "id": "3a789dd9-05bb-484b-83de-32b88a794856",
+  "anim": 1,
+  "done": 1
+ },
+ "av-m-dream": {
+  "id": "69bff02b-c9d8-4273-bf7c-d201864244bd",
+  "anim": 1,
+  "done": 1
+ },
+ "av-m-snow": {
+  "id": "c04188a7-4e08-462d-9f0a-93865871315e",
+  "anim": 1,
+  "done": 1
+ },
+ "av-m-hero": {
+  "id": "e981f2e8-e2ef-4ce2-b2aa-d5bac658fe3e",
+  "anim": 1,
+  "done": 1
+ },
+ "av-f-travel": {
+  "id": "7d4e68e9-598b-48c2-9f03-0eff1c369fca",
+  "anim": 1,
+  "done": 1
+ },
+ "av-f-stripe": {
+  "id": "5abd5ae1-9f0c-4e46-9265-b81cafaea5d3"
+ },
+ "av-f-hunter": {
+  "id": "95ac67e8-9fc4-4ac7-8c06-a2054fbd31a1"
+ },
+ "av-f-flower": {
+  "id": "3751cc82-99b1-454b-8980-1c56a11195ab"
+ },
+ "av-f-guard": {
+  "id": "7e5901fb-8a72-4ea8-b7b6-0edcc8ece4d5"
+ }
+}

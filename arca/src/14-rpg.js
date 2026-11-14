@@ -12,6 +12,12 @@ rpgMigrateLate();
 }
 const GCOL = (g) => GRADES[g].col;
 const rpgName = (it) => '<b style="color:' + GCOL(it.g) + '">' + (it.g ? "[" + GRADES[it.g].n + "] " : "") + esc(itemDef(it.id).n) + "</b>";
+// 아이콘: assets/hd/icons/<id>.png (가구는 props 그림)
+function rpgIcon(it) {
+  const d = itemDef(it.id),
+    p = HDA.icons && HDA.icons[it.id] ? "icons/" + it.id + ".png" : d.s === "d" && HDA.props[d.art] ? "props/" + d.art + ".png" : null;
+  return p ? '<img class="ricon g' + it.g + '" src="' + hdSrc(p) + '" alt="">' : '<span class="ricon g' + it.g + '"></span>';
+}
 const SLOTN = { w: "무기", o: "옷", c1: "장신구 1", c2: "장신구 2" };
 const slotOf = (it) => {
   const s = itemDef(it.id).s;
@@ -213,7 +219,9 @@ function itemRow(it, btns) {
     }
   }
   return (
-    '<div class="it ri"><span>' +
+    '<div class="it ri">' +
+    rpgIcon(it) +
+    "<span>" +
     rpgName(it) +
     "<small>" +
     (d.lv ? '<i class="' + (low ? "lvno" : "") + '">Lv ' + d.lv + "</i> · " : "") +
@@ -545,3 +553,48 @@ function rpgLook() {
   };
 }
 hud();
+
+/* ── 손에 든 무기(아이콘 그림을 손 위치에) · 좋은 장비의 반짝임 ── */
+function rpgHand(h, face, mv, f) {
+  const w = rpgGet(save.rpg && save.rpg.eq.w),
+    A = w && HDA.icons && HDA.icons[w.id];
+  if (!A || face === "u") return;
+  const im = hdImg("icons/" + w.id + ".png");
+  if (!hdOk(im)) return;
+  const side = face === "s" ? (h.fl ? -1 : 1) : 1,
+    bob = mv ? (f % 2) * 0.6 : 0,
+    hx = h.px + (face === "s" ? 4 : 5) * side,
+    hy = h.py - 7 - bob,
+    sw = pl.atk > 0 ? ((10 - pl.atk) / 10) * 1.9 - 0.9 : 0; // 공격할 때 휘두르기
+  x.save();
+  x.translate(hx, hy);
+  if (side < 0) x.scale(-1, 1);
+  x.rotate(sw);
+  // 아이콘은 오른쪽 위를 향한 대각선 그림: 손잡이(왼쪽 아래)를 손에 맞춘다
+  x.drawImage(im, -A.b[0] / HDS - 1, -A.b[3] / HDS + 1, A.w / HDS, A.h / HDS);
+  x.restore();
+  // 레어 이상 무기는 날 끝이 반짝
+  if (w.g && fr % 10 < 4) P(x, hx + side * 6, hy - 9, 1, 1, GCOL(w.g));
+}
+{
+  const fx1 = drawFx;
+  drawFx = function () {
+    fx1();
+    if (!save.rpg || !M) return;
+    const o = rpgGet(save.rpg.eq.o),
+      w = rpgGet(save.rpg.eq.w),
+      g = Math.max(o ? o.g : 0, w ? w.g : 0);
+    if (g < 2) return;
+    // 유니크: 보라 반짝, 레전드: 금빛 반짝 + 발밑 빛
+    const k = (fr * 7) % 23;
+    if (k < 3) P(x, pl.x - cam.x - 7 + ((fr * 5) % 14), pl.y - cam.y - 6 - ((fr * 3) % 16), 1, 1, GCOL(g));
+    if (g >= 3) {
+      x.globalAlpha = 0.18 + 0.08 * Math.sin(fr / 4);
+      x.fillStyle = GCOL(3);
+      x.beginPath();
+      x.ellipse(pl.x - cam.x, pl.y - cam.y, 7, 2.4, 0, 0, 7);
+      x.fill();
+      x.globalAlpha = 1;
+    }
+  };
+}

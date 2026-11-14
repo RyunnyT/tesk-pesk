@@ -13,7 +13,7 @@ def info(p):
     return {"w": im.width, "h": im.height, "b": list(bb)}
 
 
-A = {"chars": {}, "mons": {}, "pets": {}, "npc": {}, "misc": {}, "props": {}, "bld": {}, "tiles": {}}
+A = {"chars": {}, "mons": {}, "pets": {}, "npc": {}, "misc": {}, "props": {}, "bld": {}, "tiles": {}, "icons": {}}
 # 인물: chars/<키>/{south,east,north,west}.png, walk_<방향>_<i>.png
 for d in sorted((hd / "chars").glob("*")) if (hd / "chars").exists() else []:
     if not (d / "south.png").exists():
@@ -23,13 +23,14 @@ for d in sorted((hd / "chars").glob("*")) if (hd / "chars").exists() else []:
     e["west"] = (d / "west.png").exists()
     A["chars"][d.name] = e
 # 한 장짜리 + 움직임(<키>_<i>.png)
-for cat in ("mons", "pets", "npc", "misc", "props", "bld"):
+for cat in ("mons", "pets", "npc", "misc", "props", "bld", "icons"):
     for p in sorted((hd / cat).glob("*.png")) if (hd / cat).exists() else []:
-        if re.search(r"_\d+$", p.stem):
+        # 아이콘 이름(w_knight_0)은 끝이 숫자라도 움직임 장면이 아니다
+        if cat != "icons" and re.search(r"_\d+$", p.stem):
             continue
         e = info(p)
         n = 0
-        while (hd / cat / ("%s_%d.png" % (p.stem, n))).exists():
+        while cat != "icons" and (hd / cat / ("%s_%d.png" % (p.stem, n))).exists():
             n += 1
         if n:
             e["n"] = n

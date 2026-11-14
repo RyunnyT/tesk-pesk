@@ -116,6 +116,9 @@ addEventListener("resize", fitView);
       '<div class="mrow"><button type="button" data-m="mute">' + (UI.mute ? "🔇 소리 켜기" : "🔊 소리 끄기") + "</button>" +
       '<button type="button" data-m="fs">⛶ 전체 화면</button>' +
       (typeof HD === "object" ? '<button type="button" data-m="hd">' + (UI.oldArt ? "🎨 새 그림으로" : "🎨 옛 그림으로") + "</button>" : "") +
+      '<button type="button" data-m="big">' + (UI.big ? "글자 보통" : "글자 크게") + "</button>" +
+      '<button type="button" data-m="tts">' + (UI.tts ? "읽어 주기 끄기" : "대사 읽어 주기") + "</button>" +
+      '<button type="button" data-m="calm">' + (UI.calm ? "흔들림 켜기" : "흔들림 끄기") + "</button>" +
       '<button type="button" data-m="study">선생님 설정</button>' +
       '<button type="button" data-m="reset">처음부터</button></div>' +
       '<h4>조작</h4><p class="mhelp">' +
@@ -147,6 +150,13 @@ addEventListener("resize", fitView);
       uiSave();
       render();
       sfx("ok");
+    } else if (m === "big" || m === "tts" || m === "calm") {
+      // 접근성 → src/15-play.js
+      UI[m] = !UI[m];
+      uiSave();
+      if (typeof a11yApply === "function") a11yApply();
+      if (m === "tts" && !UI.tts && window.speechSynthesis) speechSynthesis.cancel();
+      render();
     } else if (m === "hd") {
       // 48점 새 그림(PixelLab) ↔ 옛 그림 → src/13-hd.js
       UI.oldArt = !UI.oldArt;

@@ -6,7 +6,7 @@
      나머지 빈자리를 부마다 어울리는 지문부터 채운다. */
 const STUDY_KEY = "arca-study";
 const studyCfg = (() => {
-  const d = { grade: 5, level: "auto", scope: "part" };
+  const d = { grade: 5, level: "auto", scope: "part", subj: "math" };
   try {
     return Object.assign(d, JSON.parse(localStorage.getItem(STUDY_KEY) || "{}"));
   } catch (e) {
@@ -43,6 +43,15 @@ function partUnit(part) {
 /* 단원 문제 한 개. makeQ 와 같은 모양 {q, a, ch} 로 돌려준다. */
 function studyQ(d) {
   if (!window.QUIZ) return null;
+  // 과목: 수학 · 영어 단어 · 섞기(영어 3할)
+  if (studyCfg.subj === "eng" || (studyCfg.subj === "mix" && Math.random() < 0.3)) {
+    const e = QUIZ.makeQuestion({ subject: "english", grade: studyCfg.grade, tier: d <= 2 ? 1 : d === 3 ? 2 : 3, contextMode: "plain", responseMode: "choice" });
+    if (e && Array.isArray(e.options)) {
+      const a = String(e.answer),
+        wr = [...new Set(e.options.map(String))].filter((v) => v !== a).sort(() => Math.random() - 0.5).slice(0, 2);
+      if (wr.length === 2) return { q: e.q, a, ch: [a, ...wr].sort(() => Math.random() - 0.5), unit: "영어 단어", ex: e.explain || "" };
+    }
+  }
   const { term, unit } = partUnit(mapPart());
   const units = QUIZ.unitsOf(studyCfg.grade, term);
   if (!units.length) return null;
@@ -172,6 +181,7 @@ function studyRender() {
   el.querySelector("#sg").value = String(studyCfg.grade);
   el.querySelector("#sl").value = studyCfg.level;
   el.querySelector("#ss").value = studyCfg.scope;
+  if (el.querySelector("#sj")) el.querySelector("#sj").value = studyCfg.subj || "math";
   el.querySelector("#st").innerHTML = studyInfo();
   el.querySelector("#sw").textContent = window.QUIZ
     ? ""
@@ -190,6 +200,7 @@ function studyRender() {
       studyCfg.grade = +el.querySelector("#sg").value;
       studyCfg.level = el.querySelector("#sl").value;
       studyCfg.scope = el.querySelector("#ss").value;
+      if (el.querySelector("#sj")) studyCfg.subj = el.querySelector("#sj").value;
       studySave();
       if (studyLevel() !== lvBefore) fillPassages();
       studyRender();
