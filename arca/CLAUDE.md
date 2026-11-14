@@ -28,6 +28,7 @@
 | `src/07-engine.js` | 지워진 곳(패치)·별빛 가루, 맵 불러오기 `loadMap`, 메인 퀘스트 길찾기 `rawGoal`·`goal`·`hop`, 대화·선택지, 전투, 마이룸 패널, 입력, 그리기 루프 `frame` |
 | `src/08-ui.js` | 엔진 뒤에 붙는 화면·게임 요소: 휴대폰 화면 맞춤 `fitView`(W×H 를 바꿈)·메뉴(☰), 효과음 `sfx`(Web Audio, 끄기 `UI.mute`), 전투 연출 `fxHit`·`fxHurt`·`fxLunge`·`drawFx`·체력 막대, 틀린 문제 `noteWrong`·`PANEL.wrong`, 대화 얼굴 `drawPortrait`(openDlg 를 감쌈), 나침반 조각 `shardCount`·알림, 바랜 마을 `drawFade`·`fxRestore`, 마을 꾸미기 `decoMap`(간판·차양·굴뚝·소품), 스킬 이펙트 `fxSkill`, 건물 안 `bRoom`(lib1·lh1), 새 퀘스트(`talk` 전하기·`solve` 문제 풀어 주기), 일지·지도 칸, 시작 화면 |
 | `src/09-field.js` | 길 위 전투: 문제 상자 `askField`, 공격이 닿음 `fieldStrike`, 부딪힘 `fieldContact`, 핵심 자리 보스 `fieldBoss`, 스킬 `fieldSkill`, 별빛 게이지 `FLD`(상단 표시), 다친 몬스터 체력 막대, 휴대폰 스킬 버튼 |
+| `src/10-secrets.js` | 숨은 것(이스터에그): 별고양이 12·반응하는 사물·행동/이름/숫자 이스터에그·도서관 비밀 서고(lib2)·떠돌이 상인. 맵별 목록 `SEC`, 숨길 자리 찾기 `hidePos`·`openPos`(걸어서 갈 수 있는 칸만). **무엇이 어디 있는지는 `docs/비밀_목록.md`(선생님용)** |
 | `docs/그림_업그레이드_기록.md` | 그림을 2등신 캐주얼풍으로 바꾸는 작업의 기록(결정·그리는 방법·적용 계획). **그림 작업은 이 문서를 먼저 읽는다.** 견본은 `prototypes/4_메이플풍_그림_견본.html` |
 | `prototypes/` | 이전 시안(참고용). 옆에서 본 풍경 그림 12장은 나중에 이야기 장면 그림으로 재사용 가능 |
 | `../quiz-bank.js` | Pesk 와 같은 수학 문제 은행 (학년·학기·단원·난이도). N부 = 그 학기 N단원 |

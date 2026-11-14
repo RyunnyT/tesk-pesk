@@ -1010,6 +1010,7 @@ function furAct(f) {
 function interact(t) {
   if (!t) return;
   const o = t.ref;
+  if (t.type === "secret") return o.act(); // 숨은 것 → src/10-secrets.js
   if (t.type === "npc") talk(o);
   else if (t.type === "spot") openBook(o);
   else if (t.type === "patch") fillPatch(o);
@@ -2150,6 +2151,7 @@ function drawMap() {
         node: () => ITEM[t.ref.t] + " 캐기",
         fur: () => t.ref.n,
         patch: () => (t.ref.core ? "핵심 자리 다시 쓰기 · 가루 6" : "다시 쓰기 · 가루 3"),
+        secret: () => t.ref.n, // 숨은 것 → src/10-secrets.js
       }[t.type]()
     : "";
   if (lab !== lastAct) {
