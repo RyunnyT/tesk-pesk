@@ -8,8 +8,10 @@ css = (root / "style.css").read_text(encoding="utf-8")
 html = re.sub(r'<link rel="stylesheet" href="style.css"\s*/?>', lambda m: "<style>\n" + css + "\n</style>", html)
 tag = r'<script src="((?!https?:)[^"]+)"></script>'
 srcs = re.findall(tag, html)
-js = "\n".join((root / s).resolve().read_text(encoding="utf-8") for s in srcs)
-html = re.sub(r'(' + tag + r'\s*)+', lambda m: "<script>\n" + js.replace("</script", "<\\/script") + "\n</script>\n", html, count=1)
+# 스크립트마다 따로 <script> 로 넣는다. 하나로 합치면 뒤 파일의 함수가 앞 파일 실행 중에 먼저 보이지만
+# 그 파일의 const 는 아직 준비되지 않아 오류가 난다(예: 마을에서 저장한 뒤 다시 열 때).
+inline = lambda src: "<script>\n" + (root / src).resolve().read_text(encoding="utf-8").replace("</script", "<\\/script") + "\n</script>"
+html = re.sub(tag, lambda m: inline(m.group(1)), html)
 out = root / "dist"
 out.mkdir(exist_ok=True)
 (out / "arca-chronicles.html").write_text(html, encoding="utf-8")
