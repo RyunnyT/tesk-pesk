@@ -1,0 +1,85 @@
+{
+ "house-red": {
+  "id": "fd66d94f-a718-4349-a46c-d751566a4208",
+  "done": 1
+ },
+ "house-blue": {
+  "id": "b363b5a1-4428-46fc-ac31-3e2ade58622a",
+  "done": 1
+ },
+ "house-brown": {
+  "id": "bf8d6dbe-ecc4-4a14-a8cf-d24d806993c8",
+  "done": 1
+ },
+ "house-purple": {
+  "id": "7499ea61-45ec-4946-a246-78ed833a4279",
+  "done": 1
+ },
+ "house-teal": {
+  "id": "407f461e-09b9-425e-927b-ae75ae1a5213",
+  "done": 1
+ },
+ "house-lavender": {
+  "id": "87c1ad13-185b-48e1-80ff-8cd0be1258fb",
+  "done": 1
+ },
+ "house-green": {
+  "id": "e73e168a-a70b-48b1-a5f4-540e41acc9e0",
+  "done": 1
+ },
+ "house-orange": {
+  "id": "26b5734f-8fb7-4bc4-bdc4-fc06d0baf23e",
+  "done": 1
+ },
+ "house-gray": {
+  "id": "1c6e6262-8905-4b4b-bc04-d64d1ff95927",
+  "done": 1
+ },
+ "house-gold": {
+  "id": "c2046589-7543-4fda-877e-ff4894b5a850",
+  "done": 1
+ },
+ "house-pale": {
+  "id": "522bcf28-fba3-4a49-ab6b-cdc0c447df9b",
+  "done": 1
+ },
+ "house-navy-small": {
+  "id": "5e2f9496-bce0-4ae4-a786-b1a18379be01",
+  "done": 1
+ },
+ "house-big": {
+  "id": "95039d42-86e9-488e-8cae-3c37358d3586",
+  "done": 1
+ },
+ "lighthouse": {
+  "id": "2fcdcaaf-42f0-4096-b0ee-a911908ab25e",
+  "done": 1
+ },
+ "oak": {
+  "id": "1e2fe68f-bcbf-4e52-998f-0bcdf015a56b",
+  "done": 1
+ },
+ "clock": {
+  "id": "2fb2d92f-456a-48a2-bf68-c5106f238d62",
+  "done": 1
+ },
+ "academy": {
+  "id": "a0ff5452-9725-4dd7-8f15-fefb7031f288",
+  "done": 1
+ },
+ "mill": {
+  "id": "f710296f-7eb4-41c7-b0e7-bee545c340bf",
+  "done": 1
+ },
+ "spire": {
+  "id": "c6a3cd6a-310b-471c-982e-1246d07d4e4c",
+  "done": 1
+ },
+ "compass": {
+  "id": "e3cf45da-df2f-4df5-90c7-af24bd67c431",
+  "done": 1
+ },
+ "palace": {
+  "id": "b89d0e40-7110-42a3-a5c9-565ae8f9a982"
+ }
+}

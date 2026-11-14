@@ -1,0 +1,197 @@
+{
+ "hero-knight": {
+  "id": "7a71554e-0c85-479f-82fd-b924f0967f27",
+  "anim": 1,
+  "done": 1
+ },
+ "hero-none": {
+  "id": "f7daa37f-6b48-421e-8cfa-6209c8d02d60",
+  "anim": 1,
+  "done": 1
+ },
+ "hero-warrior": {
+  "id": "7e22c4bb-4c48-4d38-b7db-b1264b5f421c",
+  "anim": 1,
+  "done": 1
+ },
+ "hero-mage": {
+  "id": "1e949d2f-7f43-4d98-9d6b-c28ecd7d9e72",
+  "anim": 1,
+  "done": 1
+ },
+ "hero-archer": {
+  "id": "5d5b7645-056c-4f17-99c0-3802587eb47c",
+  "anim": 1,
+  "done": 1
+ },
+ "kai": {
+  "id": "c3581a12-57d6-4793-9a07-96ed47e763ea",
+  "anim": 1,
+  "done": 1
+ },
+ "dora": {
+  "id": "a009714d-38e1-40d9-8340-dcae6d0a2848",
+  "anim": 1,
+  "done": 1
+ },
+ "toto": {
+  "id": "d190feeb-1de3-4a36-b7f2-598f695e348e",
+  "anim": 1,
+  "done": 1
+ },
+ "marta": {
+  "id": "11990e67-8969-4470-b596-27de72e5a758",
+  "anim": 1,
+  "done": 1
+ },
+ "sora": {
+  "id": "893fda79-652f-43dd-939c-37183f4c8cda",
+  "anim": 1,
+  "done": 1
+ },
+ "lumi": {
+  "id": "5da1591e-3590-4db1-aa23-ff1a804197fd",
+  "anim": 1
+ },
+ "merchant": {
+  "id": "898d0bc8-4407-4c69-b5de-efc37a02c455",
+  "anim": 1,
+  "done": 1
+ },
+ "bran": {
+  "id": "0a5f7e35-6322-4c95-9957-b797631e70c0",
+  "anim": 1,
+  "done": 1
+ },
+ "gord": {
+  "id": "82fa7313-b08e-4637-a405-0ec350c61510",
+  "anim": 1,
+  "done": 1
+ },
+ "iset": {
+  "id": "6d1fcd22-2e81-49d5-a399-37d5b0930d64",
+  "anim": 1,
+  "done": 1
+ },
+ "pila": {
+  "id": "471ff765-d678-4d45-857e-1c93c036b995",
+  "anim": 1
+ },
+ "noxy": {
+  "id": "3f79ac66-8b07-43ce-9858-9ab7c03e155c",
+  "anim": 1,
+  "done": 1
+ },
+ "nox-scribe": {
+  "id": "23ea19dc-60a0-4b8c-85b2-cfd6cbdea913",
+  "anim": 1,
+  "done": 1
+ },
+ "luke": {
+  "id": "dd021c88-94f0-4958-8a72-039fc4f09c3d",
+  "anim": 1,
+  "done": 1
+ },
+ "gren": {
+  "id": "124967cd-4c80-48b3-81a7-1a277810e176",
+  "anim": 1,
+  "done": 1
+ },
+ "mor": {
+  "id": "19831fce-af33-47d0-8aa4-d91a96c0da38",
+  "anim": 1,
+  "done": 1
+ },
+ "lis": {
+  "id": "679b30bd-3cbd-441e-8b8a-954cb68852fa",
+  "anim": 1
+ },
+ "oscar": {
+  "id": "7b98bdfe-283f-4722-bfd3-c6201148317d",
+  "anim": 1,
+  "done": 1
+ },
+ "fin": {
+  "id": "c79010c8-7e91-4c88-a163-5c450dc9b8c2",
+  "anim": 1,
+  "done": 1
+ },
+ "barg": {
+  "id": "7dbff5dd-0e21-4c75-bfcf-d8ecd495e746",
+  "anim": 1
+ },
+ "marinda": {
+  "id": "3570bede-9a1c-4566-9b0d-680cebe0f267"
+ },
+ "deok": {
+  "id": "45d650cb-b0c2-4e8a-853d-77bc50e730a2"
+ },
+ "goldwin": {
+  "id": "8b734bfa-470d-47cb-aae8-db4608303ce9"
+ },
+ "halmi": {
+  "id": "aa9213e0-a878-4148-afe3-4ad37083793f"
+ },
+ "evan": {
+  "id": "18d90646-0998-42a3-8dd8-238ea54d0746"
+ },
+ "doto": {
+  "id": "66001e1b-d063-4682-b1aa-0e139fb2c53f"
+ },
+ "rito": {
+  "id": "c06ecf5f-835e-4793-bcc5-87f0edb636cf"
+ },
+ "kron": {
+  "id": "00d599f0-cc5e-44f9-abe7-2120bd55887d"
+ },
+ "brida": {
+  "id": "fc099e98-460b-45e5-bb4f-8dd8652e7223"
+ },
+ "layla": {
+  "id": "2dde6a04-759f-4868-81cf-4a7cc0775196"
+ },
+ "jay": {
+  "id": "82077698-7374-4ca3-8215-b986fc5ca869"
+ },
+ "serafin": {
+  "id": "d681afe5-c27b-49aa-80dd-80e3e4fa6227"
+ },
+ "gris": {
+  "id": "34d4b813-997f-465e-9eb9-6842ab7b9855"
+ },
+ "popo": {
+  "id": "ad0e83ba-e80a-4620-8ef8-6889fd317188"
+ },
+ "ruru": {
+  "id": "a3c484d4-240e-4f0f-9f15-dfa155a6cd60"
+ },
+ "arien": {
+  "id": "59cf6feb-0e22-4acc-b79e-12f0baa9e289"
+ },
+ "pung": {
+  "id": "2f5389bc-26dc-489c-b075-c8bdbd784971"
+ },
+ "reno": {
+  "id": "7cb8e926-44cb-49e0-8fc2-1bdc72a7df19"
+ },
+ "harold": {
+  "id": "0f23c47c-128d-4113-b4a0-15f629744459",
+  "anim": 1,
+  "done": 1
+ },
+ "kong": {
+  "id": "73fa7b3e-fe0f-4e4c-9eb1-6554c089468a"
+ },
+ "pat": {
+  "id": "1a2f12e6-096d-49f9-a636-59451689688a"
+ },
+ "zip": {
+  "id": "62aa75c7-babf-4b9e-b658-a69bbe0549f3"
+ },
+ "momone": {
+  "id": "e22572b3-a598-4613-be7f-ff015eec506f"
+ },
+ "serena": {
+  "id": "fddff1da-29c6-4a07-83e8-07a7ba1cca53"
+ }
+}

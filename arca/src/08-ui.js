@@ -78,11 +78,13 @@ function fitView() {
       w = Math.min(400, Math.round((180 * vw) / vh / 2) * 2);
     }
   }
-  if (w === W && h === H) return;
+  if (w === W && h === H && cv.width === W * HDS) return;
   W = w;
   H = h;
-  cv.width = W;
-  cv.height = H;
+  cv.width = W * HDS;
+  cv.height = H * HDS;
+  x.setTransform(HDS, 0, 0, HDS, 0, 0);
+  x.imageSmoothingEnabled = false;
 }
 if (MOBILE) {
   document.body.classList.add("mobile");
@@ -113,6 +115,7 @@ addEventListener("resize", fitView);
       '<button class="cx" type="button" data-m="x" aria-label="닫기">×</button><h3>메뉴</h3>' +
       '<div class="mrow"><button type="button" data-m="mute">' + (UI.mute ? "🔇 소리 켜기" : "🔊 소리 끄기") + "</button>" +
       '<button type="button" data-m="fs">⛶ 전체 화면</button>' +
+      (typeof HD === "object" ? '<button type="button" data-m="hd">' + (UI.oldArt ? "🎨 새 그림으로" : "🎨 옛 그림으로") + "</button>" : "") +
       '<button type="button" data-m="study">선생님 설정</button>' +
       '<button type="button" data-m="reset">처음부터</button></div>' +
       '<h4>조작</h4><p class="mhelp">' +
@@ -144,6 +147,13 @@ addEventListener("resize", fitView);
       uiSave();
       render();
       sfx("ok");
+    } else if (m === "hd") {
+      // 48점 새 그림(PixelLab) ↔ 옛 그림 → src/13-hd.js
+      UI.oldArt = !UI.oldArt;
+      uiSave();
+      HD.on = !UI.oldArt;
+      hdRepaint();
+      render();
     } else if (m === "fs") {
       const el = document.documentElement;
       if (document.fullscreenElement) document.exitFullscreen();

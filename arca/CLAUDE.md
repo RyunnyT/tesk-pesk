@@ -16,7 +16,7 @@
 ## 파일 지도
 | 파일 | 내용 |
 |---|---|
-| `src/01-core.js` | 캔버스(320×180, 타일 16px), 그리기 도우미 `P`(사각형)·`disc`, 해시 `hsh`, 디더 `dith`, 지형 테마 `TH`, 맵 도우미 `nm`·`FL`·`border`·`picks` |
+| `src/01-core.js` | 캔버스(320×180, 타일 16px, 그릴 때만 3배 `HDS`), 그리기 도우미 `P`(사각형)·`disc`, 해시 `hsh`, 디더 `dith`, 지형 테마 `TH`, 맵 도우미 `nm`·`FL`·`border`·`picks` |
 | `src/02-town1-and-home.js` | 저장 `save`(localStorage `arca-v2`), 1부 퀘스트 `QS`, 1부 루멘 마을 `bT1`, 마이룸 `bHome`·가구 `FURD`, 1부 길목 r1·r2·r3·막다른 숲 d1 (손으로 만든 맵) |
 | `src/03-tiles.js` | 충돌 `blk`, 타일 그리기 `ground`·`objDraw`, 건물 `bldDraw`, 맵 굽기 `paintMap` |
 | `src/04-characters-and-data.js` | 사람 스프라이트 `person`(앞/뒤), 직업 `JOB`·스킬 `SKL`·`SKE`·`EFF`, 장비 `EQ`, 펫 `petDraw`, NPC 모양 `D`, 몬스터 `MON`, 문제 생성 `makeQ` |
@@ -31,6 +31,10 @@
 | `src/10-secrets.js` | 숨은 것(이스터에그): 별고양이 12·반응하는 사물·행동/이름/숫자 이스터에그·도서관 비밀 서고(lib2)·떠돌이 상인. 맵별 목록 `SEC`, 숨길 자리 찾기 `hidePos`·`openPos`(걸어서 갈 수 있는 칸만). **무엇이 어디 있는지는 `docs/비밀_목록.md`(선생님용)** |
 | `src/11-travel.js` | 이동 편의: 정복한 맵 `conquered(id)` 에서 어디서든 순간이동(가 본 마을 + 정복한 길), 길목 도착 자리 `spawn` 자동, 마이룸에 들어갔다 나오면 원래 자리(`save.ret`, 쓰러졌을 땐 마지막 마을) |
 | `src/12-monsters.js` | 몬스터 추가(일반 9종: 금화 들쥐·안개 박쥐·산딸기 고슴도치·태엽 병정·잉크 얼룩이·도깨비불·회색 까마귀·구름 양·망각 유령)와 보스 3종 새 그림(warden·noxshade·noxf), 길목 배치 `NEW_SPAWN`. **모든 인물·몬스터 겉모습은 `docs/등장인물_몬스터_외형.md`** |
+| `src/13-hd.js` | **48점 그림(PixelLab) 연결.** 그림 목록 `data/hd-assets.js`(`HDA`, `tools/hd/build_manifest.py` 로 자동 생성), 그림 파일 `assets/hd/`. `mapper` 가 위치를 붙여 주면 `person`·`owl`·`petDraw`·`MON[].dr`·`drawCat`·`drawPortrait` 가 그림을 찍고, 그림이 없으면 옛 그림으로 그린다. 지도는 `paintMap` 을 바꿔 바닥을 **이중 격자**(칸 네 개 모서리 → 16칸 모서리 타일)로 잇고, 나무·바위·울타리·집·랜드마크·가구·소품을 그림으로 바꾼다. 3배 바탕은 지금 맵과 바로 전 맵만 남긴다 |
+| `assets/hd/` | PixelLab 그림: `chars/<키>/`(4방향+걷기), `mons`·`pets`·`npc`·`misc`(한 장+움직임 `_0~3`), `props`·`bld`, `tiles/<테마>-path·water·sand·sea`(모서리 16칸)·`solid`. 만드는 법은 `docs/그림_업그레이드_기록.md` 의 'PixelLab 48점 전체 바꾸기' |
+| `tools/pixellab/` | PixelLab 자동 그리기: `run_chars`·`run_objs`·`run_tiles`·`run_bld`(.mjs), 진행 상태 `state_*.json`(다시 실행하면 이어서). 키는 저장소 밖 파일(`PIXELLAB_KEY_FILE`) |
+| `tools/hd/` | 그림 손질: `fix_borders.py`(타일 흰 테두리), `harmonize.py`(테마별 풀색 맞추기), `build_manifest.py`(목록 만들기) |
 | `docs/그림_업그레이드_기록.md` | 그림을 2등신 캐주얼풍으로 바꾸는 작업의 기록(결정·그리는 방법·적용 계획). **그림 작업은 이 문서를 먼저 읽는다.** 견본은 `prototypes/4_메이플풍_그림_견본.html`(벡터풍)·`prototypes/5_도트_견본.html`(도트풍, 선생님 참고 그림 기반) |
 | `prototypes/` | 이전 시안(참고용). 옆에서 본 풍경 그림 12장은 나중에 이야기 장면 그림으로 재사용 가능 |
 | `../quiz-bank.js` | Pesk 와 같은 수학 문제 은행 (학년·학기·단원·난이도). N부 = 그 학기 N단원 |
@@ -75,5 +79,7 @@
 - 한 사람이 퀘스트를 여러 개 줄 수 있다: `qFor(n)` 이 끝나지 않은 것부터 준다. 퀘스트 대사의 `{pet}` 은 `storyText` 가 펫 이름으로 바꾼다.
 - `curPart()`(07-engine)는 이야기 진행 단계(0부터)이고, `mapPart()`(06b)는 지금 서 있는 맵의 부(1부터)다. 헷갈리지 않게.
 - 화면 크기 `W`·`H` 는 `let` 이다(휴대폰에서 바뀜). 화면 좌표 계산에 320·180 을 직접 쓰지 않는다.
+- 캔버스 실제 크기는 `W×HDS`(3배)이고 `x` 에 3배 변환이 걸려 있다. 그리기 좌표는 지금처럼 16점 칸 기준으로 쓴다. 맵 바탕(`M.base`·`M.over`·`M.sketch`)도 3배 크기라 `drawImage` 할 때 목적지 크기(`WW`,`WH`)를 꼭 준다.
+- `index.html` 을 파일로 바로 열면 그림 파일 때문에 캔버스 픽셀을 읽을 수 없다(`getImageData`). 연필 밑그림은 그때 옛 그림으로 따로 그려 읽는다(`13-hd.js`). 파일 하나 빌드(`dist/`)는 그림이 안에 들어가서 이 문제가 없다.
 - 엔진 함수 `openDlg`·`hud`·`drawFx`·`storyTalk` 등은 뒤 파일이 감싸서(원래 함수를 부른 뒤 덧붙임) 기능을 더한다. 고칠 때 감싼 쪽도 확인한다.
 - 전역 이름이 많다. 새 전역을 만들 때 기존 이름(`M`, `G`, `O`, `B`, `T`, `W`, `H`, `x` 등)과 겹치지 않게 한다.

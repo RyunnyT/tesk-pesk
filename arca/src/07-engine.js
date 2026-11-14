@@ -1,14 +1,17 @@
 function setupPatches(m) {
-  const sk2 = mk(m.w * T, m.h * T),
+  // 밑그림도 3배 크기로 만든다(바탕 그림이 3배)
+  const sk2 = mk(m.w * T * HDS, m.h * T * HDS),
     kc = sk2.getContext("2d"),
     bc = m.base.getContext("2d"),
-    d = bc.getImageData(0, 0, m.w * T, m.h * T).data,
+    d = bc.getImageData(0, 0, m.w * T * HDS, m.h * T * HDS).data,
     L = (i) => d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11,
-    WW2 = m.w * T;
-  P(kc, 0, 0, WW2, m.h * T, "#f6f3ea");
-  for (let y = 4; y < m.h * T; y += 7) P(kc, 0, y, WW2, 1, "#ebe5d6");
+    WW2 = m.w * T * HDS;
+  kc.setTransform(HDS, 0, 0, HDS, 0, 0);
+  P(kc, 0, 0, m.w * T, m.h * T, "#f6f3ea");
+  for (let y = 4; y < m.h * T; y += 7) P(kc, 0, y, m.w * T, 1, "#ebe5d6");
+  kc.setTransform(1, 0, 0, 1, 0, 0);
   kc.fillStyle = "#aaa292";
-  for (let y = 0; y < m.h * T - 1; y++)
+  for (let y = 0; y < m.h * T * HDS - 1; y++)
     for (let a = 0; a < WW2 - 1; a++) {
       const i = (y * WW2 + a) * 4,
         l = L(i);
@@ -84,8 +87,10 @@ function loadMap(id, tx, ty, quiet) {
   WW = MW * T;
   WH = MH * T;
   if (!M.base) {
-    M.base = mk(WW, WH);
-    M.over = mk(WW, WH);
+    M.base = mk(WW * HDS, WH * HDS);
+    M.over = mk(WW * HDS, WH * HDS);
+    M.base.getContext("2d").setTransform(HDS, 0, 0, HDS, 0, 0);
+    M.over.getContext("2d").setTransform(HDS, 0, 0, HDS, 0, 0);
     paintMap(M);
     if (M.patch) setupPatches(M);
   }
@@ -2050,7 +2055,7 @@ function drawMap() {
   if (WH <= H) cam.y = Math.round((WH - H) / 2);
   x.fillStyle = "#14112a";
   x.fillRect(0, 0, W, H);
-  x.drawImage(M.base, -cam.x, -cam.y);
+  x.drawImage(M.base, -cam.x, -cam.y, WW, WH);
   if (typeof drawFade === "function") drawFade(); // 되살리기 전 바랜 마을 → src/08-ui.js
   const tx0 = Math.floor(cam.x / T),
     ty0 = Math.floor(cam.y / T);
@@ -2076,7 +2081,7 @@ function drawMap() {
       if (ER.has(key) && !PATCH[ER.get(key)].done) {
         const pi = ER.get(key),
           core = PATCH[pi].core;
-        x.drawImage(M.sketch, a * T, y * T, T, T, X, Y, T, T);
+        x.drawImage(M.sketch, a * T * HDS, y * T * HDS, T * HDS, T * HDS, X, Y, T, T);
         const nb = (dx, dy) => {
           const k2 = a + dx + "," + (y + dy);
           return ER.has(k2) && ER.get(k2) === pi;
@@ -2123,7 +2128,7 @@ function drawMap() {
     ...(save.pet ? [{ y: pet.y - 0.1, d: drawPet }] : []),
   ];
   L.sort((a, b) => a.y - b.y).forEach((o) => o.d());
-  x.drawImage(M.over, -cam.x, -cam.y);
+  x.drawImage(M.over, -cam.x, -cam.y, WW, WH);
   npcs.forEach((n) => {
     const qm = qmark(n);
     if (qm)

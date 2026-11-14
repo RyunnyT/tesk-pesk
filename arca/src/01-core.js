@@ -2,6 +2,8 @@
 let W = 320,
   H = 180;
 const T = 16;
+// 화면 배율: 게임 좌표는 그대로 16점 칸이고, 그릴 때만 3배(PixelLab 48점 그림을 그대로 찍는다)
+const HDS = 3;
 const cv = document.getElementById("cv"),
   x = cv.getContext("2d");
 const mk = (w, h) => {
