@@ -7,6 +7,8 @@ img = {
   'nov': {d: u(f'novice/{d}.png') for d in ['south', 'east', 'north', 'west']},
   'kn': {d: u(f'knight/{d}.png') for d in ['south', 'east', 'north', 'west']},
   'walk': {d: [u(f'novice/walk_{d}/frame_00{i}.png') for i in range(4)] for d in ['south', 'east', 'north']},
+  'n48': {d: u(f'novice48/{d}.png') for d in ['south', 'east', 'north', 'west']},
+  'walk48': {d: [u(f'novice48/walk_{d}/frame_00{i}.png') for i in range(4)] for d in ['south', 'east', 'north']},
   'nowNov': u('now_novice.png'), 'nowKn': u('now_knight.png'),
   'base': u('scene_base.png'), 'over': u('scene_over.png'),
 }

@@ -32,7 +32,7 @@
 <body>
 <main>
   <h1>PixelLab 견본 — 주인공 그림</h1>
-  <p class="sub">PixelLab으로 그린 주인공 2명(직업 전·기사)을 지금 게임 그림과 나란히 놓았어요. 게임 본체는 그대로예요.</p>
+  <p class="sub">PixelLab으로 그린 주인공을 지금 게임 그림과 나란히 놓았어요. 크기 32(화면 2배)와 48(화면 3배)을 비교해 보세요. 게임 본체는 그대로예요.</p>
 
   <section>
     <h2>1. 지금 그림과 PixelLab 그림 (확대해서 보기)</h2>
@@ -40,18 +40,20 @@
   </section>
 
   <section>
-    <h2>2. 걷기 동작 (직업 전 주인공)</h2>
+    <h2>2. 걷기 동작 (직업 전 주인공) — 위: 크기 32, 아래: 크기 48</h2>
     <p class="sub" style="margin:0 0 10px">앞·오른쪽·뒤는 PixelLab이 그렸고, 왼쪽은 오른쪽 그림을 뒤집어서 만들었어요.</p>
     <div class="row" id="walks"></div>
+    <div class="row" id="walks48" style="margin-top:12px"></div>
   </section>
 
   <section>
-    <h2>3. 마을에 세워 보기 (화면 2배)</h2>
+    <h2>3. 마을에 세워 보기</h2>
     <p class="sub" style="margin:0 0 10px">루멘 마을 한 조각이에요. 방향키나 아래 버튼으로 걸어 보세요.</p>
     <canvas id="scene" width="640" height="384"></canvas>
     <div class="btns">
-      <button id="bNov" class="on">PixelLab 직업 전</button>
-      <button id="bKn">PixelLab 기사</button>
+      <button id="b48" class="on">크기 48 (화면 3배)</button>
+      <button id="bNov">크기 32 (화면 2배)</button>
+      <button id="bKn">크기 32 기사</button>
       <button id="bNow">지금 그림</button>
       <div class="pad">
         <span></span><button data-d="north">▲</button><span></span>
@@ -65,8 +67,9 @@
     <ul>
       <li><b>좋은 점</b>: 그림자·명암이 들어가서 지금보다 섬세하고, 걷기 동작이 자연스러워요.</li>
       <li><b>다른 점</b>: 지금 지도(16점 칸)는 단순한데 인물만 섬세해져서 서로 어울리는지 봐야 해요.</li>
-      <li><b>기사 그림</b>은 걷기 동작 없이 서 있는 모습만 받았어요(그리기 횟수를 아끼려고).</li>
-      <li><b>남은 그리기 횟수</b>: 27번. 인물 1명 = 1번, 걷기 = 방향마다 1번(앞·옆·뒤 3번).</li>
+      <li><b>크기 48</b>은 화면을 3배로 키워서, 지도 칸(16점)이 48점으로 커져요. 인물은 더 섬세하지만 지도는 그만큼 뭉툭해 보여요 → 48로 가면 지도도 PixelLab으로 다시 그리는 게 좋아요.</li>
+      <li><b>기사 그림</b>은 크기 32로 서 있는 모습만 받았어요.</li>
+      <li><b>그리기 횟수</b>: 인물 1명 = 1번, 걷기 = 방향마다 1번(앞·옆·뒤 3번). 크기 32와 48은 횟수가 같아요.</li>
     </ul>
   </section>
 </main>
@@ -74,7 +77,7 @@
 const IMG = /*IMG*/null;
 const load = (src) => { const i = new Image(); i.src = src; return i; };
 const L = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, Array.isArray(v) ? v.map(load) : load(v)]));
-const nov = L(IMG.nov), kn = L(IMG.kn), walk = L(IMG.walk);
+const nov = L(IMG.nov), kn = L(IMG.kn), walk = L(IMG.walk), n48 = L(IMG.n48), walk48 = L(IMG.walk48);
 const nowNov = load(IMG.nowNov), nowKn = load(IMG.nowKn), base = load(IMG.base), over = load(IMG.over);
 
 // 1) 비교
@@ -88,22 +91,26 @@ add(cmp, IMG.nowNov, 54, 24, 3, '지금 · 직업 전 (앞·옆·뒤)');
 add(cmp, IMG.nowKn, 54, 24, 3, '지금 · 기사');
 ['south', 'east', 'north'].forEach((d) => add(cmp, IMG.nov[d], 48, 48, 2, 'PixelLab 직업 전 · ' + ({ south: '앞', east: '옆', north: '뒤' })[d]));
 ['south', 'east', 'north'].forEach((d) => add(cmp, IMG.kn[d], 48, 48, 2, 'PixelLab 기사 · ' + ({ south: '앞', east: '옆', north: '뒤' })[d]));
+['south', 'east', 'north'].forEach((d) => add(cmp, IMG.n48[d], 68, 68, 2, '크기 48 직업 전 · ' + ({ south: '앞', east: '옆', north: '뒤' })[d]));
 
 // 2) 걷기
-const walks = document.getElementById('walks'), wc = [];
-[['south', '앞'], ['east', '오른쪽'], ['west', '왼쪽'], ['north', '뒤']].forEach(([d, n]) => {
-  const c = document.createElement('canvas'); c.width = 48; c.height = 48; c.className = 'px';
-  c.style.width = c.style.height = '144px';
-  const box = document.createElement('div'); box.className = 'cell'; box.append(c, n); walks.append(box); wc.push([c, d]);
+const wc = [];
+[['walks', 48, 'walk'], ['walks48', 68, 'walk48']].forEach(([id, sz, set]) => {
+  const box0 = document.getElementById(id);
+  [['south', '앞'], ['east', '오른쪽'], ['west', '왼쪽'], ['north', '뒤']].forEach(([d, n]) => {
+    const c = document.createElement('canvas'); c.width = sz; c.height = sz; c.className = 'px';
+    c.style.width = c.style.height = (sz * 2) + 'px';
+    const box = document.createElement('div'); box.className = 'cell'; box.append(c, (sz === 48 ? '32 · ' : '48 · ') + n); box0.append(box); wc.push([c, d, set, sz]);
+  });
 });
 const frame = (set, d, f) => d === 'west' ? set.east[f] : set[d][f];
-const drawFlip = (g, im, x, y, flip) => { g.save(); if (flip) { g.translate(x + 48, y); g.scale(-1, 1); g.drawImage(im, 0, 0); } else g.drawImage(im, x, y); g.restore(); };
+const drawFlip = (g, im, x, y, flip) => { const w = im.naturalWidth || 48; g.save(); if (flip) { g.translate(x + w, y); g.scale(-1, 1); g.drawImage(im, 0, 0); } else g.drawImage(im, x, y); g.restore(); };
 
 // 3) 장면
 const sc = document.getElementById('scene'), g = sc.getContext('2d'); g.imageSmoothingEnabled = false;
-let who = 'nov', dir = 'south', x = 320, y = 230, moving = 0, keys = {};
-const pick = (id, w) => document.getElementById(id).onclick = () => { who = w; ['bNov', 'bKn', 'bNow'].forEach((b) => document.getElementById(b).classList.toggle('on', b === id)); };
-pick('bNov', 'nov'); pick('bKn', 'kn'); pick('bNow', 'now');
+let who = 'n48', dir = 'south', x = 320, y = 230, moving = 0, keys = {};
+const pick = (id, w) => document.getElementById(id).onclick = () => { who = w; ['b48', 'bNov', 'bKn', 'bNow'].forEach((b) => document.getElementById(b).classList.toggle('on', b === id)); };
+pick('b48', 'n48'); pick('bNov', 'nov'); pick('bKn', 'kn'); pick('bNow', 'now');
 const KEY = { ArrowUp: 'north', ArrowDown: 'south', ArrowLeft: 'west', ArrowRight: 'east' };
 addEventListener('keydown', (e) => { if (KEY[e.key]) { keys[KEY[e.key]] = 1; e.preventDefault(); } });
 addEventListener('keyup', (e) => { if (KEY[e.key]) keys[KEY[e.key]] = 0; });
@@ -118,26 +125,32 @@ function loop() {
   t++;
   const f = Math.floor(t / 9) % 4;
   // 걷기 미리보기
-  wc.forEach(([c, d]) => { const q = c.getContext('2d'); q.clearRect(0, 0, 48, 48); drawFlip(q, frame(walk, d, f), 0, 0, d === 'west'); });
+  wc.forEach(([c, d, set, sz]) => { const q = c.getContext('2d'); q.clearRect(0, 0, sz, sz); drawFlip(q, frame(set === 'walk' ? walk : walk48, d, f), 0, 0, d === 'west'); });
   // 이동
   moving = 0;
-  for (const d of ['north', 'south', 'west', 'east']) if (keys[d]) { dir = d; x += V[d][0] * 2; y += V[d][1] * 2; moving = 1; }
-  x = Math.max(16, Math.min(624, x)); y = Math.max(40, Math.min(380, y));
-  g.clearRect(0, 0, 640, 384);
-  g.drawImage(base, 0, 0, 640, 384);
-  g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(x, y - 2, 11, 4, 0, 0, 7); g.fill();
+  for (const d of ['north', 'south', 'west', 'east']) if (keys[d]) { dir = d; x += V[d][0] * (who === 'n48' ? 3 : 2); y += V[d][1] * (who === 'n48' ? 3 : 2); moving = 1; }
+  const Z = who === 'n48' ? 3 : 2, W = 320 * Z, H = 192 * Z;
+  if (sc.width !== W) { const rx = x / sc.width, ry = y / sc.height; sc.width = W; sc.height = H; g.imageSmoothingEnabled = false; x = rx * W; y = ry * H; }
+  x = Math.max(16, Math.min(W - 16, x)); y = Math.max(40, Math.min(H - 4, y));
+  g.clearRect(0, 0, W, H);
+  g.drawImage(base, 0, 0, W, H);
+  g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(x, y - 2, 5.5 * Z, 2 * Z, 0, 0, 7); g.fill();
   if (who === 'now') {
     const col = { south: 0, east: 1, west: 1, north: 2 }[dir], bob = moving && f % 2 ? -2 : 0;
     g.save(); g.translate(x - 18, y - 44 + bob);
     if (dir === 'west') { g.translate(36, 0); g.scale(-1, 1); }
     g.drawImage(nowNov, col * 18, 0, 18, 24, 0, 0, 36, 48); g.restore();
+  } else if (who === 'n48') {
+    let im = n48[dir], flip = false;
+    if (moving) { im = frame(walk48, dir, f); flip = dir === 'west'; }
+    drawFlip(g, im, x - 34, y - 62, flip);
   } else {
     const set = who === 'nov' ? nov : kn;
     let im = set[dir], flip = false;
     if (moving && who === 'nov') { im = frame(walk, dir, f); flip = dir === 'west'; }
     drawFlip(g, im, x - 24, y - 44, flip);
   }
-  g.drawImage(over, 0, 0, 640, 384);
+  g.drawImage(over, 0, 0, W, H);
   requestAnimationFrame(loop);
 }
 base.onload = () => requestAnimationFrame(loop);
