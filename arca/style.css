@@ -1288,3 +1288,9 @@ body.bigtext #qlist .goal,
 body.bigtext .trk {
   font-size: clamp(12px, 2.1vw, 15px);
 }
+/* 문제 상자·패널이 떠 있을 때는 알림을 가리지 않게 숨긴다 */
+.stage:has(#bt:not([hidden])) .toast,
+.stage:has(#panel:not([hidden])) .toast,
+.stage:has(#book:not([hidden])) .toast {
+  display: none !important;
+}

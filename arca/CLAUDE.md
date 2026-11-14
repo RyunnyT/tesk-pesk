@@ -41,6 +41,7 @@
 | `tools/pixellab/` | PixelLab 자동 그리기: `run_chars`·`run_objs`·`run_tiles`·`run_bld`(.mjs), 진행 상태 `state_*.json`(다시 실행하면 이어서). 키는 저장소 밖 파일(`PIXELLAB_KEY_FILE`) |
 | `tools/check/` | 검사(Playwright): `econ.cjs` 성장·경제 시뮬레이션(부마다 레벨·금화·공격력·몬스터를 쓰러뜨리는 데 필요한 횟수), `bot.cjs` 1~12부 실제 출구를 따라 끝까지 가는 진행 봇(퀘스트·문지기·잠금 확인). `node arca/tools/check/bot.cjs` |
 | `tools/hd/` | 그림 손질: `fix_borders.py`(타일 흰 테두리), `harmonize.py`(테마별 풀색 맞추기), `build_manifest.py`(목록 만들기) |
+| `docs/아르카연대기_교사안내서.pdf`·`docs/아르카연대기_학생_조작안내.pdf` | 선생님용 안내서(시작·설정·부·단원 대응표·배움 장치·수업 활용·RPG·건물·접근성·FAQ)와 학생용 한 장. 만들기: `python3 docs/guide/make_guides.py && node docs/guide/print_pdf.cjs`(부·단원 표는 `docs/guide/units.json`) |
 | `docs/그림_업그레이드_기록.md` | 그림을 2등신 캐주얼풍으로 바꾸는 작업의 기록(결정·그리는 방법·적용 계획). **그림 작업은 이 문서를 먼저 읽는다.** 견본은 `prototypes/4_메이플풍_그림_견본.html`(벡터풍)·`prototypes/5_도트_견본.html`(도트풍, 선생님 참고 그림 기반) |
 | `prototypes/` | 이전 시안(참고용). 옆에서 본 풍경 그림 12장은 나중에 이야기 장면 그림으로 재사용 가능 |
 | `../quiz-bank.js` | Pesk 와 같은 수학 문제 은행 (학년·학기·단원·난이도). N부 = 그 학기 N단원 |
