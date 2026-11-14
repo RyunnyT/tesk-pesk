@@ -72,7 +72,7 @@ function hdPreload() {
 const HD_ALIAS = { lis2: "lis" };
 function hdCharKey(p) {
   if (!p) return null;
-  if (p.n === "나") return "hero-" + (save.job || "none");
+  if (p.n === "나") return typeof rpgLook === "function" ? rpgLook() : "hero-" + (save.job || "none");
   const id = HD_ALIAS[p.id] || p.id;
   return id && HDA.chars[id] ? id : null;
 }
@@ -220,7 +220,7 @@ const PET_FACE = { dog: 1, cat: 1, fox: -1, rabbit: 1, chick: -1 }; // 그림이
   drawPortrait = function (n) {
     let p = null,
       A = null;
-    const k = HD.on && (n.n === "나" ? "hero-" + (save.job || "none") : hdCharKey(n));
+    const k = HD.on && hdCharKey(n);
     if (k && HDA.chars[k]) {
       A = HDA.chars[k];
       p = "chars/" + k + "/south.png";

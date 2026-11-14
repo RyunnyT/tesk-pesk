@@ -89,12 +89,18 @@ function fieldStrike(m, sk) {
   pl.face = "s";
   m.dir = pl.x < m.x ? -1 : 1;
   B = { m, MI, hp: m.hpNow, g: FLD.g, core: m.core, field: 1 };
-  const base = sk ? { hit2: 2, hit3: 3, ult: 5 }[sk.t] : atk();
+  // 스킬은 공격력의 1.5배·2배·3배
+  const base = sk ? Math.round(({ hit2: 1.5, hit3: 2, ult: 3 }[sk.t] || 1.5) * atk()) : atk();
   askField(MI, (sk ? sk.nm : "공격") + " · " + MI.n, (ok) => {
     let d = ok ? base : Math.ceil(base / 2);
     const job = save.job || "knight";
-    if (ok && job === "warrior" && skLearned(STUDY.warrior) && FLD.streak >= 2) d++;
-    if (ok && petOn(0) && Math.random() < 0.25) d++;
+    if (ok && job === "warrior" && skLearned(STUDY.warrior) && FLD.streak >= 2) d += PWR;
+    if (ok && petOn(0) && Math.random() < 0.25) d += PWR;
+    // 치명타(장비): 맞혔을 때만
+    if (ok && Math.random() * 100 < rpgSum().crit) {
+      d *= 2;
+      fxPop(m.x, m.y - 42, "치명타!", "#ffb84a");
+    }
     if (FLD.dbl) {
       d *= 2;
       FLD.dbl = 0;
@@ -152,6 +158,12 @@ function fieldContact(m) {
     } else if (job === "knight" && skLearned(STUDY.knight) && Math.random() < 0.5) {
       fxPop(pl.x, pl.y - 24, "굳센 마음!", "#9fe0ff");
       sfx("hit");
+    } else if (Math.random() * 100 < rpgSum().def) {
+      // 막기(옷·장신구): 틀렸어도 피해 1 줄이기
+      const dm = Math.max(0, MI.dmg - 1);
+      fxPop(pl.x, pl.y - 24, dm ? "막기! -" + dm : "막기!", "#9fe0ff");
+      pl.hp -= dm;
+      if (dm) fxHurt(dm);
     } else {
       pl.hp -= MI.dmg;
       shakeT = 10;

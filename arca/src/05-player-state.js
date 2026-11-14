@@ -41,9 +41,10 @@ function skLearned(k) {
   return k === 0 ? !!save.trained : partDone(k);
 }
 const slots = () => (save.lv >= 7 ? 4 : save.lv >= 5 ? 3 : save.lv >= 3 ? 2 : 1);
-const hpB = () => (EQ[save.eq.a].hp || 0) + (save.eq.c ? EQ[save.eq.c].hp || 0 : 0);
+// 하트·공격력은 RPG 장비(src/04b-items.js · 04c-rpg-save.js)에서 계산한다. 공격력은 10배 단위(PWR)
+const hpB = () => rpgHp();
 const maxHp = () => 4 + save.lv + hpB(),
-  atk = () => EQ[save.eq.w].atk,
+  atk = () => rpgAtk(),
   petOn = (k) => !!save.pet && partDone(k);
 const eqName = (id) => (EQ[id].s === "w" ? WN[save.job || "none"][{ w1: 0, w2: 1, w3: 2 }[id]] : EQ[id].n);
 const eqDesc = (id) => {

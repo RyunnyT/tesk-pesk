@@ -1120,3 +1120,118 @@ body.mobile .btns button {
   max-height: 80%;
   overflow: auto;
 }
+
+/* ── 화면 정리(src/14-rpg.js): 왼쪽 위 상태·퀘스트, 오른쪽 위 버튼·지도. 서로 겹치지 않게 너비를 나눈다 ── */
+.lcol {
+  position: absolute;
+  top: 2.5%;
+  left: 1.5%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: 50%;
+  pointer-events: none;
+}
+.lcol .hud {
+  position: static;
+  max-width: none;
+}
+.mm {
+  max-width: 34%;
+}
+.qbox {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  pointer-events: auto;
+  max-width: 100%;
+}
+.qhead {
+  font: inherit;
+  font-size: clamp(10px, 1.7vw, 12px);
+  background: rgba(20, 17, 42, 0.82);
+  color: #f5e3a3;
+  border: 1px solid #6f64b0;
+  border-radius: 999px;
+  padding: 1px 10px;
+  cursor: pointer;
+}
+#qlist {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  max-width: 100%;
+}
+#qlist .goal {
+  background: rgba(122, 78, 31, 0.92);
+  color: #fff6d6;
+  border: 1px solid #f5e3a3;
+  font-size: clamp(10px, 1.8vw, 13px);
+  padding: 2px 9px;
+  border-radius: 999px;
+}
+#qlist .trk {
+  position: static;
+  max-width: none;
+}
+.toast {
+  top: auto;
+  bottom: 34%;
+}
+.box.banner {
+  top: 34%;
+}
+/* 장비·상점 */
+.pc .ri > span:first-child {
+  min-width: 0;
+}
+.pc .ri small i {
+  font-style: normal;
+}
+.pc .ri small i.lvno {
+  color: #ff8a8a;
+}
+.pc .ri em.up {
+  color: #7ee07a;
+  font-size: 0.85em;
+}
+.pc .ri em.dn {
+  color: #ff9f9f;
+  font-size: 0.85em;
+}
+.pc .rb {
+  display: flex;
+  flex-direction: row !important;
+  gap: 4px;
+  flex-shrink: 0;
+  align-items: center;
+}
+.pc button.sell {
+  background: none;
+  color: #cfc6ee;
+}
+.rfilt,
+.rbody {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin: 2px 0 6px;
+}
+.rfilt button[aria-pressed="true"],
+.rbody button[aria-pressed="true"] {
+  background: #f5e3a3;
+  color: #1e1b3f;
+  border-color: #f5e3a3;
+}
+.rbody {
+  align-items: center;
+  font-size: 0.9em;
+  color: #cfc6ee;
+  margin: 4px 0 0;
+}
+body.mobile .lcol {
+  max-width: 60%;
+}

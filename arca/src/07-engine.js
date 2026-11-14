@@ -676,7 +676,7 @@ function talk(n) {
       if (q.rw.item && !save.items.includes(q.rw.item)) {
         save.items.push(q.rw.item);
         const e2 = I2E[q.rw.item];
-        if (e2 && !save.own.includes(e2)) save.own.push(e2);
+        if (e2) rpgGiveStory(e2);
       }
       save.q[q.id].st = "done";
       gain(q.rw.exp, q.rw.gold, q.rw.dust);
@@ -1240,13 +1240,12 @@ function win() {
   const m = B.m,
     MI = B.MI,
     core = B.core,
-    c = save.eq.c && EQ[save.eq.c];
-  let ex = MI.exp,
-    gd = MI.gold;
-  if (c && c.exp) ex = Math.round(ex * (1 + c.exp));
-  if (c && c.gold) gd = Math.round(gd * (1 + c.gold));
+    R = rpgSum();
+  let ex = Math.round(MI.exp * (1 + R.exp / 100)),
+    gd = Math.round(MI.gold * (1 + R.gold / 100));
+  const du = Math.round((MI.dust || 0) * (1 + R.dust / 100));
   if (petOn(7)) gd += 2;
-  if (c && c.heal) pl.hp = Math.min(maxHp(), pl.hp + c.heal);
+  if (R.heal) pl.hp = Math.min(maxHp(), pl.hp + R.heal);
   for (let i = 0; i < 20; i++)
     sp.push({ a: m.x - 8 + Math.random() * 16, y: m.y - 16 + Math.random() * 16, t: 8 + Math.random() * 10 });
   m.dead = MI.boss ? 1e9 : 1400;
@@ -1258,7 +1257,7 @@ function win() {
   if (typeof sfx === "function") sfx("win");
   endBattle();
   pl.inv = 30;
-  gain(ex, gd, MI.dust);
+  gain(ex, gd, du);
   if (core) {
     mons = mons.filter((x2) => x2 !== m);
     finishCore(core);

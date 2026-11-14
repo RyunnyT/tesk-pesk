@@ -643,7 +643,7 @@ function merchantMaybe() {
 }
 function merchantTalk(n) {
   if (n.sold) return openDlg(n, ["또 만나요, 견습생! 길 위에서 또 마주칠 거예요."]);
-  const left = RARE.filter(([id]) => !save.own.includes(id));
+  const left = RARE.filter(([id]) => !rpgHas(id));
   openDlg(
     n,
     ["반가워요, 견습생! 나는 떠돌이 상인 루포.", left.length ? "문제 세 개를 맞히면, 희귀한 장신구를 금화 60에 팔게요." : "희귀한 장신구는 다 가지셨네요! 문제 세 개를 맞히면 별빛 가루를 드릴게요."],
@@ -662,7 +662,7 @@ function merchantQuiz(n, k) {
       closeBox();
       if (k < 2) return merchantQuiz(n, k + 1);
       n.sold = 1;
-      const left = RARE.filter(([id]) => !save.own.includes(id));
+      const left = RARE.filter(([id]) => !rpgHas(id));
       if (!left.length) {
         save.dust += 5;
         store();
@@ -672,7 +672,7 @@ function merchantQuiz(n, k) {
       if (save.gold < 60) return openDlg(n, ["훌륭해요! …그런데 금화가 모자라네요. 다음에 또 만나요!"]);
       const [id, nm, o] = left[Math.floor(Math.random() * left.length)];
       save.gold -= 60;
-      save.own.push(id);
+      rpgGiveStory(id);
       save.items.push(nm);
       store();
       hud();

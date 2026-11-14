@@ -269,7 +269,7 @@ const I2E = {
   "멈춘 회중시계": "c_watch",
   "모르의 귤": "c_tang",
 };
-const tier = () => ({ w1: 0, w2: 1, w3: 2 })[save.eq.w] || 0;
+const tier = () => (typeof rpgWTier === "function" ? rpgWTier() : 0);
 const JL = {
   none: { hair: "#5a3a22", ht: "short", top: "#c9b48a", top2: "#8a6a45", bot: "#5F5E5A" },
   knight: {
