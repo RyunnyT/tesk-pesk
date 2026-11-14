@@ -2229,7 +2229,12 @@ function toggleMap() {
 $("mmb").onclick = toggleMap;
 mmState();
 $("reset").onclick = () => {
-  if (!confirm("저장된 진행을 지우고 처음부터 시작할까요?")) return;
+  // confirm() 이 막힌 화면(아티팩트 등)도 있어서, 4초 안에 한 번 더 누르면 지운다
+  if (!window._rst || Date.now() - window._rst > 4000) {
+    window._rst = Date.now();
+    toast("한 번 더 누르면 저장을 지우고 처음부터 시작해요");
+    return;
+  }
   try {
     localStorage.removeItem("arca-v2");
   } catch (e) {}
