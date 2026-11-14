@@ -455,7 +455,8 @@ function attack() {
   const fx = pl.x + (pl.face === "s" ? pl.dir * 12 : 0),
     fy = pl.y - 6 + (pl.face === "u" ? -12 : pl.face === "d" ? 10 : 0);
   const m = mons.find((m) => !m.dead && Math.hypot(m.x - fx, m.y - 6 - fy) < 16);
-  if (m) setTimeout(() => startBattle(m, true), 120);
+  // 길 위 전투 → src/09-field.js
+  if (m) setTimeout(() => (typeof fieldStrike === "function" ? fieldStrike(m, null) : startBattle(m, true)), 120);
 }
 function near() {
   let best = null,
@@ -849,6 +850,7 @@ function fillPatch(p) {
         mons = mons.filter((x2) => x2 !== m);
         return;
       }
+      if (typeof fieldBoss === "function") return fieldBoss(m, p);
       startBattle(m, false);
       if (B) B.core = p;
     };
@@ -1028,7 +1030,7 @@ function interact(t) {
       loadMap(o.to, o.at[0], o.at[1]);
     } else toast(o.n + "은(는) 다음 단계에서 안을 들어가 볼 수 있어요");
   } else if (t.type === "lock") toast(o.msg);
-  else if (t.type === "mon") startBattle(o, false);
+  else if (t.type === "mon") typeof fieldStrike === "function" ? fieldStrike(o, null) : startBattle(o, false);
 }
 $("act").onclick = () => interact(near());
 function startBattle(m, first) {
@@ -1725,6 +1727,11 @@ addEventListener("keydown", (e) => {
     toggleMap();
     return;
   }
+  const fsi = SKEY.indexOf(c.replace("Key", ""));
+  if (fsi >= 0 && c.startsWith("Key") && typeof fieldSkill === "function") {
+    fieldSkill(fsi);
+    return;
+  }
   keys[c] = true;
 });
 addEventListener("keyup", (e) => {
@@ -1869,7 +1876,8 @@ function update() {
       ddy = pl.y - m.y,
       d = Math.hypot(ddx, ddy);
     if (d < 10 && pl.inv <= 0 && pl.z < 5) {
-      startBattle(m, false);
+      if (typeof fieldContact === "function") fieldContact(m);
+      else startBattle(m, false);
       return;
     }
     if (MI.boss) continue;
@@ -2033,7 +2041,7 @@ function drawGoal() {
 function drawMap() {
   // 싸울 때는 주인공과 몬스터 가운데를 화면 위쪽에 둔다(아래쪽은 문제 상자)
   const fx0 = B ? (pl.x + B.m.x) / 2 : pl.x,
-    fy0 = B ? (pl.y + B.m.y) / 2 + H * 0.2 : pl.y;
+    fy0 = B ? (pl.y + B.m.y) / 2 + H * 0.2 * ($("bt").hidden ? 0 : 1) : pl.y;
   cam.x = Math.max(0, Math.min(WW - W, Math.round(fx0 - W / 2)));
   cam.y = Math.max(0, Math.min(WH - H, Math.round(fy0 - H / 2 - 6)));
   if (WW <= W) cam.x = Math.round((WW - W) / 2);

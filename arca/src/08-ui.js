@@ -117,8 +117,8 @@ addEventListener("resize", fitView);
       '<button type="button" data-m="reset">처음부터</button></div>' +
       '<h4>조작</h4><p class="mhelp">' +
       (MOBILE
-        ? "왼쪽 아래 방향 버튼으로 걷고, 오른쪽 버튼으로 공격·점프·조사해요. 싸울 때는 답 버튼을 눌러요."
-        : "방향키·WASD 이동 · 스페이스/엔터 조사 · Q 선제공격 · J/Z 점프 · M 지도 · 싸울 때 1·2·3 답, E·R·T·Y 스킬, Esc 도망") +
+        ? "왼쪽 아래 방향 버튼으로 걷고, 오른쪽 버튼으로 공격·점프·조사해요. 스킬은 오른쪽 위 줄 버튼이에요. 공격이 닿으면 문제가 떠요."
+        : "방향키·WASD 이동 · 스페이스/엔터 조사 · Q 공격 · E·R·T·Y 스킬 · J/Z 점프 · M 지도 · 문제가 뜨면 1·2·3 으로 답") +
       "</p><h4>목표</h4><p class=\"mhelp\">마을의 지워진 곳을 별빛 가루로 다시 써요. 별빛 가루는 몬스터를 물리치고, 지문을 읽고, 부탁을 들어주면 모여요. 마을을 다 되살리고 길목 끝 문지기를 넘으면 다음 부로 가요.</p>";
   };
   const open = (v) => {
@@ -529,9 +529,8 @@ function decoMap(m, bc) {
 /* ════════ 스킬 이펙트 ════════ */
 FX.sk = [];
 function fxSkill(t, nm) {
-  if (!B) return;
   sfx("skill");
-  FX.sk.push({ t: 0, job: save.job || "knight", eff: t, nm });
+  FX.sk.push({ t: 0, job: save.job || "knight", eff: t, nm, tg: B ? B.m : null });
   if (t === "heal") fxPop(pl.x, pl.y - 26, "+2♥", "#7ee07a");
 }
 {
@@ -552,10 +551,10 @@ function fxSkill(t, nm) {
     });
     FX.sk = FX.sk.filter((s) => s.t++ < 24);
     FX.sk.forEach((s) => {
-      if (!B) return;
-      const k = s.t,
-        mx = B.m.x - cam.x,
-        my = B.m.y - cam.y - 8,
+      const tg = s.tg || (B && B.m) || pl,
+        k = s.t,
+        mx = tg.x - cam.x,
+        my = tg.y - cam.y - 8,
         px = pl.x - cam.x,
         py = pl.y - cam.y - 8,
         col = JOBCOL[s.job],
