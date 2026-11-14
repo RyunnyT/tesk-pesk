@@ -1756,7 +1756,7 @@ function petFollow() {
     return;
   }
   if (d > 3) {
-    const v = Math.min(2.2, 0.4 + d * 0.06);
+    const v = Math.min(3.6, 0.5 + d * 0.09);
     pet.x += (ex / d) * v;
     pet.y += (ey / d) * v;
     pet.dir = ex > 0 ? 1 : -1;
@@ -1797,8 +1797,9 @@ function update() {
     }
   } else if (dx || dy) {
     const l = Math.hypot(dx, dy);
-    tryMove(pl, (dx / l) * 1.4, 0, false);
-    tryMove(pl, 0, (dy / l) * 1.2, false);
+    // 걷는 속도 (2026-11-14 선생님 요청으로 빠르게: 1.4/1.2 → 2.6/2.2)
+    tryMove(pl, (dx / l) * 2.6, 0, false);
+    tryMove(pl, 0, (dy / l) * 2.2, false);
     if (dx) pl.dir = dx > 0 ? 1 : -1;
     pl.face = Math.abs(dy) > Math.abs(dx) ? (dy < 0 ? "u" : "d") : "s";
     pl.mv = true;

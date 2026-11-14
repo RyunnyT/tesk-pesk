@@ -1111,3 +1111,12 @@ body.mobile .btns button {
 .skrow button:disabled {
   opacity: 0.35;
 }
+.ftl small {
+  color: #a59ec6;
+  font-size: 12px;
+  margin-top: 2px;
+}
+.ftl {
+  max-height: 80%;
+  overflow: auto;
+}
