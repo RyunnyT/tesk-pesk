@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PixelLab 견본</title>
+<style>
+  :root { --bg:#f6f3ec; --card:#fff; --ink:#2b2622; --sub:#6d655c; --line:#e3ddd2; --acc:#378ADD; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#1d1b19; --card:#272421; --ink:#f1ece4; --sub:#b5ab9e; --line:#3a3530; --acc:#6aa9ec; } }
+  :root[data-theme="dark"] { --bg:#1d1b19; --card:#272421; --ink:#f1ece4; --sub:#b5ab9e; --line:#3a3530; --acc:#6aa9ec; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:20px 16px 48px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  h2 { font-size:17px; margin:0 0 10px; }
+  p.sub { color:var(--sub); margin:0 0 18px; font-size:14px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  .row { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end; }
+  .cell { text-align:center; font-size:13px; color:var(--sub); }
+  .px { image-rendering:pixelated; image-rendering:crisp-edges; display:block; margin:0 auto 4px; background:#bfe0a0; border-radius:6px; }
+  .tag { display:inline-block; font-size:12px; padding:2px 8px; border-radius:99px; background:var(--line); color:var(--ink); margin-bottom:8px; }
+  canvas#scene { width:100%; height:auto; image-rendering:pixelated; border-radius:8px; display:block; touch-action:none; }
+  .btns { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  button { font:inherit; font-size:14px; padding:8px 14px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); cursor:pointer; }
+  button.on { background:var(--acc); color:#fff; border-color:var(--acc); }
+  .pad { display:grid; grid-template-columns:repeat(3,44px); gap:4px; margin-left:auto; }
+  .pad button { padding:8px 0; }
+  ul { margin:6px 0 0; padding-left:20px; }
+  li { margin:2px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>PixelLab 견본 — 주인공 그림</h1>
+  <p class="sub">PixelLab으로 그린 주인공 2명(직업 전·기사)을 지금 게임 그림과 나란히 놓았어요. 게임 본체는 그대로예요.</p>
+
+  <section>
+    <h2>1. 지금 그림과 PixelLab 그림 (확대해서 보기)</h2>
+    <div class="row" id="cmp"></div>
+  </section>
+
+  <section>
+    <h2>2. 걷기 동작 (직업 전 주인공)</h2>
+    <p class="sub" style="margin:0 0 10px">앞·오른쪽·뒤는 PixelLab이 그렸고, 왼쪽은 오른쪽 그림을 뒤집어서 만들었어요.</p>
+    <div class="row" id="walks"></div>
+  </section>
+
+  <section>
+    <h2>3. 마을에 세워 보기 (화면 2배)</h2>
+    <p class="sub" style="margin:0 0 10px">루멘 마을 한 조각이에요. 방향키나 아래 버튼으로 걸어 보세요.</p>
+    <canvas id="scene" width="640" height="384"></canvas>
+    <div class="btns">
+      <button id="bNov" class="on">PixelLab 직업 전</button>
+      <button id="bKn">PixelLab 기사</button>
+      <button id="bNow">지금 그림</button>
+      <div class="pad">
+        <span></span><button data-d="north">▲</button><span></span>
+        <button data-d="west">◀</button><button data-d="south">▼</button><button data-d="east">▶</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. 보고 나서 정할 것</h2>
+    <ul>
+      <li><b>좋은 점</b>: 그림자·명암이 들어가서 지금보다 섬세하고, 걷기 동작이 자연스러워요.</li>
+      <li><b>다른 점</b>: 지금 지도(16점 칸)는 단순한데 인물만 섬세해져서 서로 어울리는지 봐야 해요.</li>
+      <li><b>기사 그림</b>은 걷기 동작 없이 서 있는 모습만 받았어요(그리기 횟수를 아끼려고).</li>
+      <li><b>남은 그리기 횟수</b>: 27번. 인물 1명 = 1번, 걷기 = 방향마다 1번(앞·옆·뒤 3번).</li>
+    </ul>
+  </section>
+</main>
+<script>
+const IMG = /*IMG*/null;
+const load = (src) => { const i = new Image(); i.src = src; return i; };
+const L = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, Array.isArray(v) ? v.map(load) : load(v)]));
+const nov = L(IMG.nov), kn = L(IMG.kn), walk = L(IMG.walk);
+const nowNov = load(IMG.nowNov), nowKn = load(IMG.nowKn), base = load(IMG.base), over = load(IMG.over);
+
+// 1) 비교
+const cmp = document.getElementById('cmp');
+const add = (box, src, w, h, z, label) => {
+  const d = document.createElement('div'); d.className = 'cell';
+  const i = document.createElement('img'); i.src = src; i.className = 'px'; i.width = w * z; i.height = h * z;
+  d.append(i, label); box.append(d);
+};
+add(cmp, IMG.nowNov, 54, 24, 3, '지금 · 직업 전 (앞·옆·뒤)');
+add(cmp, IMG.nowKn, 54, 24, 3, '지금 · 기사');
+['south', 'east', 'north'].forEach((d) => add(cmp, IMG.nov[d], 48, 48, 2, 'PixelLab 직업 전 · ' + ({ south: '앞', east: '옆', north: '뒤' })[d]));
+['south', 'east', 'north'].forEach((d) => add(cmp, IMG.kn[d], 48, 48, 2, 'PixelLab 기사 · ' + ({ south: '앞', east: '옆', north: '뒤' })[d]));
+
+// 2) 걷기
+const walks = document.getElementById('walks'), wc = [];
+[['south', '앞'], ['east', '오른쪽'], ['west', '왼쪽'], ['north', '뒤']].forEach(([d, n]) => {
+  const c = document.createElement('canvas'); c.width = 48; c.height = 48; c.className = 'px';
+  c.style.width = c.style.height = '144px';
+  const box = document.createElement('div'); box.className = 'cell'; box.append(c, n); walks.append(box); wc.push([c, d]);
+});
+const frame = (set, d, f) => d === 'west' ? set.east[f] : set[d][f];
+const drawFlip = (g, im, x, y, flip) => { g.save(); if (flip) { g.translate(x + 48, y); g.scale(-1, 1); g.drawImage(im, 0, 0); } else g.drawImage(im, x, y); g.restore(); };
+
+// 3) 장면
+const sc = document.getElementById('scene'), g = sc.getContext('2d'); g.imageSmoothingEnabled = false;
+let who = 'nov', dir = 'south', x = 320, y = 230, moving = 0, keys = {};
+const pick = (id, w) => document.getElementById(id).onclick = () => { who = w; ['bNov', 'bKn', 'bNow'].forEach((b) => document.getElementById(b).classList.toggle('on', b === id)); };
+pick('bNov', 'nov'); pick('bKn', 'kn'); pick('bNow', 'now');
+const KEY = { ArrowUp: 'north', ArrowDown: 'south', ArrowLeft: 'west', ArrowRight: 'east' };
+addEventListener('keydown', (e) => { if (KEY[e.key]) { keys[KEY[e.key]] = 1; e.preventDefault(); } });
+addEventListener('keyup', (e) => { if (KEY[e.key]) keys[KEY[e.key]] = 0; });
+document.querySelectorAll('.pad button').forEach((b) => {
+  const d = b.dataset.d;
+  b.onpointerdown = (e) => { keys[d] = 1; e.preventDefault(); };
+  b.onpointerup = b.onpointerleave = b.onpointercancel = () => keys[d] = 0;
+});
+const V = { north: [0, -1], south: [0, 1], west: [-1, 0], east: [1, 0] };
+let t = 0;
+function loop() {
+  t++;
+  const f = Math.floor(t / 9) % 4;
+  // 걷기 미리보기
+  wc.forEach(([c, d]) => { const q = c.getContext('2d'); q.clearRect(0, 0, 48, 48); drawFlip(q, frame(walk, d, f), 0, 0, d === 'west'); });
+  // 이동
+  moving = 0;
+  for (const d of ['north', 'south', 'west', 'east']) if (keys[d]) { dir = d; x += V[d][0] * 2; y += V[d][1] * 2; moving = 1; }
+  x = Math.max(16, Math.min(624, x)); y = Math.max(40, Math.min(380, y));
+  g.clearRect(0, 0, 640, 384);
+  g.drawImage(base, 0, 0, 640, 384);
+  g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(x, y - 2, 11, 4, 0, 0, 7); g.fill();
+  if (who === 'now') {
+    const col = { south: 0, east: 1, west: 1, north: 2 }[dir], bob = moving && f % 2 ? -2 : 0;
+    g.save(); g.translate(x - 18, y - 44 + bob);
+    if (dir === 'west') { g.translate(36, 0); g.scale(-1, 1); }
+    g.drawImage(nowNov, col * 18, 0, 18, 24, 0, 0, 36, 48); g.restore();
+  } else {
+    const set = who === 'nov' ? nov : kn;
+    let im = set[dir], flip = false;
+    if (moving && who === 'nov') { im = frame(walk, dir, f); flip = dir === 'west'; }
+    drawFlip(g, im, x - 24, y - 44, flip);
+  }
+  g.drawImage(over, 0, 0, 640, 384);
+  requestAnimationFrame(loop);
+}
+base.onload = () => requestAnimationFrame(loop);
+</script>
+</body>
+</html>
