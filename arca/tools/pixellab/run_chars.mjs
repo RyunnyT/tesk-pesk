@@ -12,6 +12,8 @@ const st = loadState(STF);
 const only = process.argv.slice(2);
 const keys = Object.keys(CHARS).filter((k) => !only.length || only.includes(k));
 const TMP = process.env.PL_TMP || "/tmp";
+// 꼬마 인물은 작게(크기 40): 어른보다 키가 작아 보이게
+const SMALL = new Set(["toto", "sora", "jay", "doto", "rito", "arien", "luke"]);
 
 async function waitChar(id, test) {
   for (let i = 0; i < 80; i++) {
@@ -31,7 +33,7 @@ async function one(k) {
       name: "arca " + k,
       mode: "standard",
       n_directions: 4,
-      size: 48,
+      size: SMALL.has(k) ? 40 : 48,
       view: "low top-down",
       proportions: JSON.stringify({ type: "preset", name: "chibi" }),
       description: CHARS[k],

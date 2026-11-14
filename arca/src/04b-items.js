@@ -119,6 +119,21 @@ for (const job in WEAPON_LINE)
   ["d_tree", "벚꽃 화분 나무", "tree-garden", 150],
   ["d_tree2", "꿈빛 나무", "tree-dream", 200],
   ["d_well", "작은 우물", "well", 250],
+  ["d_sofa", "파란 소파", "sofa", 160],
+  ["d_flamp", "스탠드 조명", "floorlamp", 90],
+  ["d_table", "둥근 탁자", "table", 110],
+  ["d_chair", "나무 의자", "chair", 60],
+  ["d_easel", "그림 이젤", "easel", 120],
+  ["d_vase", "해바라기 꽃병", "vase", 70],
+  ["d_fish", "금붕어 어항", "fishtank", 180],
+  ["d_slamp", "별 무드등", "starlamp", 100],
+  ["d_trophy", "황금 트로피", "trophy", 300],
+  ["d_teddy", "곰 인형", "teddy", 90],
+  ["d_piano", "작은 피아노", "piano", 350],
+  ["d_clock", "괘종시계", "clock", 220],
+  ["d_toybox", "장난감 상자", "toybox", 80],
+  ["d_bean", "빈백 의자", "beanbag", 90],
+  ["d_scope", "별 망원경", "telescope", 280],
 ].forEach(([id, n, art, price, walk]) => (ITEMS[id] = { s: "d", n, art, price, walk: !!walk, lv: 1 }));
 
 /* ── 계산(순수 함수) ── */

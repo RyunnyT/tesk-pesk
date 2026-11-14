@@ -595,3 +595,38 @@ hdPreload().then(() => {
   HD.ready = true;
   hdRepaint();
 });
+
+/* ── 길가 소품(src/08-ui.js PROPS)·채집 재료(nodeDraw·nodeDraw2) 그림 ── */
+for (const k in PROPS) {
+  const p0 = PROPS[k];
+  PROPS[k] = function (c, X, Y) {
+    const A = HDA.props["s-" + k],
+      im = A && hdImg("props/s-" + k + ".png");
+    if (HD.on && hdOk(im)) return hdPut(c, im, A.w / 2, A.b[3], X + 8, Y + 15);
+    return p0(c, X, Y);
+  };
+}
+function hdNode(r, t, ok, f) {
+  if (!HD.on || !r || !r.hd) return false;
+  const key = ok ? "node-" + t : "node-sprout",
+    A = HDA.misc[key],
+    im = A && hdImg("misc/" + key + ".png");
+  if (!hdOk(im)) return false;
+  // 아직 안 캔 재료는 살짝 떠오르며 반짝
+  const bob = ok ? Math.round(Math.sin(f / 6) * 1) : 0;
+  hdPut(x, im, A.w / 2, A.b[3], r.hd.px, r.hd.py - 1 + bob);
+  if (ok && f % 16 < 3) P(x, r.hd.px + 3, r.hd.py - 9, 1, 1, "#fff6d0");
+  return true;
+}
+{
+  const nd0 = nodeDraw;
+  nodeDraw = function (r, t, ok, f) {
+    if (!hdNode(r, t, ok, f)) nd0(r, t, ok, f);
+  };
+  if (typeof nodeDraw2 === "function") {
+    const nd2 = nodeDraw2;
+    nodeDraw2 = function (r, t, ok, f) {
+      if (!hdNode(r, t, ok, f)) nd2(r, t, ok, f);
+    };
+  }
+}

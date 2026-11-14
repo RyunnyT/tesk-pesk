@@ -34,18 +34,8 @@
   "anim": 1,
   "done": 1
  },
- "toto": {
-  "id": "d190feeb-1de3-4a36-b7f2-598f695e348e",
-  "anim": 1,
-  "done": 1
- },
  "marta": {
   "id": "11990e67-8969-4470-b596-27de72e5a758",
-  "anim": 1,
-  "done": 1
- },
- "sora": {
-  "id": "893fda79-652f-43dd-939c-37183f4c8cda",
   "anim": 1,
   "done": 1
  },
@@ -86,11 +76,6 @@
  },
  "nox-scribe": {
   "id": "23ea19dc-60a0-4b8c-85b2-cfd6cbdea913",
-  "anim": 1,
-  "done": 1
- },
- "luke": {
-  "id": "dd021c88-94f0-4958-8a72-039fc4f09c3d",
   "anim": 1,
   "done": 1
  },
@@ -149,16 +134,6 @@
   "anim": 1,
   "done": 1
  },
- "doto": {
-  "id": "66001e1b-d063-4682-b1aa-0e139fb2c53f",
-  "anim": 1,
-  "done": 1
- },
- "rito": {
-  "id": "c06ecf5f-835e-4793-bcc5-87f0edb636cf",
-  "anim": 1,
-  "done": 1
- },
  "kron": {
   "id": "00d599f0-cc5e-44f9-abe7-2120bd55887d",
   "anim": 1,
@@ -171,11 +146,6 @@
  },
  "layla": {
   "id": "2dde6a04-759f-4868-81cf-4a7cc0775196",
-  "anim": 1,
-  "done": 1
- },
- "jay": {
-  "id": "82077698-7374-4ca3-8215-b986fc5ca869",
   "anim": 1,
   "done": 1
  },
@@ -196,11 +166,6 @@
  },
  "ruru": {
   "id": "a3c484d4-240e-4f0f-9f15-dfa155a6cd60",
-  "anim": 1,
-  "done": 1
- },
- "arien": {
-  "id": "59cf6feb-0e22-4acc-b79e-12f0baa9e289",
   "anim": 1,
   "done": 1
  },
@@ -241,6 +206,41 @@
  },
  "serena": {
   "id": "fddff1da-29c6-4a07-83e8-07a7ba1cca53",
+  "anim": 1,
+  "done": 1
+ },
+ "toto": {
+  "id": "d65d3c73-0d56-46fe-9e76-e370578d69da",
+  "anim": 1,
+  "done": 1
+ },
+ "sora": {
+  "id": "8f8ee072-7c3d-46ef-ae26-61afa829dde5",
+  "anim": 1,
+  "done": 1
+ },
+ "luke": {
+  "id": "39c7f8e6-f7c9-40c8-a8e9-0ef9205a2a82",
+  "anim": 1,
+  "done": 1
+ },
+ "doto": {
+  "id": "53571c93-f4e1-443f-9de2-be6cd6f7b0f2",
+  "anim": 1,
+  "done": 1
+ },
+ "rito": {
+  "id": "5a12b48a-d9c2-444f-853a-b7e4d7724ec1",
+  "anim": 1,
+  "done": 1
+ },
+ "jay": {
+  "id": "d138e504-32b4-4960-b566-dacd670cc109",
+  "anim": 1,
+  "done": 1
+ },
+ "arien": {
+  "id": "c028cc42-ff60-41aa-b7f1-7e2ae8347cb7",
   "anim": 1,
   "done": 1
  }
