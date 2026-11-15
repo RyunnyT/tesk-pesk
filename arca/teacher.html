@@ -331,6 +331,17 @@
         const t =
           "﻿별명,푼 문제,정답률,공부한 날,진도(부),되살린 마을,Lv,되찾은 기억,마지막 날\n" +
           STU.map((s) => [q(s.nick), s.n, pct(s.ok, s.n) + "%", s.days, s.pr.part || "", s.pr.towns || 0, s.pr.lv || "", s.pr.recov || 0, s.last].join(",")).join("\n");
+        // 틀 안(플레이 링크 같은 곳)에서는 파일 저장이 막혀 있어 글 상자로 보여 준다
+        let inFrame = true;
+        try {
+          inFrame = window.self !== window.top;
+        } catch (e) {}
+        if (inFrame) {
+          document.querySelector("details").open = true;
+          $("paste").value = t;
+          $("msg").textContent = "이 화면에서는 파일 저장이 막혀 있어요. 아래 글을 복사해 메모장에 붙여 넣고 .csv 로 저장해요.";
+          return;
+        }
         try {
           const a = document.createElement("a");
           a.href = URL.createObjectURL(new Blob([t], { type: "text/csv" }));
