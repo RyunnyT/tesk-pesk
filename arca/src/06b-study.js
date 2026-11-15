@@ -6,7 +6,7 @@
      나머지 빈자리를 부마다 어울리는 지문부터 채운다. */
 const STUDY_KEY = "arca-study";
 const studyCfg = (() => {
-  const d = { grade: 5, level: "auto", scope: "part", subj: "math" };
+  const d = { grade: 5, level: "auto", scope: "part", subj: "math", battle: "orb" };
   try {
     return Object.assign(d, JSON.parse(localStorage.getItem(STUDY_KEY) || "{}"));
   } catch (e) {
@@ -182,6 +182,7 @@ function studyRender() {
   el.querySelector("#sl").value = studyCfg.level;
   el.querySelector("#ss").value = studyCfg.scope;
   if (el.querySelector("#sj")) el.querySelector("#sj").value = studyCfg.subj || "math";
+  if (el.querySelector("#sb")) el.querySelector("#sb").value = studyCfg.battle || "orb";
   el.querySelector("#st").innerHTML = studyInfo();
   el.querySelector("#sw").textContent = window.QUIZ
     ? ""
@@ -201,6 +202,7 @@ function studyRender() {
       studyCfg.level = el.querySelector("#sl").value;
       studyCfg.scope = el.querySelector("#ss").value;
       if (el.querySelector("#sj")) studyCfg.subj = el.querySelector("#sj").value;
+      if (el.querySelector("#sb")) studyCfg.battle = el.querySelector("#sb").value;
       studySave();
       if (studyLevel() !== lvBefore) fillPassages();
       studyRender();

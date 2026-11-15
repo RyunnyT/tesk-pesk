@@ -1388,3 +1388,121 @@ body.bigtext .trk {
   color: #ff9fe0;
   border: 1px solid #ff9fe0;
 }
+/* 약점 구슬 전투 (18-orb) — 아래 대화창 자리, 상단 상태와 안 겹침 */
+.qstrip {
+  position: absolute;
+  left: 3%;
+  right: 3%;
+  bottom: 3%;
+  z-index: 6;
+  background: rgba(20, 17, 42, 0.84);
+  border: 1px solid #f5e3a3;
+  border-radius: 10px;
+  padding: 6px 10px 8px;
+  color: #fff6d6;
+  font-size: clamp(12px, 2.1vw, 16px);
+  pointer-events: auto;
+}
+.qstrip .qsh {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.qstrip .qsh b {
+  color: #f5e3a3;
+  font-weight: 400;
+  font-family: "Gowun Batang", serif;
+}
+.qstrip .qsh small {
+  opacity: 0.75;
+  font-size: 0.8em;
+}
+.qstrip .qsq {
+  margin: 3px 0 5px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.qstrip .qsq.long {
+  -webkit-line-clamp: 3;
+  font-size: 0.92em;
+}
+.qstrip .qsq.hint {
+  opacity: 0.7;
+  font-size: 0.85em;
+}
+.qstrip .qsa {
+  display: flex;
+  gap: 8px;
+}
+.qstrip .qsa button {
+  flex: 1;
+  min-height: 40px;
+  border-radius: 20px;
+  border: 2px solid var(--oc);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font: inherit;
+  font-size: 1.05em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.qstrip .qsa button i {
+  font-style: normal;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  background: var(--oc);
+  color: #1e1b3f;
+  font-size: 0.8em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.qstrip .qsa button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.qstrip .qsa button.ans {
+  opacity: 1;
+  background: rgba(126, 224, 122, 0.3);
+}
+.qstrip .qsr {
+  margin-top: 5px;
+  white-space: pre-line;
+  font-size: 0.88em;
+}
+.qstrip .qsr.ok {
+  color: #ffd86b;
+}
+.qstrip .qsr.bad {
+  color: #ffc2c8;
+}
+/* 조준 중: 대화창이 열리면 띠는 위로, 휴대폰 공격 버튼은 숨김(띠의 큰 구슬 버튼이 대신) */
+.stage:has(#dlg:not([hidden])) .qstrip {
+  bottom: auto;
+  top: 18%;
+}
+body.orbing .btns {
+  display: none !important;
+}
+body.orbing .stage .toast {
+  bottom: 40%;
+}
+.qstrip .qsh small {
+  margin-left: auto;
+}
+.qstrip .qsx {
+  background: none;
+  border: 0;
+  color: #cfc6ee;
+  font-size: 1em;
+  cursor: pointer;
+  padding: 0 2px;
+}
