@@ -12,7 +12,7 @@ const ORBCOL = ["#6aa9ec", "#7ee07a", "#ffb84a", "#f08ad0"];
 const orbAllowed = () => studyCfg.battle !== "box" && (!ORB_ONLY || ORB_ONLY.has(M.id));
 // 문제 글에서 "계산해 보세요." 를 떼고 짧은 식인지
 const qBody = (t) => String(t || "").replace(/^계산해 보세요\.\s*/, "");
-const isShortQ = (t) => {
+let isShortQ = (t) => {
   const s = qBody(t);
   return s.length <= 14 && !s.includes("\n");
 };

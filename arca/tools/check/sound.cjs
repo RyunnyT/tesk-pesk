@@ -13,6 +13,8 @@ const OUT = path.join(__dirname, 'out');
   await p.waitForFunction(() => typeof HD !== 'undefined' && HD.ready, null, { timeout: 30000 });
   const R = {};
   R.beforeGesture = await p.evaluate(() => ({ unlocked: SND.unlocked, ctx: !!SND.ctx }));
+  R.musicDefault = await p.evaluate(() => UI.musicOn);
+  await p.evaluate(() => { UI.musicOn = true; });
   await p.mouse.click(500, 300);
   await p.evaluate(() => { document.querySelectorAll('.titlebox').forEach((e) => e.remove()); save.job = 'mage'; save.lv = 7; save.trained = 1; loadMap('r1', 6, 11, true); });
   await p.waitForTimeout(800);

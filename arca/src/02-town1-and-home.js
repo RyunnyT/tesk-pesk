@@ -33,7 +33,15 @@ function loadSave() {
   try {
     const v = localStorage.getItem("arca-v2");
     if (v) save = { ...save, ...JSON.parse(v) };
-  } catch (e) {}
+  } catch (e) {
+    // 저장이 깨졌을 때: 게임은 새로 시작하되, 깨진 글은 따로 남겨 두고 알린다(src/28-product.js)
+    try {
+      localStorage.setItem("arca-v2-broken", localStorage.getItem("arca-v2") || "");
+    } catch (e2) {}
+    window.ARCA_SAVE_BROKEN = true;
+  }
+  // 저장 구조 버전(옛 저장을 읽을 때 바꿔 줄 자리). 지금 1
+  if (!save.ver) save.ver = 1;
 }
 loadSave();
 const store = () => {

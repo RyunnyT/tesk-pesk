@@ -2372,3 +2372,188 @@ body.orbing #skrow {
   color: inherit;
   cursor: pointer;
 }
+/* ── 그림 있는 문제 (27-figq) · 지문 근거 ── */
+.qfigwrap {
+  display: flex;
+  justify-content: center;
+  margin: 2px 0;
+}
+.qfig {
+  display: block;
+  width: min(100%, 300px);
+  max-height: 150px;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 8px;
+}
+.qstrip .qfigwrap .qfig {
+  width: min(100%, 260px);
+  max-height: 120px;
+}
+@media (max-height: 430px) {
+  .qfig,
+  .qstrip .qfigwrap .qfig {
+    max-height: 92px;
+  }
+}
+.bkev {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #fff3c4;
+  color: #4a3a12;
+  line-height: 1.5;
+}
+.bkev i {
+  display: block;
+  font-style: normal;
+  font-size: 0.8em;
+  color: #8a6a12;
+}
+body.orbing .stage .toast {
+  bottom: auto;
+  top: 16%;
+}
+/* ── 제품답게 (28-product): 글 상자 · 튜토리얼 띠 · 메뉴 아래 ── */
+.box.pbox {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(94%, 520px);
+  max-height: 94%;
+  overflow: auto;
+  padding: 12px 16px;
+  z-index: 10;
+  font-size: 14px;
+}
+.pbox h3 {
+  margin: 0 0 6px;
+  color: #f5e3a3;
+  font-family: "Gowun Batang", serif;
+}
+.pbox p {
+  margin: 4px 0;
+  line-height: 1.5;
+}
+.pbox textarea {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 6px 0;
+  font-size: 11px;
+  background: #15122b;
+  color: #fff6d6;
+  border: 1px solid #6f64b0;
+  border-radius: 8px;
+}
+.pbox .prow,
+.menu .mprod .mrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.pbox button:not(.cx) {
+  font: inherit;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid #f5e3a3;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  cursor: pointer;
+}
+.pbox .cx {
+  position: absolute;
+  right: 8px;
+  top: 4px;
+  background: none;
+  border: 0;
+  color: inherit;
+  font-size: 20px;
+  cursor: pointer;
+}
+.pbox small {
+  color: #ffe9a8;
+}
+.pbox .pcred {
+  padding-left: 18px;
+  line-height: 1.6;
+}
+.menu .mprod {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.mver {
+  margin: 6px 0 0;
+  font-size: 11px;
+  opacity: 0.7;
+}
+.stage:has(#pbox:not([hidden])) .toast,
+.stage:has(#pbox:not([hidden])) .pad,
+.stage:has(#pbox:not([hidden])) .btns,
+.stage:has(#pbox:not([hidden])) #skrow {
+  display: none !important;
+}
+.tut {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  transform: translateX(-50%);
+  width: min(92%, 520px);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid #7ee07a;
+  background: rgba(16, 40, 32, 0.92);
+  color: #eafff2;
+  font-size: clamp(12px, 2vw, 15px);
+  z-index: 5;
+}
+.tut .tutowl {
+  font-size: 1.6em;
+}
+.tut b {
+  color: #9ff0b6;
+  font-weight: 400;
+  font-size: 0.85em;
+}
+.tut p {
+  margin: 0;
+  line-height: 1.4;
+}
+.tut div {
+  flex: 1;
+}
+.tut button {
+  font: inherit;
+  font-size: 0.8em;
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid #9ff0b6;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tutglow {
+  box-shadow: 0 0 0 3px #7ee07a, 0 0 14px 4px rgba(126, 224, 122, 0.7);
+  border-radius: 10px;
+}
+@media (orientation: portrait) {
+  body.mobile .tut {
+    bottom: calc(3 * 48px + 6%);
+  }
+}
+@media (orientation: landscape) {
+  body.mobile .tut {
+    bottom: auto;
+    top: 22%;
+  }
+}
+/* 대화창·문제 띠가 있으면 안내 띠는 위로 */
+.stage:has(#dlg:not([hidden])) .tut,
+.stage:has(#qstrip:not([hidden])) .tut {
+  bottom: auto;
+  top: 20%;
+}

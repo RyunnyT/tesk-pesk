@@ -6,7 +6,8 @@
    · 효과음: 예전 소리(08-ui sfx)에 치명타·막기·약점·튕김·콤보·레벨업·전리품 등급별·보스 예고·상자 열기 등을 더하고, 모두 크기 조절.
    · 교실용: 화면을 누르거나 키를 누른 뒤에만 소리가 난다(브라우저 규칙). 기본은 음악 30%·효과음 50%. 메뉴에서 음악 끄기·소리 크기.
    · 스킬 효과 그림: PixelLab VFX(무료, 프리셋 8종: 베기·충격·충격파·번개·보호막·회복·폭발·마법진) → assets/hd/vfx/. */
-UI.musicOn = UI.musicOn !== false && UI.musicOn !== 0;
+// 기본은 음악 끔(2026-11-15: 음악을 사람 귀로 확인하기 전까지). 효과음은 켬. 메뉴에서 켠다
+UI.musicOn = UI.musicOn === true || UI.musicOn === 1;
 UI.vol = UI.vol == null ? 1 : UI.vol; // 0 작게(0.5) · 1 보통 · 2 크게(1.6)
 const VOLK = [0.5, 1, 1.6];
 const SND = { ctx: null, music: null, sfx: null, cur: null, want: null, next: 0, step: 0, timer: null, noise: null, unlocked: false };
@@ -298,7 +299,7 @@ document.addEventListener("visibilitychange", () => {
       const b1 = document.createElement("button");
       b1.type = "button";
       b1.dataset.m = "music";
-      b1.textContent = UI.musicOn ? "🎵 음악 끄기" : "🎵 음악 켜기";
+      b1.textContent = (UI.musicOn ? "🎵 음악 끄기" : "🎵 음악 켜기") + (SND.cur && UI.musicOn ? " (" + SONGS[SND.cur].n + ")" : "");
       const b2 = document.createElement("button");
       b2.type = "button";
       b2.dataset.m = "vol";

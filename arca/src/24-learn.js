@@ -320,7 +320,8 @@ function learnFast(t0, m) {
       if (contact) return cb(false);
       // 다시 풀기: 같은 유형·다른 수(만들 수 없으면 그 단원의 다른 문제)
       LEARN.inRetry = true;
-      LEARN.forceQ = Q.src ? learnSimilar(Q.src, lnSig(Q.q), Q.q) : null;
+      LEARN.forceQ = Q.src ? learnSimilar(Q.src, lnSig(Q.q), Q.q) : typeof Q.regen === "function" ? Q.regen() : null; // 그림 문제(27-figq)는 같은 생성기로 다시
+      if (LEARN.forceQ && Q.regen && !LEARN.forceQ.unit) LEARN.forceQ.unit = Q.unit;
       afL(MI, title + " · 다시 풀기", (ok2) => {
         LEARN.inRetry = false;
         LEARN.res = ok2 ? "half" : "zero";

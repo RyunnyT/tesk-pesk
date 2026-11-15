@@ -7,7 +7,7 @@ const PGROUP = [
   ["가방", ["eq", "bag", "deco"]],
   ["상점", ["shop"]],
   ["공부", ["note", "wrong", "book", "dex"]],
-  ["모험", ["log", "world"]],
+  ["모험", ["log", "world", "tower"]],
 ];
 {
   const rp0 = renderPanel;
