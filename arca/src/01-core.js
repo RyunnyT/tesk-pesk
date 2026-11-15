@@ -3,7 +3,15 @@ let W = 320,
   H = 180;
 const T = 16;
 // 화면 배율: 게임 좌표는 그대로 16점 칸이고, 그릴 때만 3배(PixelLab 48점 그림을 그대로 찍는다)
-const HDS = 3;
+// ART = 그림 배율(그림 한 점 = 1/3 칸점, 바뀌지 않음), HDS = 화면 배율(가벼운 모드면 2, src/20-lite.js)
+const ART = 3;
+let HDS = (() => {
+  try {
+    return JSON.parse(localStorage.getItem("arca-ui") || "{}").lite ? 2 : 3;
+  } catch (e) {
+    return 3;
+  }
+})();
 const cv = document.getElementById("cv"),
   x = cv.getContext("2d");
 const mk = (w, h) => {

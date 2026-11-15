@@ -19,7 +19,7 @@ const hdOk = (i) => i && i.complete && i.naturalWidth > 0;
 function hdPut(c, im, ax, ay, wx, wy, flip, sc, alpha) {
   if (!hdOk(im)) return false;
   sc = sc || 1;
-  const k = sc / HDS,
+  const k = sc / ART,
     w = im.naturalWidth * k,
     h = im.naturalHeight * k,
     X = Math.round((wx - ax * k) * HDS) / HDS,
@@ -149,7 +149,7 @@ function hdMonPatch() {
             i = A.n ? (mv ? f : fr >> 1) % A.n : -1,
             im = hdImg("mons/" + k + (i >= 0 ? "_" + i : "") + ".png");
           if (hdOk(im)) {
-            hdShadow(x, h.px, h.py, (A.b[2] - A.b[0]) / HDS / 2.6);
+            hdShadow(x, h.px, h.py, (A.b[2] - A.b[0]) / ART / 2.6);
             hdPut(x, im, A.w / 2, A.b[3], h.px, h.py, !h.fl);
             return;
           }
@@ -360,7 +360,7 @@ function hdProp(bc, oc, key, X, Y, opt) {
   if (!A) return false;
   const im = hdImg("props/" + key + ".png");
   if (!hdOk(im)) return false;
-  const k = 1 / HDS,
+  const k = 1 / ART,
     ax = A.w / 2,
     ay = A.b[3],
     wx = X + 8,
@@ -395,7 +395,7 @@ function hdProp(bc, oc, key, X, Y, opt) {
         im = A && hdImg("props/" + (hz ? "fence-h" : "fence-v") + ".png");
       if (hdOk(im)) {
         // 가로 울타리는 가운데 48점만 잘라 이어 붙인다
-        if (hz) bc.drawImage(im, (A.w - 48) / 2, A.b[3] - 40, 48, 40, X, Y + 16 - 40 / HDS, T, 40 / HDS);
+        if (hz) bc.drawImage(im, (A.w - 48) / 2, A.b[3] - 40, 48, 40, X, Y + 16 - 40 / ART, T, 40 / ART);
         else hdPut(bc, im, A.w / 2, A.b[3], X + 8, Y + 16);
         ok = true;
       }
@@ -505,7 +505,7 @@ function hdBld(c, key, b) {
           A = HDA.props[key],
           im = hdImg("props/" + key + ".png");
         // 자리(칸)에 맞게 1배나 2배로
-        const sc = Math.max(1, Math.min(2, Math.round(Math.min((f.w * T * HDS) / (A.b[2] - A.b[0]), (f.h * T * HDS) / (A.b[3] - A.b[1])))));
+        const sc = Math.max(1, Math.min(2, Math.round(Math.min((f.w * T * ART) / (A.b[2] - A.b[0]), (f.h * T * ART) / (A.b[3] - A.b[1])))));
         if (hdOk(im)) return hdPut(bc, im, (A.b[0] + A.b[2]) / 2, A.b[3], X + (f.w * T) / 2, Y + f.h * T, false, sc);
       }
       f0(bc, X, Y);

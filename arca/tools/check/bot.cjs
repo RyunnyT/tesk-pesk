@@ -3,7 +3,7 @@
 // 맵마다 몬스터 1마리와 싸워 보고(fieldStrike → 답 자동), 퀘스트를 받아 끝내고, 지워진 곳을 다시 쓴다.
 const { chromium } = require('playwright');
 (async () => {
-  const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1000, height: 760 } });
+  const b = await chromium.launch({ args: ['--enable-precise-memory-info', '--js-flags=--expose-gc'] }); const p = await b.newPage({ viewport: { width: 1000, height: 760 } });
   const errs = []; p.on('pageerror', (e) => errs.push(e.message + ' @' + (e.stack || '').split('\n')[1]));
   await p.goto('file://' + require('path').resolve(__dirname, '../../index.html')); await p.evaluate(() => localStorage.clear()); await p.reload();
   await p.waitForFunction(() => typeof HD !== 'undefined' && HD.ready, null, { timeout: 30000 });
@@ -56,7 +56,12 @@ const { chromium } = require('playwright');
         if (!e) fails.push('출구 없음 ' + id + '→' + nx);
         else if (e.need && !e.need()) fails.push('잠김 ' + id + '→' + nx + ' : ' + (e.msg ? (typeof e.msg === 'function' ? e.msg() : e.msg) : ''));
       }
-      if (M.kind === 'town') L.push(id + ' Lv' + save.lv + ' 금화' + save.gold + ' 가방' + save.rpg.bag.length + ' 공격' + atk());
+      if (M.kind === 'town') {
+        // 메모리(프롬프트 F): JS 힙과 남아 있는 맵 바탕 그림 크기
+        if (window.gc) gc();
+        const cv = Object.values(MAPS).reduce((a, m) => a + [m.base, m.over, m.sketch].filter(Boolean).reduce((s, c) => s + c.width * c.height * 4, 0), 0);
+        L.push(id + ' Lv' + save.lv + ' 금화' + save.gold + ' 가방' + save.rpg.bag.length + ' 공격' + atk() + ' 힙' + Math.round(performance.memory.usedJSHeapSize / 1e6) + 'MB 바탕' + Math.round(cv / 1e6) + 'MB');
+      }
     }
     return { L, fights, quests, fails, fin: save.lv, wrong: (save.wrong || []).length };
   });

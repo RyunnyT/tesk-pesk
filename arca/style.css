@@ -1668,3 +1668,119 @@ body.orbing .stage .toast {
   font-size: 20px;
   cursor: pointer;
 }
+/* 가벼운 화면 묻기 (20-lite) */
+.box.liteask {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(88%, 360px);
+  padding: 12px 16px;
+  text-align: center;
+  z-index: 8;
+  font-size: 14px;
+}
+.liteask p {
+  margin: 0 0 6px;
+}
+.liteask small {
+  display: block;
+  opacity: 0.8;
+  margin-bottom: 10px;
+}
+.liteask div {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.liteask button {
+  font: inherit;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #f5e3a3;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  cursor: pointer;
+}
+.stage:has(.liteask) .toast {
+  display: none;
+}
+/* 다시 하고 싶게 (21-loop): 열쇠 조각·상자·현상금 줄·메뉴 예고 */
+.hud .hkey {
+  font-size: 0.85em;
+  opacity: 0.9;
+}
+.qbty {
+  background: rgba(70, 52, 10, 0.9);
+  color: #ffe9a8;
+  border: 1px solid #ffd86b;
+  font-size: clamp(10px, 1.7vw, 12px);
+  padding: 1px 9px;
+  border-radius: 999px;
+  width: fit-content;
+}
+.menu .mnext {
+  margin: -2px 0 8px;
+  font-size: 13px;
+  color: #ffd86b;
+}
+.box.kbox {
+  left: 50%;
+  top: 45%;
+  transform: translate(-50%, -50%);
+  width: min(80%, 300px);
+  padding: 14px 16px;
+  text-align: center;
+  z-index: 8;
+}
+.kbox .kbq {
+  font-size: 34px;
+  line-height: 1.2;
+  color: #fff6d0;
+  animation: kbpulse 0.35s ease-in-out infinite alternate;
+}
+.kbox.g0 .kbq,
+.kbox.g1 .kbq,
+.kbox.g2 .kbq,
+.kbox.g3 .kbq {
+  animation: none;
+}
+.kbox.g1 .kbq,
+.kbox.g1 .kbg {
+  color: #6aa9ec;
+}
+.kbox.g2 .kbq,
+.kbox.g2 .kbg {
+  color: #b58cf0;
+}
+.kbox.g3 .kbq,
+.kbox.g3 .kbg {
+  color: #ffc04a;
+}
+.kbox .kbg {
+  font-size: 20px;
+  margin: 2px 0;
+}
+.kbox p {
+  margin: 4px 0;
+}
+.kbox button {
+  font: inherit;
+  margin-top: 6px;
+  padding: 5px 16px;
+  border-radius: 8px;
+  border: 1px solid #f5e3a3;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  cursor: pointer;
+}
+@keyframes kbpulse {
+  from {
+    transform: scale(0.9);
+  }
+  to {
+    transform: scale(1.15);
+  }
+}
+.stage:has(.kbox) .toast {
+  display: none;
+}

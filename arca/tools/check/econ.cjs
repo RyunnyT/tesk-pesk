@@ -37,12 +37,17 @@ const { chromium } = require('playwright');
       // 핵심 자리 보스
       const P0 = (typeof PARTS !== 'undefined' && PARTS[sg.part - 1]) || {};
       if (P0.boss) { const MI = mstat({ map: PARTTOWN[sg.part - 1], type: P0.boss }); bossHits.push(Math.ceil(MI.hp / atkNow())); gainS(MI.exp || 30, MI.gold || 40, 0); }
+      // 열쇠 조각 상자(src/21-loop.js): 맞힌 문제 10개마다 1개, 60%는 금화(10+부×6)·가루, 40%는 장비(여기선 금화로 안 셈)
+      const answers = monHits.reduce((a, b) => a + b, 0) * 1.6 * 0.8 + bossHits.reduce((a, b) => a + b, 0);
+      const boxes = answers / 10;
+      gainS(0, boxes * 0.6 * (10 + (sg.part - 1) * 6), boxes * 0.6 * 4);
+      S.boxes = (S.boxes || 0) + boxes;
       // 장비 사기: 쓸 수 있는 가장 좋은 무기, 그다음 옷
       for (let t = 6; t > wT; t--) { const d = ITEMS['w_' + job + '_' + t]; if (d.lv <= S.lv && S.gold >= d.price) { S.gold -= d.price; wT = t; break; } }
       const os = Object.values(ITEMS).filter((d) => d.s === 'o' && d.lv <= S.lv && d.lv > oLv).sort((a, b) => b.lv - a.lv);
       if (os[0] && S.gold >= os[0].price) { S.gold -= os[0].price; oLv = os[0].lv; }
       const avg = (a) => (a.length ? (a.reduce((x, y) => x + y, 0) / a.length).toFixed(1) : '-');
-      rows.push({ cumExp: Math.round(S.cum || 0), part: sg.part, lv: lv0 + '→' + S.lv, gold: Math.round(S.gold), dust: Math.round(S.dust), weapon: wT + '(Lv' + ITEMS['w_' + job + '_' + wT].lv + ')', outfitLv: oLv, atk: atkNow(), hitsMon: avg(monHits), hitsMax: Math.max(0, ...monHits), boss: bossHits.join('/') });
+      rows.push({ cumExp: Math.round(S.cum || 0), part: sg.part, lv: lv0 + '→' + S.lv, gold: Math.round(S.gold), dust: Math.round(S.dust), weapon: wT + '(Lv' + ITEMS['w_' + job + '_' + wT].lv + ')', outfitLv: oLv, atk: atkNow(), hitsMon: avg(monHits), hitsMax: Math.max(0, ...monHits), boss: bossHits.join('/'), keyBox: Math.round(boxes) });
     });
     return rows;
   }, 'knight');

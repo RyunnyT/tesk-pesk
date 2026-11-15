@@ -578,7 +578,7 @@ function rpgHand(h, face, mv, f) {
   x.translate(hx, hy);
   if (side < 0) x.scale(-1, 1);
   x.rotate(sw);
-  x.drawImage(im, (-gx / HDS) * k, (-gy / HDS) * k, (A.w / HDS) * k, (A.h / HDS) * k);
+  x.drawImage(im, (-gx / ART) * k, (-gy / ART) * k, (A.w / ART) * k, (A.h / ART) * k);
   x.restore();
   // 손(주먹)을 무기 손잡이 위에 한 점 더 그려 쥔 것처럼
   P(x, hx - 0.7, hy - 0.7, 1.4, 1.4, "#f1c6a0");
