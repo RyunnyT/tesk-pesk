@@ -67,7 +67,8 @@ function studyQ(d) {
     term,
     unitNos: nos,
     tier,
-    contextMode: "plain",
+    // 잉크 얼룩이 같은 몬스터는 같은 단원을 글 문제로(src/18-orb.js 가 RQ.ctx 를 정함)
+    contextMode: (typeof RQ === "object" && RQ.ctx) || "plain",
     responseMode: "choice",
   });
   if (!q || !Array.isArray(q.options)) return null;

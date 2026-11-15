@@ -505,7 +505,8 @@ TABS.splice(TABS.findIndex((t) => t[0] === "pet"), 0, ["dex", "도감"]);
   const mq1 = makeQ;
   makeQ = function (d) {
     RQ.short = false;
-    if (RQ.wantShort && window.QUIZ && Math.random() < 0.5) {
+    // 태엽 병정·톱니 벌레(RQ.forceShort, src/18-orb.js)는 늘 숫자 판
+    if ((RQ.wantShort || RQ.forceShort) && window.QUIZ && (RQ.forceShort || Math.random() < 0.5)) {
       try {
         const { term, unit } = partUnit(mapPart()),
           units = QUIZ.unitsOf(studyCfg.grade, term),

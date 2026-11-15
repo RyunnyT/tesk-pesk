@@ -61,11 +61,11 @@ TEACHER = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>
 <div class="box"><b>학생이 하는 일</b>
 <ol>
 <li>마을 사람에게 부탁(퀘스트)을 받고, 마을 밖 <b>길목</b>으로 나가요.</li>
-<li>몬스터에게 공격이 닿으면 <b>문제 상자</b>가 떠요. 맞히면 공격이 그대로, 틀리면 절반만 들어가고 정답과 풀이를 보여 줘요.</li>
+<li>몬스터를 공격하면 그 몬스터를 <b>조준</b>하고 문제가 떠요(짧은 식은 몬스터 머리 위, 긴 문제는 화면 아래 띠). 게임은 멈추지 않아요. 주인공 둘레의 <b>답 구슬 1·2·3</b> 중 하나를 던져요. 맞히면 <b>약점!</b> 공격이 그대로, 틀리면 튕겨 나가 절반만 들어가고 정답과 풀이를 보여 줘요.</li>
 <li>몬스터를 물리치고 지문을 읽으면 <b>별빛 가루</b>가 모여요. 이 가루로 안개에 지워진 마을을 <b>다시 써요</b>.</li>
 <li>마을을 모두 되살리고 길목 끝 <b>문지기</b>를 넘으면 다음 부로 가요. 12부를 마치면 1년 이야기가 끝나요.</li>
 </ol></div>
-<div class="two">{fig("town.jpg", "마을: 왼쪽 위는 상태·퀘스트, 오른쪽 위는 지도")}{fig("battle.jpg", "길목 전투: 공격이 닿으면 문제 상자")}</div>
+<div class="two">{fig("town.jpg", "마을: 왼쪽 위는 상태·퀘스트, 오른쪽 위는 지도")}{fig("battle.jpg", "약점 구슬 전투: 머리 위 문제, 둘레의 답 구슬, 아래 띠")}</div>
 <p>게임 안 숫자: 1년 지문 {U['spots']}편 · 퀘스트 {U['quests']}개 · 몬스터 {U['mons']}종 · 들어갈 수 있는 건물 {U['rooms']}곳 · 장비·가구 {U['items']}종.</p>
 
 <h2>2. 시작하기</h2>
@@ -84,7 +84,8 @@ TEACHER = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>
 <tr><td>공격</td><td><span class="key">Q</span></td><td>'공격' 버튼</td></tr>
 <tr><td>스킬</td><td><span class="key">E</span> <span class="key">R</span> <span class="key">T</span> <span class="key">Y</span> (Lv 1·3·5·7에 칸이 열림)</td><td>공격 버튼 위의 스킬 버튼 줄</td></tr>
 <tr><td>점프(울타리·바위·개울)</td><td><span class="key">J</span> 또는 <span class="key">Z</span></td><td>'점프' 버튼</td></tr>
-<tr><td>문제 답</td><td><span class="key">1</span> <span class="key">2</span> <span class="key">3</span></td><td>답 버튼 누르기</td></tr>
+<tr><td>답 구슬 던지기</td><td><span class="key">1</span> <span class="key">2</span> <span class="key">3</span></td><td>아래 띠의 큰 구슬 버튼</td></tr>
+<tr><td>조준 풀기(도망)</td><td><span class="key">Esc</span></td><td>띠의 ✕ (멀리 걸어가도 풀려요)</td></tr>
 <tr><td>장비·가방</td><td><span class="key">I</span></td><td>오른쪽 위 '장비' 버튼</td></tr>
 <tr><td>지도 접기/펴기</td><td><span class="key">M</span></td><td>'지도' 버튼</td></tr></table>
 
@@ -94,7 +95,9 @@ TEACHER = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>
 <tr><td>학년</td><td>3·4·5·6학년</td><td>문제 은행의 그 학년 단원 문제가 나와요.</td></tr>
 <tr><td>지문 수준</td><td>학년에 맞춤 / 심화</td><td>3~4학년용·5~6학년용·심화 지문 중에서 채워요.</td></tr>
 <tr><td>과목</td><td>수학 / 영어 단어 / 섞기</td><td>섞기는 수학 7 : 영어 3 정도로 나와요.</td></tr>
-<tr><td>문제 범위</td><td>부에 맞춘 단원 / 학기 전체 섞기</td><td>'부에 맞춘 단원'은 N부에서 그 학기 N단원 문제만 내요.</td></tr></table>
+<tr><td>문제 범위</td><td>부에 맞춘 단원 / 학기 전체 섞기</td><td>'부에 맞춘 단원'은 N부에서 그 학기 N단원 문제만 내요.</td></tr>
+<tr><td>전투 방식</td><td>약점 구슬(새, 기본) / 문제 상자(예전)</td><td>약점 구슬은 게임이 멈추지 않고 답 구슬을 던져요. 문제 상자는 화면 가운데 상자에서 골라요. 배움 효과(정답·풀이·오답 노트)는 같아요.</td></tr></table>
+<p><b>몬스터마다 문제 모양이 달라요</b>(단원은 늘 그 부의 단원): 잉크 얼룩이는 <b>글 문제</b>, 태엽 병정·톱니 벌레는 <b>숫자 직접 쓰기</b>, 금화 들쥐는 <b>짧은 문제</b>, 망각 유령·지우개 덩어리는 <b>틀렸던 문제</b>를 들고 와요.</p>
 <p>길목이 깊을수록(1~5단계) 같은 단원 안에서 더 어려운 문제가 나와요. 보기는 3개(정답 1 + 오답 2)예요.</p>
 
 <h2 class="pb">4. 부와 단원 대응표</h2>
@@ -163,7 +166,7 @@ TEACHER = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>
 </body></html>"""
 
 STUDENT = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>아르카 연대기 조작 안내</title><style>{CSS}
-body {{ font-size: 12pt; }} h1 {{ font-size: 20pt; }} .big td {{ font-size: 12pt; padding: 2mm 3mm; }}</style></head><body>
+body {{ font-size: 11pt; }} h1 {{ font-size: 18pt; }} .big td {{ font-size: 11pt; padding: 1.2mm 3mm; }} .two figure img {{ max-height: 55mm; object-fit: cover; }}</style></head><body>
 <div class="cover" style="padding:7mm 9mm"><h1>아르카 연대기 · 모험가 안내</h1><p>문제를 맞히면 별빛이 생겨요. 그 별빛으로 지워진 마을을 다시 써요!</p></div>
 <table class="big"><tr><th>하고 싶은 것</th><th>키보드</th><th>태블릿</th></tr>
 <tr><td>걷기</td><td><span class="key">←↑↓→</span> / <span class="key">WASD</span></td><td>방향 버튼</td></tr>
@@ -171,13 +174,13 @@ body {{ font-size: 12pt; }} h1 {{ font-size: 20pt; }} .big td {{ font-size: 12pt
 <tr><td>공격</td><td><span class="key">Q</span></td><td>공격</td></tr>
 <tr><td>스킬</td><td><span class="key">E</span><span class="key">R</span><span class="key">T</span><span class="key">Y</span></td><td>스킬 버튼</td></tr>
 <tr><td>점프</td><td><span class="key">J</span> / <span class="key">Z</span></td><td>점프</td></tr>
-<tr><td>문제 답</td><td><span class="key">1</span><span class="key">2</span><span class="key">3</span></td><td>답 누르기</td></tr>
+<tr><td>답 구슬 던지기 (풀기)</td><td><span class="key">1</span><span class="key">2</span><span class="key">3</span> (<span class="key">Esc</span>)</td><td>아래 구슬 버튼 (✕)</td></tr>
 <tr><td>장비 · 가방</td><td><span class="key">I</span></td><td>장비</td></tr>
 <tr><td>지도</td><td><span class="key">M</span></td><td>지도</td></tr></table>
-<div class="two">{fig("battle.jpg", "몬스터에 공격이 닿으면 문제가 떠요")}{fig("hud.jpg", "왼쪽 위: 하트·레벨·퀘스트 (퀘스트 ▾ 를 누르면 접혀요)")}</div>
+<div class="two">{fig("battle.jpg", "공격하면 문제가 떠요. 답 구슬 1·2·3을 던져요!")}{fig("hud.jpg", "왼쪽 위: 하트·레벨·퀘스트 (퀘스트 ▾ 를 누르면 접혀요)")}</div>
 <div class="box"><b>모험의 약속</b>
 <ul>
-<li>틀려도 괜찮아요! 피해가 절반이 되고 풀이를 보여 줘요. <b>풀이를 꼭 읽어요.</b></li>
+<li>맞히면 <b>약점!</b> 틀려도 괜찮아요! 피해가 절반이 되고 풀이가 나와요. <b>풀이를 꼭 읽어요.</b> 몬스터는 아주 천천히 다가오니 차분히 생각해요.</li>
 <li>틀린 문제는 나중에 <b>다시 만나요</b>. 맞히면 오답 노트에서 사라져요.</li>
 <li>노란 화살표가 다음 할 일을 가리켜요. 막히면 마을 <b>길드</b>에 가 봐요.</li>
 <li>연속으로 맞히면 🔥 콤보! 3연속부터 힘이 세지고 5연속마다 필살기!</li>

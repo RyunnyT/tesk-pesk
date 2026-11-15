@@ -118,6 +118,56 @@ fs.mkdirSync(OUT, { recursive: true });
     dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' }));
     return { was: on, now: ORB.on, busy, B: !!B, strip: !$('qstrip').hidden };
   });
+  // 5c) 몬스터 성격 = 문제 모양: 잉크 = 글 문제, 태엽 병정 = 숫자 판, 들쥐 = 짧은 문제
+  R.shape = await p.evaluate(async () => {
+    const out = {};
+    for (const t of ['ink', 'windup', 'rat', 'wolf']) {
+      const L = [];
+      for (let k = 0; k < 6; k++) {
+        B = null; busy = false;
+        const m = __fresh(t, 30); m.hpNow = 99999; fieldStrike(m, null);
+        await new Promise((r) => setTimeout(r, 60));
+        L.push({ len: qBody((RQ.last || {}).q).length, short: !!RQ.short, title: RQ.short ? $('btt').textContent : $('qst').textContent });
+        if (RQ.short) { document.querySelector('#kp [data-k="ok"]').click(); } else orbThrow(0);
+        await __wait(() => !ORB.on && !busy && !B && $('bt').hidden);
+      }
+      out[t] = { avgLen: Math.round(L.reduce((a, b) => a + b.len, 0) / L.length), keypad: L.filter((x) => x.short).length + '/' + L.length, title: L[0].title };
+    }
+    return out;
+  });
+  // 5d) 몬스터 5마리 시간: 생각하는 시간 1.5초 + 80% 정답, 구슬 vs 예전 상자 (화면이 멈추는 시간 = 상자 방식에서 걷지 못한 시간)
+  R.time = await p.evaluate(async () => {
+    const res = {};
+    for (const modeName of ['orb', 'box']) {
+      studyCfg.battle = modeName;
+      let froze = 0, qn = 0;
+      const t0 = performance.now();
+      const smp = setInterval(() => { if (busy) froze += 20; }, 20);
+      for (let i = 0; i < 5; i++) {
+        B = null; busy = false;
+        const m = __fresh('wolf', 30);
+        let guard = 0;
+        while (!m.dead && guard++ < 10) {
+          fieldStrike(m, null);
+          const ts = performance.now();
+          await new Promise((r) => setTimeout(r, 1500));
+          qn++;
+          const ok = Math.random() < 0.8;
+          if (RQ.short) { const v = ok ? String(RQ.last.a) : '0'; for (const ch of v) document.querySelector('#kp [data-k="' + ch + '"]').click(); document.querySelector('#kp [data-k="ok"]').click(); }
+          else {
+            const bs = [...$('bc').children].filter((x) => !x.hidden && !x.disabled);
+            const b0 = ok ? bs.find((x) => x.dataset.v === String(RQ.last.a)) : bs.find((x) => x.dataset.v !== String(RQ.last.a));
+            if (ORB.on) orbThrow(orbBtns().indexOf(b0)); else b0.click();
+          }
+          for (let k = 0; k < 200 && (ORB.on || busy || B); k++) { await new Promise((r) => setTimeout(r, 20)); }
+        }
+      }
+      clearInterval(smp);
+      res[modeName] = { perQ: +((performance.now() - t0) / 1000 / qn).toFixed(2), frozenPerQ: +(froze / 1000 / qn).toFixed(2), sec: +((performance.now() - t0) / 1000).toFixed(1), questions: qn, frozenSec: +(froze / 1000).toFixed(1) };
+    }
+    studyCfg.battle = 'orb';
+    return res;
+  });
   // 6) 휴대폰 크기 사진
   await p.setViewportSize({ width: 390, height: 844 });
   await p.evaluate(() => { document.body.classList.add('mobile'); if (typeof fitView === 'function') fitView(); B = null; busy = false; const m = __fresh('slime', 34); m.hpNow = 99999; fieldStrike(m, null); });

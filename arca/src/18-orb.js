@@ -17,6 +17,28 @@ const isShortQ = (t) => {
   return s.length <= 14 && !s.includes("\n");
 };
 
+/* ── 몬스터 성격 = 문제 모양 (단원은 늘 그 부의 단원) ──
+   잉크 얼룩이 = 글 문제, 태엽 병정·톱니 벌레 = 숫자 직접 넣기, 금화 들쥐 = 짧은 문제(빠른 판단).
+   망각 유령·지우개 = 틀렸던 문제(15-play 가 이미 함). 전투 방식과 상관없이 적용. */
+const QSHAPE = { ink: "word", windup: "num", gear: "num", rat: "short" };
+const QSHAPE_TXT = { word: "글 문제", num: "숫자를 직접 써요", short: "빨리 풀기" };
+let qShape = null;
+{
+  const mqO = makeQ;
+  makeQ = function (d) {
+    if (qShape !== "short") return mqO(d);
+    // 짧은 문제: 세 번 뽑아 가장 짧은 것(다시 만난 문제는 그대로)
+    let best = mqO(d);
+    for (let i = 0; i < 2 && best && !best.re; i++) {
+      const n0 = save.qn;
+      const q = mqO(d);
+      save.qn = n0;
+      if (q && !q.re && qBody(q.q).length < qBody(best.q).length) best = q;
+    }
+    return (RQ.last = best);
+  };
+}
+
 /* ── 문제 띠(화면 아래) ── */
 const qs = document.createElement("div");
 qs.className = "qstrip";
@@ -100,8 +122,18 @@ function orbEnd() {
 {
   const afO = askField;
   askField = function (MI, title, cb) {
+    const key = B && B.m ? B.m.type : null;
+    qShape = (studyCfg.subj !== "eng" && QSHAPE[key]) || null;
+    RQ.ctx = qShape === "word" ? "word" : null;
+    RQ.forceShort = qShape === "num";
+    if (qShape) title += " · " + QSHAPE_TXT[qShape];
     const use = orbAllowed() && B && B.m;
-    if (!use) return afO(MI, title, cb);
+    if (!use) {
+      afO(MI, title, cb);
+      qShape = RQ.ctx = null;
+      RQ.forceShort = false;
+      return;
+    }
     afO(MI, title, (ok) => {
       const was = ORB.on;
       orbEnd();
@@ -109,6 +141,8 @@ function orbEnd() {
       if (was) busy = true;
       cb(ok);
     });
+    qShape = RQ.ctx = null;
+    RQ.forceShort = false;
     // 숫자 직접 넣기는 지금처럼 상자(숫자 판)
     if (RQ.short) return;
     $("bt").hidden = true;
