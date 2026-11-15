@@ -103,7 +103,26 @@ figcaption { font-size: 8.5pt; color: #5a5480; text-align: center; }
 <li><b>보스 공동 공략</b>: 같은 부 보스 앞에서 막힌 친구를 '도우미'가 옆에서 설명해 주기(대신 풀어 주지 않기).</li>
 </ul>
 
-<h2>7. 장비·성장(RPG) 안내</h2>
+<h2>7. 학습 보고서</h2>
+<p>게임 위쪽 <b>「학습 보고서」</b> 버튼(태블릿·휴대폰은 메뉴 ☰ → 선생님 설정 → <b>학습 보고서 보기</b>)에서 그 기기 학생의 기록을 봐요.</p>
+<ul>
+<li><b>요약</b>: 푼 문제 수, 정답률, 공부한 날 수, 진도(부·되살린 마을·레벨), 되찾은 기억(틀렸다가 다시 맞힌 문제).</li>
+<li><b>최근 7일 막대</b>: 날마다 푼 문제 수.</li>
+<li><b>단원별 표</b>: 문제 수·정답률·평균 시간. 5문제 이상 풀었는데 정답률이 60% 아래면 <b>▼ 표시와 굵은 글씨</b>로 보여요.</li>
+<li><b>자주 틀리는 문제 5개</b>: 문제 글과 정답, 틀린 횟수. 다시 맞히면 목록에서 빠져요.</li>
+</ul>
+<p class="muted">처음 고른 답만 세요(다시 고른 답은 틀린 것으로). 기록은 게임 저장과 따로 그 기기에 남고, '처음부터'를 해도 지워지지 않아요. 이름 대신 게임 속 별명만 들어가요.</p>
+<div class="two"><figure><img class='shot' src='img/report.jpg'><figcaption>학습 보고서: 요약·7일 막대·단원별·자주 틀리는 문제</figcaption></figure><figure><img class='shot' src='img/class.jpg'><figcaption>학급 모아 보기(teacher.html): 학생별·단원별 학급 평균</figcaption></figure></div>
+<h3>학급 전체를 모아 보려면</h3>
+<ol>
+<li>학생이 학습 보고서에서 <b>기록 내보내기(JSON)</b>를 눌러 파일을 저장해요. 표로 보고 싶으면 <b>표로 내보내기(CSV)</b>(엑셀로 열려요).</li>
+<li>플레이 링크처럼 파일 저장이 막힌 곳에서는 글 상자가 나와요. <b>복사</b>해서 학급 게시판·메신저로 보내 주면 돼요.</li>
+<li>선생님은 <span class="key">arca/teacher.html</span>(학급 모아 보기)을 열고 파일들을 끌어다 놓거나, 복사한 글을 '글로 붙여 넣기'에 넣어요.</li>
+<li>학생별 정답률·진도와 <b>단원별 학급 평균</b>이 나와요. ▼ 단원은 다시 가르칠 후보예요. '학급 표 CSV 저장'으로 엑셀에 옮길 수 있어요.</li>
+</ol>
+<p class="muted">파일은 선생님 브라우저 안에서만 읽고 어디로도 보내지 않아요. 나중에 Pesk 와 연결하면 이 과정 없이 자동으로 모일 예정이에요.</p>
+
+<h2>8. 장비·성장(RPG) 안내</h2>
 <div class="two"><figure><img class='shot' src='img/me.jpg'><figcaption>내 정보: 전투력·능력·입은 장비</figcaption></figure><figure><img class='shot' src='img/eq.jpg'><figcaption>장비: 가방·비교(▲▼)·팔기</figcaption></figure></div>
 <ul>
 <li><b>직업</b>은 1부 수련장에서 스승 네 명 중 하나를 골라요. 직업을 얻으면 <b>견습 무기만</b> 받아요. 옷은 상점에서 사거나 몬스터·보물 상자에서 얻어요.</li>
@@ -115,7 +134,7 @@ figcaption { font-size: 8.5pt; color: #5a5480; text-align: center; }
 </ul>
 <div class="two"><figure><img class='shot' src='img/outfit.jpg'><figcaption>옷을 입으면 겉모습이 바뀌어요</figcaption></figure><figure><img class='shot' src='img/home.jpg'><figcaption>마이룸 꾸미기</figcaption></figure></div>
 
-<h2>8. 마을 건물 안</h2>
+<h2>9. 마을 건물 안</h2>
 <p>마을 건물 47곳에 들어갈 수 있어요. 문 앞에서 조사하면 들어가요.</p>
 <table><tr><th>건물</th><th>안에서 하는 일</th></tr>
 <tr><td>상점·가게·대장간·공방</td><td>주인에게 말 걸면 상점이 열려요.</td></tr>
@@ -124,15 +143,16 @@ figcaption { font-size: 8.5pt; color: #5a5480; text-align: center; }
 <tr><td>길드·본부·천막</td><td>다음에 할 일을 알려 줘요.</td></tr>
 <tr><td>집</td><td>주민 이야기, 상자 선물(처음 한 번).</td></tr></table>
 
-<h2>9. 접근성·화면 설정</h2>
+<h2>10. 접근성·화면 설정</h2>
 <p>메뉴 ☰ 에서: <b>글자 크게</b> · <b>대사 읽어 주기</b>(브라우저 음성) · <b>흔들림 끄기</b> · <b>소리 끄기</b> · <b>옛 그림/새 그림</b>(느린 기기는 옛 그림이 가벼워요) · 전체 화면.</p>
 
-<h2>10. 자주 묻는 것</h2>
+<h2>11. 자주 묻는 것</h2>
 <table><tr><th>질문</th><th>답</th></tr>
 <tr><td>학생이 진행을 잃어버렸어요.</td><td>다른 기기·다른 브라우저로 열었거나 방문 기록을 지운 경우예요. 같은 기기를 쓰게 해 주세요.</td></tr>
 <tr><td>처음부터 하고 싶어요.</td><td>화면 위 '처음부터'를 4초 안에 두 번 누르면 저장이 지워져요.</td></tr>
 <tr><td>문제가 너무 어렵거나 쉬워요.</td><td>선생님 설정의 학년·문제 범위를 바꿔요. 길목이 깊을수록 어려워요.</td></tr>
 <tr><td>영어도 하고 싶어요.</td><td>과목을 '영어 단어' 또는 '섞기'로 바꿔요.</td></tr>
+<tr><td>누가 어느 단원을 어려워하나요?</td><td>학습 보고서(학생 한 명)나 teacher.html(학급 전체)의 ▼ 단원을 봐요.</td></tr>
 <tr><td>숨은 요소가 궁금해요.</td><td>별고양이 12마리, 반응하는 사물, 비밀 서고, 떠돌이 상인 등이 있어요. 위치는 <span class="key">docs/비밀_목록.md</span>(선생님용).</td></tr></table>
 <p class="muted">그림: 인물·몬스터·지도는 PixelLab으로 그렸어요. 문제 은행은 Pesk 문제 은행(quiz-bank.js)을 써요.</p>
 </body></html>

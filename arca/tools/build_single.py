@@ -24,4 +24,6 @@ html = html[:first] + "<script>\nconst HD_INLINE = " + json.dumps(pics, separato
 out = root / "dist"
 out.mkdir(exist_ok=True)
 (out / "arca-chronicles.html").write_text(html, encoding="utf-8")
+# 학급 모아 보기는 그대로 옆에 복사(혼자 도는 페이지)
+(out / "teacher.html").write_text((root / "teacher.html").read_text(encoding="utf-8"), encoding="utf-8")
 print("dist/arca-chronicles.html 을 만들었어요. (스크립트 " + str(len(srcs)) + "개, 그림 " + str(len(pics)) + "장, " + str(round(len(html) / 1e6, 1)) + "MB)")

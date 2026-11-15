@@ -1506,3 +1506,165 @@ body.orbing .stage .toast {
   cursor: pointer;
   padding: 0 2px;
 }
+/* ── 학습 보고서 (19-log) ── */
+.report {
+  --card: #ffffff;
+  --lowbg: #fde8e8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .report {
+    --card: #1f1a3d;
+    --lowbg: #4a1f2c;
+  }
+}
+:root[data-theme="dark"] .report {
+  --card: #1f1a3d;
+  --lowbg: #4a1f2c;
+}
+.report {
+  position: relative;
+  margin: -8px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--bg);
+}
+.report.over {
+  position: absolute;
+  inset: 4%;
+  margin: 0;
+  overflow: auto;
+  z-index: 7;
+}
+.report .rpx {
+  position: absolute;
+  right: 8px;
+  top: 4px;
+  color: var(--sub);
+}
+.report .rph b {
+  font-family: "Gowun Batang", serif;
+  font-size: 17px;
+  margin-right: 8px;
+}
+.report .rph small,
+.report .rpnote {
+  color: var(--sub);
+  font-size: 12px;
+}
+.report h4 {
+  margin: 12px 0 4px;
+  font-size: 14px;
+}
+.rpsum {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.rpsum div {
+  flex: 1 1 110px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: var(--card);
+}
+.rpsum small {
+  display: block;
+  color: var(--sub);
+  font-size: 12px;
+}
+.rpsum b {
+  font-size: 17px;
+}
+.rpweek {
+  display: flex;
+  gap: 6px;
+  height: 90px;
+  align-items: flex-end;
+}
+.rpweek div {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  font-size: 11px;
+}
+.rpweek i {
+  display: block;
+  width: 70%;
+  min-height: 2px;
+  background: #7d6fd6;
+  border-radius: 3px 3px 0 0;
+}
+.rpweek b {
+  font-weight: 400;
+}
+.rpweek small {
+  color: var(--sub);
+}
+.rpt {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: var(--card);
+}
+.rpt th,
+.rpt td {
+  border-bottom: 1px solid var(--line);
+  padding: 3px 6px;
+  text-align: left;
+}
+.rpt tr.low td {
+  background: var(--lowbg);
+  font-weight: 700;
+}
+.rpmiss {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+}
+.rpmiss small {
+  color: var(--sub);
+}
+.rpbtn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.rpbtn button,
+.rpout button,
+.rpopen {
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+}
+.rpopen {
+  margin-top: 8px;
+}
+.rpout textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 11px;
+  margin-top: 8px;
+}
+.rpout small {
+  margin-left: 8px;
+  color: var(--sub);
+}
+.report .rpx {
+  background: none;
+  border: 0;
+  font-size: 20px;
+  cursor: pointer;
+}
