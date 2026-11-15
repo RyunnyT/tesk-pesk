@@ -1294,3 +1294,97 @@ body.bigtext .trk {
 .stage:has(#book:not([hidden])) .toast {
   display: none !important;
 }
+/* 도감·숫자 판 (src/17-fun.js) */
+.dex {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 6px;
+}
+.dex.sm {
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+}
+.dx {
+  background: #2b2552;
+  border: 1px solid #4a4380;
+  border-radius: 8px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+.dx img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.dex.sm .dx img {
+  width: 32px;
+  height: 32px;
+}
+.dx.no img {
+  filter: brightness(0) opacity(0.45);
+}
+.dx b {
+  font-weight: 400;
+  font-size: 0.85em;
+  overflow-wrap: anywhere;
+}
+.dx small {
+  color: #bdb4dd;
+  font-size: 0.75em;
+}
+.kp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.kpv {
+  min-width: 160px;
+  background: #15122b;
+  border: 2px solid #f5e3a3;
+  border-radius: 8px;
+  padding: 2px 14px;
+  font-size: clamp(20px, 4.4vw, 28px);
+  text-align: center;
+  color: #fff;
+  min-height: 1.4em;
+}
+.kpg {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(36px, 48px));
+  gap: 4px;
+}
+.kp button {
+  font: inherit;
+  font-size: clamp(15px, 3vw, 19px);
+  background: #2b2552;
+  color: #fff;
+  border: 1px solid #6f64b0;
+  border-radius: 6px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+.kp .kpok {
+  background: #f5e3a3;
+  color: #1e1b3f;
+  border-color: #f5e3a3;
+  padding: 4px 18px;
+}
+.hud .combo {
+  color: #fff6d0;
+}
+.hud .combo.c1 {
+  color: #ffd86b;
+}
+.hud .combo.c2 {
+  color: #ffb84a;
+  border: 1px solid #ffb84a;
+}
+.hud .combo.c3 {
+  color: #ff9fe0;
+  border: 1px solid #ff9fe0;
+}

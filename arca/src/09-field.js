@@ -89,10 +89,12 @@ function fieldStrike(m, sk) {
   pl.face = "s";
   m.dir = pl.x < m.x ? -1 : 1;
   B = { m, MI, hp: m.hpNow, g: FLD.g, core: m.core, field: 1 };
-  // 스킬은 공격력의 1.5배·2배·3배
-  const base = sk ? Math.round(({ hit2: 1.5, hit3: 2, ult: 3 }[sk.t] || 1.5) * atk()) : atk();
+  // 스킬은 공격력의 몇 배(src/17-fun.js 의 skMul, 없으면 1.5·2·3배)
+  const base = sk ? Math.round((typeof skMul === "function" ? skMul(sk.t) : { hit2: 1.5, hit3: 2, ult: 3 }[sk.t] || 1.5) * atk()) : atk();
   askField(MI, (sk ? sk.nm : "공격") + " · " + MI.n, (ok) => {
     let d = ok ? base : Math.ceil(base / 2);
+    // 콤보·5연속 필살기(src/17-fun.js)
+    if (typeof funDmg === "function") d = funDmg(d, ok, m, sk);
     const job = save.job || "knight";
     if (ok && job === "warrior" && skLearned(STUDY.warrior) && FLD.streak >= 2) d += PWR;
     if (ok && petOn(0) && Math.random() < 0.25) d += PWR;
@@ -106,9 +108,11 @@ function fieldStrike(m, sk) {
       FLD.dbl = 0;
     }
     m.hpNow -= d;
-    B.hp = m.hpNow;
+    if (B) B.hp = m.hpNow;
     m.hit = 10;
     fxHit(d);
+    // 범위·관통·기절·독 같은 스킬 뒷효과(src/17-fun.js)
+    if (sk && typeof skillAfter === "function") skillAfter(sk, m, d, ok);
     if (!ok) fxPop(m.x, m.y - 34, "절반", "#cfc6ee");
     for (let i = 0; i < 12; i++) sp.push({ a: m.x - 8 + Math.random() * 16, y: m.y - 18 + Math.random() * 16, t: 8 + Math.random() * 8 });
     setTimeout(() => {
@@ -162,10 +166,11 @@ function fieldContact(m) {
       // 막기(옷·장신구): 틀렸어도 피해 1 줄이기
       const dm = Math.max(0, MI.dmg - 1);
       fxPop(pl.x, pl.y - 24, dm ? "막기! -" + dm : "막기!", "#9fe0ff");
-      pl.hp -= dm;
+      pl.hp -= typeof takeDmg === "function" ? takeDmg(dm) : dm;
       if (dm) fxHurt(dm);
     } else {
-      pl.hp -= MI.dmg;
+      // 보호막·다시 일어서기(src/17-fun.js)
+      pl.hp -= typeof takeDmg === "function" ? takeDmg(MI.dmg) : MI.dmg;
       shakeT = 10;
       fxHurt(MI.dmg);
     }

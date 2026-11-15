@@ -37,8 +37,15 @@ const RQ = { mon: null, last: null };
     af0(MI, title, (ok) => {
       const q = RQ.last;
       if (ok && q && q.re) {
+        // 기억을 되찾았어요: 별이 터지고 별빛 가루 보너스, 되찾은 기억 수(도감·내 정보)
         save.wrong = (save.wrong || []).filter((w) => w.q !== q.q);
-        setTimeout(() => toast("다시 만난 문제를 맞혔어요! 오답 노트에서 지웠어요"), 500);
+        save.st.recov = (save.st.recov || 0) + 1;
+        save.dust += 3;
+        for (let i = 0; i < 30; i++) sp.push({ a: pl.x - 14 + Math.random() * 28, y: pl.y - 30 + Math.random() * 20, t: 10 + Math.random() * 14 });
+        if (typeof fxPop === "function") fxPop(pl.x, pl.y - 40, "기억을 되찾았어요!", "#ffd86b");
+        if (typeof sfx === "function") sfx("shard");
+        setTimeout(() => toast("기억을 되찾았어요! 별빛 가루 +3 · 되찾은 기억 " + save.st.recov + "개"), 500);
+        if (typeof titleCheck === "function") titleCheck();
       }
       cb(ok);
     });
