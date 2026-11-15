@@ -6,8 +6,8 @@
      그래서 콤보·힌트·오답 노트·다시 만나기·직업 공부 도움이 그대로 이어진다. 숫자 직접 넣기(숫자 판)는 지금처럼 상자로.
    · 선생님 설정 '전투 방식'(studyCfg.battle: orb 기본 / box 예전 상자). */
 const ORB = { on: false, m: null, fly: null, res: null, t0: 0 };
-// 1단계: 길목 1(동쪽 들판길)에서만. 선생님 확인 뒤 null 로 바꾸면 모든 곳
-const ORB_ONLY = new Set(["r1"]);
+// 처음엔 길목 1에서만 시험했다. 2026-11-15 선생님이 "바뀐 걸 모르겠다" → 모든 길목·보스로 켬(null = 모든 곳)
+const ORB_ONLY = null;
 const ORBCOL = ["#6aa9ec", "#7ee07a", "#ffb84a"];
 const orbAllowed = () => studyCfg.battle !== "box" && (!ORB_ONLY || ORB_ONLY.has(M.id));
 // 문제 글에서 "계산해 보세요." 를 떼고 짧은 식인지
@@ -118,6 +118,11 @@ function orbEnd() {
     ORB.m = B.m;
     ORB.t0 = tk;
     orbRender(title);
+    if (save.st && !save.st.orbTip) {
+      save.st.orbTip = 1;
+      fxPop(pl.x, pl.y - 30, "새 전투! 구슬을 던져요", "#ffd86b");
+      toast("새 전투 방식! 문제를 보고 답 구슬 1·2·3 을 던져 약점을 맞혀요");
+    }
   };
   // 조준 중에는 다른 공격·스킬·조사·부딪힘을 막는다
   const fs0 = fieldStrike;
@@ -224,11 +229,15 @@ function orbEnd() {
       orbBtns().forEach((b, i) => {
         if (b.disabled || (ORB.fly && ORB.fly.i === i)) return;
         const an = fr / 8 + (i * Math.PI * 2) / 3,
-          ox = pl.x - cam.x + Math.cos(an) * 11,
-          oy = pl.y - cam.y - 10 + Math.sin(an) * 5;
-        disc(x, Math.round(ox), Math.round(oy), 3, "#1e1b3f");
-        disc(x, Math.round(ox), Math.round(oy), 2, ORBCOL[i]);
-        P(x, Math.round(ox) - 1, Math.round(oy) - 2, 1, 1, "#ffffff");
+          ox = pl.x - cam.x + Math.cos(an) * 14,
+          oy = pl.y - cam.y - 10 + Math.sin(an) * 6;
+        disc(x, Math.round(ox), Math.round(oy), 5, "#1e1b3f");
+        disc(x, Math.round(ox), Math.round(oy), 4, ORBCOL[i]);
+        P(x, Math.round(ox) - 2, Math.round(oy) - 3, 1, 1, "#ffffff");
+        x.font = "bold 6px sans-serif";
+        x.fillStyle = "#1e1b3f";
+        x.textAlign = "center";
+        x.fillText(String(i + 1), Math.round(ox), Math.round(oy) + 2);
       });
     }
     // 날아가는 구슬

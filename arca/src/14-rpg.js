@@ -563,20 +563,27 @@ function rpgHand(h, face, mv, f) {
   if (!A || face === "u") return;
   const im = hdImg("icons/" + w.id + ".png");
   if (!hdOk(im)) return;
+  // 손 위치(68점 인물 그림에서 잰 값): 앞모습은 오른손(가운데 +3, 발에서 4.3 위), 옆모습은 몸 앞(+1, 4 위)
   const side = face === "s" ? (h.fl ? -1 : 1) : 1,
+    S = h.S || 1,
     bob = mv ? (f % 2) * 0.6 : 0,
-    hx = h.px + (face === "s" ? 4 : 5) * side,
-    hy = h.py - 7 - bob,
-    sw = pl.atk > 0 ? ((10 - pl.atk) / 10) * 1.9 - 0.9 : 0; // 공격할 때 휘두르기
+    hx = h.px + (face === "s" ? 1 : 3) * side * S,
+    hy = h.py - 4.3 * S - bob,
+    sw = pl.atk > 0 ? ((10 - pl.atk) / 10) * 1.9 - 0.9 : 0, // 공격할 때 휘두르기
+    k = 0.8 * S, // 몸에 맞게 조금 작게
+    // 아이콘은 오른쪽 위를 향한 대각선 그림: 손잡이 끝에서 1/4 지점을 쥔다
+    gx = A.b[0] + (A.b[2] - A.b[0]) * 0.25,
+    gy = A.b[3] - (A.b[3] - A.b[1]) * 0.25;
   x.save();
   x.translate(hx, hy);
   if (side < 0) x.scale(-1, 1);
   x.rotate(sw);
-  // 아이콘은 오른쪽 위를 향한 대각선 그림: 손잡이(왼쪽 아래)를 손에 맞춘다
-  x.drawImage(im, -A.b[0] / HDS - 1, -A.b[3] / HDS + 1, A.w / HDS, A.h / HDS);
+  x.drawImage(im, (-gx / HDS) * k, (-gy / HDS) * k, (A.w / HDS) * k, (A.h / HDS) * k);
   x.restore();
+  // 손(주먹)을 무기 손잡이 위에 한 점 더 그려 쥔 것처럼
+  P(x, hx - 0.7, hy - 0.7, 1.4, 1.4, "#f1c6a0");
   // 레어 이상 무기는 날 끝이 반짝
-  if (w.g && fr % 10 < 4) P(x, hx + side * 6, hy - 9, 1, 1, GCOL(w.g));
+  if (w.g && fr % 10 < 4) P(x, hx + side * 5 * k, hy - 7 * k, 1, 1, GCOL(w.g));
 }
 {
   const fx1 = drawFx;

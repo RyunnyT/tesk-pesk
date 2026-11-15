@@ -89,7 +89,7 @@ fs.mkdirSync(OUT, { recursive: true });
     }
     return { hits: n, dead: !!m.dead, sec: +((performance.now() - t0) / 1000).toFixed(1) };
   });
-  // 5) 다른 길목(r2)·설정 '문제 상자'는 예전 상자
+  // 5) 다른 길목(r2)도 구슬, 설정 '문제 상자'면 예전 상자
   R.other = await p.evaluate(async () => {
     B = null; busy = false;
     loadMap('r2', 3, 10, true);
@@ -99,7 +99,7 @@ fs.mkdirSync(OUT, { recursive: true });
     const m = __fresh('wolf', 14); m.hpNow = 99999; fieldStrike(m, null);
     await new Promise((r) => setTimeout(r, 200));
     const r2 = { box: !$('bt').hidden, strip: !$('qstrip').hidden };
-    [...$('bc').children][0].click(); await __wait(() => $('bt').hidden); busy = false; B = null;
+    [...$('bc').children][0].click(); await __wait(() => !ORB.on && !busy && !B);
     loadMap('r1', 3, 10, true); $('dlg').hidden = true; dl = null; busy = false;
     studyCfg.battle = 'box';
     const m2 = __fresh('wolf', 14); m2.hpNow = 99999; fieldStrike(m2, null);
