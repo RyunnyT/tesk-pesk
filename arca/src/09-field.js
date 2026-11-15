@@ -18,7 +18,7 @@ function askField(MI, title, cb) {
   }
   $("btt").textContent = title;
   $("bth").hidden = false;
-  $("bth").textContent = "맞히면 그대로 · 틀리면 절반   별빛 " + "◆".repeat(FLD.g) + "◇".repeat(3 - FLD.g);
+  $("bth").textContent = "맞히면 그대로 · 틀리면 다시   별빛 " + "◆".repeat(FLD.g) + "◇".repeat(3 - FLD.g);
   $("bs").hidden = true;
   $("bq").textContent = Q.q;
   $("bq").classList.toggle("long", Q.q.length > 18);
@@ -45,15 +45,15 @@ function askField(MI, title, cb) {
       $("bm").textContent = "아쉬워요. 정답은 " + Q.a + (Q.ex ? "\n풀이: " + Q.ex : "");
     }
     store();
-    setTimeout(
-      () => {
-        $("bt").hidden = true;
-        $("bt").classList.remove("battle");
-        $("bs").hidden = false;
-        cb(ok);
-      },
-      ok ? 450 : Q.ex ? 2200 : 1400,
-    );
+    const end = () => {
+      $("bt").hidden = true;
+      $("bt").classList.remove("battle");
+      $("bs").hidden = false;
+      cb(ok);
+    };
+    // 틀리면 풀이를 보여 주고 「알겠어요」를 눌러야 넘어간다(src/24-learn.js). 없으면 예전처럼 시간으로
+    if (!ok && typeof learnWrong === "function") learnWrong(Q, end);
+    else setTimeout(end, ok ? 450 : Q.ex ? 2200 : 1400);
   };
   Q.ch.forEach((v, i) => {
     const b = document.createElement("button");

@@ -21,7 +21,7 @@ const RQ = { mon: null, last: null };
   const mq0 = makeQ;
   makeQ = function (d) {
     save.qn = (save.qn || 0) + 1;
-    const L = (save.wrong || []).filter((w) => w.ch && w.ch.length >= 2),
+    const L = (save.wrong || []).filter((w) => w.ch && w.ch.length >= 2 && !w.src),
       due = L.filter((w) => (save.qn || 0) - (w.n || 0) >= 6),
       force = RQ.mon && ["ghost", "eraser", "noxshade"].includes(RQ.mon) && L.length;
     if ((due.length && Math.random() < 0.2) || force) {
@@ -36,7 +36,7 @@ const RQ = { mon: null, last: null };
     RQ.mon = k || null;
     af0(MI, title, (ok) => {
       const q = RQ.last;
-      if (ok && q && q.re) {
+      if (ok && q && q.re && !q.wq) {
         // 기억을 되찾았어요: 별이 터지고 별빛 가루 보너스, 되찾은 기억 수(도감·내 정보)
         save.wrong = (save.wrong || []).filter((w) => w.q !== q.q);
         save.st.recov = (save.st.recov || 0) + 1;
@@ -44,7 +44,7 @@ const RQ = { mon: null, last: null };
         for (let i = 0; i < 30; i++) sp.push({ a: pl.x - 14 + Math.random() * 28, y: pl.y - 30 + Math.random() * 20, t: 10 + Math.random() * 14 });
         if (typeof fxPop === "function") fxPop(pl.x, pl.y - 40, "기억을 되찾았어요!", "#ffd86b");
         if (typeof sfx === "function") sfx("shard");
-        setTimeout(() => toast("기억을 되찾았어요! 별빛 가루 +3 · 되찾은 기억 " + save.st.recov + "개"), 500);
+        toastLater(() => "기억을 되찾았어요! 별빛 가루 +3 · 되찾은 기억 " + save.st.recov + "개", 500);
         if (typeof titleCheck === "function") titleCheck();
       }
       cb(ok);
@@ -154,7 +154,7 @@ const MOVE = {
       }, 500);
     } else if (k <= 1 / 3 && !(m.ph >= 3)) {
       m.ph = 3;
-      setTimeout(() => toast("마지막 힘! 보스 문제가 어려워져요 (3단계)"), 500);
+      toastLater(() => "마지막 힘! 보스 문제가 어려워져요 (3단계)", 500);
     }
   };
   const ms1 = mstat;
@@ -221,7 +221,7 @@ function unitStory(nm) {
       if (!nm) return;
       save.st["unit_" + id] = 1;
       store();
-      setTimeout(() => !busy && toast(mapPart() + "부 단원 「" + nm + "」 · " + unitStory(nm)), 1800);
+      toastLater(() => mapPart() + "부 단원 「" + nm + "」 · " + unitStory(nm), 1800, true);
     };
   }
 }

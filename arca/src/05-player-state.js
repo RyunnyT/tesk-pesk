@@ -53,6 +53,15 @@ const eqDesc = (id) => {
 };
 const esc = (t) =>
   String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+// 조금 뒤에 띄우는 안내: 그 사이 맵을 옮겼으면 띄우지 않는다(다른 곳 내용이 보이지 않게). f 는 글 또는 글을 만드는 함수
+function toastLater(f, ms, idle) {
+  const id = typeof M === "object" && M ? M.id : null;
+  setTimeout(() => {
+    if (typeof M === "object" && M && M.id !== id) return;
+    if (idle && busy) return;
+    toast(typeof f === "function" ? f() : f);
+  }, ms);
+}
 function toast(m) {
   const t = $("toast");
   t.textContent = m;

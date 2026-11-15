@@ -75,8 +75,11 @@ function studyQ(d) {
   const a = String(q.answer);
   const wrong = [...new Set(q.options.map(String))].filter((v) => v !== a);
   if (wrong.length < 2) return null;
-  const pickW = wrong.sort(() => Math.random() - 0.5).slice(0, 2);
-  return { q: q.q, a, ch: [a, ...pickW].sort(() => Math.random() - 0.5), unit: q.unit, ex: q.explain || "" };
+  // 보기 수(프롬프트 J): 5~6학년 4개, 3~4학년 3개. 선생님 설정 studyCfg.choices(auto/3/4)
+  const nCh = studyCfg.choices === 3 || studyCfg.choices === 4 ? studyCfg.choices : studyCfg.grade >= 5 ? 4 : 3;
+  const pickW = wrong.sort(() => Math.random() - 0.5).slice(0, nCh - 1);
+  // src: 같은 유형을 수만 바꿔 다시 낼 때 쓴다(src/24-learn.js)
+  return { q: q.q, a, ch: [a, ...pickW].sort(() => Math.random() - 0.5), unit: q.unit, ex: q.explain || "", src: { g: studyCfg.grade, t: term, no: q.unitNo, tier } };
 }
 
 /* 부마다 먼저 넣을 지문 (전체 줄거리 문서의 서브 퀘스트 지문). 고른 수준에 없는 제목은 건너뛴다. */
@@ -184,6 +187,8 @@ function studyRender() {
   el.querySelector("#ss").value = studyCfg.scope;
   if (el.querySelector("#sj")) el.querySelector("#sj").value = studyCfg.subj || "math";
   if (el.querySelector("#sb")) el.querySelector("#sb").value = studyCfg.battle || "orb";
+  if (el.querySelector("#sc")) el.querySelector("#sc").value = String(studyCfg.choices || "auto");
+  if (el.querySelector("#sd")) el.querySelector("#sd").value = studyCfg.adapt || "auto";
   el.querySelector("#st").innerHTML = studyInfo();
   el.querySelector("#sw").textContent = window.QUIZ
     ? ""
@@ -204,6 +209,8 @@ function studyRender() {
       studyCfg.scope = el.querySelector("#ss").value;
       if (el.querySelector("#sj")) studyCfg.subj = el.querySelector("#sj").value;
       if (el.querySelector("#sb")) studyCfg.battle = el.querySelector("#sb").value;
+      if (el.querySelector("#sc")) studyCfg.choices = el.querySelector("#sc").value === "auto" ? "auto" : +el.querySelector("#sc").value;
+      if (el.querySelector("#sd")) studyCfg.adapt = el.querySelector("#sd").value;
       studySave();
       if (studyLevel() !== lvBefore) fillPassages();
       studyRender();

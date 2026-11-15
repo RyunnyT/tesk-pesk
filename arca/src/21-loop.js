@@ -201,7 +201,7 @@ function bountySpawn() {
     X = src[1] * T + 8,
     Y = src[2] * T + 14;
   mons.push({ map: M.id, type: t, x: X, y: Y, hx: X, hy: Y, tx: X, ty: Y, wait: 20, dir: -1, f: 0, mv: false, dead: 0, hit: 0, bounty: 1 });
-  setTimeout(() => toast("✦ 오늘의 현상금 몬스터가 이 길목에 있어요! 빛나는 " + MON[t].n), 800);
+  toastLater(() => "✦ 오늘의 현상금 몬스터가 이 길목에 있어요! 빛나는 " + MON[t].n, 800);
 }
 {
   // 현상금 몬스터는 체력 두 배
@@ -226,7 +226,7 @@ function bountySpawn() {
     const st = LOOP_ST();
     st.bshard = (st.bshard || 0) + 1;
     rpgDrop("chest", save.lv + 1, m.x, m.y - 44); // 레어 이상(chest 표는 일반 0%)
-    setTimeout(() => toast("현상금 성공! 칭호 조각 " + st.bshard + "개" + (st.bshard >= 5 ? "" : " · 5개면 칭호 「현상금 사냥꾼」")), 1600);
+    toastLater(() => "현상금 성공! 칭호 조각 " + st.bshard + "개" + (st.bshard >= 5 ? "" : " · 5개면 칭호 「현상금 사냥꾼」"), 1600);
     if (typeof titleCheck === "function") titleCheck();
     store();
     hud();
@@ -267,7 +267,7 @@ function keyAdd() {
   if (st.key >= KEY_N) {
     st.key -= KEY_N;
     st.kbox = (st.kbox || 0) + 1;
-    setTimeout(() => toast("🔑 열쇠 조각 10개! 마이룸에 열쇠 상자가 왔어요"), 900);
+    toastLater(() => "🔑 열쇠 조각 10개! 마이룸에 열쇠 상자가 왔어요", 900);
     if (typeof sfx === "function") sfx("shard");
   }
 }
@@ -405,7 +405,7 @@ function loopNext() {
   loadMap = function (id, ...a) {
     const from = M && M.id;
     const r = lmN(id, ...a);
-    if (id === "home" && from && from !== "home") setTimeout(() => toast(loopNext()), 1500);
+    if (id === "home" && from && from !== "home") toastLater(() => loopNext(), 1500);
     return r;
   };
   const menu = document.querySelector(".box.menu");

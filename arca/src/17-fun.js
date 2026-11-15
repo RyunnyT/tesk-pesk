@@ -255,7 +255,7 @@ function funDmg(d, ok, m, sk) {
       }
       if (ok) {
         save.st.bestCombo = Math.max(save.st.bestCombo || 0, FLD.streak);
-      } else if (before >= 3) setTimeout(() => toast("아깝다! " + before + "연속에서 끊겼어요 · 다시 3연속부터 힘이 세져요"), 300);
+      } else if (before >= 3) toastLater(() => "아깝다! " + before + "연속에서 끊겼어요 · 다시 3연속부터 힘이 세져요", 300);
       cb(ok);
     });
     RQ.wantShort = false;
@@ -366,7 +366,7 @@ function titleCheck() {
     save.title = nm;
     save.gold += gd;
     save.dust += 5;
-    setTimeout(() => toast("칭호 「" + nm + "」! 금화 +" + gd + " · 별빛 가루 +5"), 1200);
+    toastLater(() => "칭호 「" + nm + "」! 금화 +" + gd + " · 별빛 가루 +5", 1200);
     if (typeof sfx === "function") sfx("lvl");
   });
 }

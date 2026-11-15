@@ -19,7 +19,7 @@ fs.mkdirSync(OUT, { recursive: true });
   await p.evaluate(() => {
     document.querySelectorAll('.titlebox').forEach((e) => e.remove());
     busy = false;
-    studyCfg.battle = 'box'; // 이 검사는 예전 문제 상자로(구슬 전투는 orb.cjs)
+    LEARN.off = true; studyCfg.choices = 3; /* 예전 규칙으로 검사(새 규칙은 learn.cjs) */ studyCfg.battle = 'box'; // 이 검사는 예전 문제 상자로(구슬 전투는 orb.cjs)
     save.job = 'knight'; save.lv = 12; save.trained = 1;
     save.rpg.eq.w = rpgAdd('w_knight_3', 0, true).u;
     window.partDone = () => true;

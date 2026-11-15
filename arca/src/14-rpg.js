@@ -5,11 +5,11 @@
 rpgMigrateLate();
 {
   const ms0 = mstat;
-  // 몬스터 체력 = 원래 체력 × 그 부의 예상 공격력 × 0.38(보스 0.4) → 부가 달라도 맞혀야 하는 횟수가 비슷하다
+  // 몬스터 체력 = 원래 체력 × 그 부의 예상 공격력 × 0.28(보스 0.32, 2026-11-15 틀리면 피해 0 으로 바뀌며 낮춤) → 부가 달라도 맞혀야 하는 횟수가 비슷하다
   mstat = function (m) {
     const r = ms0(m),
       part = (typeof MAP_PART === "object" && MAP_PART[m.map]) || 1;
-    return { ...r, hp: Math.max(PWR, Math.round(r.hp * partPow(part) * (r.boss ? 0.4 : 0.38))) };
+    return { ...r, hp: Math.max(PWR, Math.round(r.hp * partPow(part) * (r.boss ? 0.32 : 0.28))) };
   };
 }
 const GCOL = (g) => GRADES[g].col;
@@ -38,7 +38,7 @@ const rpgPlaced = (u) => save.rpg.room.some((r) => r.u === u);
       const it = rpgAdd("w_" + save.job + "_0", 0, true);
       R.eq.w = it.u;
       store();
-      setTimeout(() => toast("「" + itemDef(it.id).n + "」 받았어요 · 옷은 상점에서 골라요"), 600);
+      toastLater(() => "「" + itemDef(it.id).n + "」 받았어요 · 옷은 상점에서 골라요", 600);
     }
   };
 }
@@ -58,7 +58,7 @@ function rpgDrop(table, lv, x0, y0) {
     return null;
   }
   if (typeof fxPop === "function" && x0 != null) fxPop(x0, y0, (g ? GRADES[g].n + " " : "") + itemDef(id).n, GCOL(g));
-  setTimeout(() => toast("전리품! " + (g ? "[" + GRADES[g].n + "] " : "") + itemDef(id).n + " · 마이룸 옷장이나 장비(I)에서 장착"), 700);
+  toastLater(() => "전리품! " + (g ? "[" + GRADES[g].n + "] " : "") + itemDef(id).n + " · 마이룸 옷장이나 장비(I)에서 장착", 700);
   if (g >= 2 && typeof sfx === "function") sfx("lvl");
   return it;
 }

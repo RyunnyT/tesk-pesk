@@ -292,7 +292,7 @@ function miniRender() {
     body =
       '<p class="mnq">목표: <b>' + P.target + "</b> · 지금 솥: <b>" + (MINI.cur ? P.lab(MINI.cur) : "0") + "</b></p>" +
       '<div class="mnpot" id="mnpot" aria-label="솥(여기에 병을 넣어요)"><div class="mnbar">' + segs + "</div><small>솥 · 막대 한 칸 = " + P.lab(1) + "</small></div>" +
-      '<div class="mnbots">' + P.bottles.map((v) => '<button type="button" draggable="true" data-bot="' + v + '"><span class="bt" style="--h:' + Math.round((v / P.b) * 100) + '%"></span>' + P.lab(v) + "</button>").join("") + "</div>" +
+      '<div class="mnbots">' + P.bottles.map((v) => '<button type="button" draggable="true" data-bot="' + v + '"><span class="mnbt" style="--h:' + Math.round((v / P.b) * 100) + '%"></span>' + P.lab(v) + "</button>").join("") + "</div>" +
       '<div class="mnrow"><button type="button" data-act="undo">↶ 하나 빼기</button><button type="button" data-act="empty">솥 비우기</button></div>';
   } else if (k === "order") {
     const st = P.steps[MINI.si],

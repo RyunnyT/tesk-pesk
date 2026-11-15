@@ -72,7 +72,8 @@ const logKind = (Q) => (Q && Q.unit === "영어 단어" ? "eng" : "math");
     const t0 = Date.now();
     afL(MI, title, (ok) => {
       const Q = RQ.last || {};
-      logAdd({ u: Q.unit, k: logKind(Q), ok, t: (Date.now() - t0) / 1000, re: Q.re, q: Q.q, a: Q.a });
+      const tA = typeof LEARN === "object" && LEARN.ansT > t0 ? LEARN.ansT : Date.now();
+      logAdd({ u: Q.unit, k: logKind(Q), ok, t: (tA - t0) / 1000, re: Q.re, q: Q.q, a: Q.a });
       cb(ok);
     });
   };

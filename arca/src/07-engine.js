@@ -1688,7 +1688,7 @@ addEventListener("keydown", (e) => {
     return;
   }
   if (mode === "battle" && B) {
-    if (/^Digit[1-3]$/.test(c)) {
+    if (/^Digit[1-4]$/.test(c)) {
       const b = $("bc").children[+c.slice(5) - 1];
       if (b && !b.disabled) b.click();
     }
@@ -1701,7 +1701,7 @@ addEventListener("keydown", (e) => {
     return;
   }
   if (!$("bt").hidden) {
-    if (/^Digit[1-3]$/.test(c)) {
+    if (/^Digit[1-4]$/.test(c)) {
       const b = $("bc").children[+c.slice(5) - 1];
       if (b && !b.disabled) b.click();
     }

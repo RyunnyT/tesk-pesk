@@ -8,7 +8,7 @@
 const ORB = { on: false, m: null, fly: null, res: null, t0: 0 };
 // 처음엔 길목 1에서만 시험했다. 2026-11-15 선생님이 "바뀐 걸 모르겠다" → 모든 길목·보스로 켬(null = 모든 곳)
 const ORB_ONLY = null;
-const ORBCOL = ["#6aa9ec", "#7ee07a", "#ffb84a"];
+const ORBCOL = ["#6aa9ec", "#7ee07a", "#ffb84a", "#f08ad0"];
 const orbAllowed = () => studyCfg.battle !== "box" && (!ORB_ONLY || ORB_ONLY.has(M.id));
 // 문제 글에서 "계산해 보세요." 를 떼고 짧은 식인지
 const qBody = (t) => String(t || "").replace(/^계산해 보세요\.\s*/, "");
@@ -51,7 +51,7 @@ function orbRender(title) {
   const Q = RQ.last || {},
     short = isShortQ(Q.q);
   $("qst").textContent = title;
-  $("qsm").textContent = $("bth").textContent.replace("맞히면 그대로 · 틀리면 절반", "맞히면 약점 · 틀리면 절반");
+  $("qsm").textContent = $("bth").textContent.replace("맞히면 그대로 · 틀리면 다시", "맞히면 약점 · 틀리면 다시");
   $("qsq").textContent = short ? "몬스터 머리 위 문제를 풀어요" : qBody(Q.q);
   $("qsq").classList.toggle("hint", short);
   $("qsq").classList.toggle("long", !short && qBody(Q.q).length > 40);
@@ -193,7 +193,7 @@ function orbEnd() {
         e.stopImmediatePropagation();
         return;
       }
-      const n = /^Digit([1-3])$/.exec(e.code) || /^Numpad([1-3])$/.exec(e.code);
+      const n = /^Digit([1-4])$/.exec(e.code) || /^Numpad([1-4])$/.exec(e.code);
       if (n) {
         orbThrow(+n[1] - 1);
         e.preventDefault();
@@ -262,7 +262,7 @@ function orbEnd() {
       // 내 둘레를 도는 구슬(색 = 띠의 1·2·3)
       orbBtns().forEach((b, i) => {
         if (b.disabled || (ORB.fly && ORB.fly.i === i)) return;
-        const an = fr / 8 + (i * Math.PI * 2) / 3,
+        const an = fr / 8 + (i * Math.PI * 2) / Math.max(3, orbBtns().length),
           ox = pl.x - cam.x + Math.cos(an) * 14,
           oy = pl.y - cam.y - 10 + Math.sin(an) * 6;
         disc(x, Math.round(ox), Math.round(oy), 5, "#1e1b3f");
