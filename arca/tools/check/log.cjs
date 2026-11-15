@@ -16,7 +16,7 @@ fs.mkdirSync(OUT, { recursive: true });
   await p.waitForFunction(() => typeof HD !== 'undefined' && HD.ready, null, { timeout: 30000 });
   await p.evaluate(() => {
     document.querySelectorAll('.titlebox').forEach((e) => e.remove());
-    LEARN.off = true; studyCfg.choices = 3; /* 예전 규칙으로 검사(새 규칙은 learn.cjs) */ save.name = '별빛7'; save.job = 'mage'; save.lv = 4; save.trained = 1;
+    LEARN.off = true; FQ.off = true; studyCfg.choices = 3; studyCfg.adapt = "route"; /* 예전 규칙으로 검사(새 규칙은 learn·figq·lesson.cjs) */ save.name = '별빛7'; save.job = 'mage'; save.lv = 4; save.trained = 1;
     save.rpg.eq.w = rpgAdd('w_mage_1', 0, true).u;
     loadMap('r1', 3, 10, true);
   });

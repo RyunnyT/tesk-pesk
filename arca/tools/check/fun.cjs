@@ -19,7 +19,7 @@ fs.mkdirSync(OUT, { recursive: true });
   await p.evaluate(() => {
     document.querySelectorAll('.titlebox').forEach((e) => e.remove());
     busy = false;
-    LEARN.off = true; studyCfg.choices = 3; /* 예전 규칙으로 검사(새 규칙은 learn.cjs) */ studyCfg.battle = 'box'; // 이 검사는 예전 문제 상자로(구슬 전투는 orb.cjs)
+    LEARN.off = true; FQ.off = true; studyCfg.choices = 3; studyCfg.adapt = "route"; /* 예전 규칙으로 검사(새 규칙은 learn·figq·lesson.cjs) */ studyCfg.battle = 'box'; // 이 검사는 예전 문제 상자로(구슬 전투는 orb.cjs)
     save.job = 'knight'; save.lv = 12; save.trained = 1;
     save.rpg.eq.w = rpgAdd('w_knight_3', 0, true).u;
     window.partDone = () => true;
@@ -33,8 +33,14 @@ fs.mkdirSync(OUT, { recursive: true });
         for (const ch of v) document.querySelector('#kp [data-k="' + ch + '"]') && document.querySelector('#kp [data-k="' + ch + '"]').click();
         document.querySelector('#kp [data-k="ok"]').click();
       } else {
-        const bs = [...$('bc').children].filter((x) => !x.hidden);
-        (ok ? bs.find((x) => x.dataset.v === String(q.a)) : bs.find((x) => x.dataset.v !== String(q.a))).click();
+        let t = null;
+        for (let k = 0; k < 20 && !t; k++) {
+          const bs = [...$('bc').children].filter((x) => !x.hidden), q2 = RQ.last;
+          t = ok ? bs.find((x) => x.dataset.v === String(q2.a)) : bs.find((x) => x.dataset.v !== String(q2.a));
+          if (!t) await new Promise((r) => setTimeout(r, 30));
+        }
+        if (!t) { window.__ansFail = (window.__ansFail || '') + ' | a=' + RQ.last.a + ' ch=' + [...$('bc').children].map((x) => x.dataset.v + (x.hidden ? '(숨김)' : '')).join(',') + ' kp=' + !$('kp').hidden + ' short=' + RQ.short; $('bt').hidden = true; busy = false; B = null; return; }
+        t.click();
       }
       await new Promise((r) => setTimeout(r, 2500));
     };
@@ -143,6 +149,7 @@ fs.mkdirSync(OUT, { recursive: true });
   await p.waitForTimeout(300);
   await p.locator('#stage').screenshot({ path: path.join(OUT, 'fun_keypad.png') });
   console.log(JSON.stringify(R, null, 1));
+  console.log('ansFail', await p.evaluate(() => window.__ansFail || 'none'));
   console.log('errs', JSON.stringify(errs.slice(0, 6)));
   await b.close();
 })();
