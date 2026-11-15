@@ -1784,3 +1784,234 @@ body.orbing .stage .toast {
 .stage:has(.kbox) .toast {
   display: none;
 }
+/* ── 단원 미니 조작 (22-mini) ── */
+.box.mini {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(94%, 560px);
+  max-height: 94%;
+  overflow: auto;
+  padding: 10px 14px 12px;
+  z-index: 9;
+  font-size: clamp(13px, 2.1vw, 16px);
+}
+.stage:has(.mini:not([hidden])) .toast,
+body.miniing .qstrip {
+  display: none;
+}
+.mini .mnh {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.mini .mnh b {
+  color: #f5e3a3;
+  font-family: "Gowun Batang", serif;
+  font-size: 1.15em;
+}
+.mini .mnh small {
+  opacity: 0.75;
+  font-size: 0.8em;
+}
+.mini .mnstory {
+  margin: 4px 0 8px;
+  color: #d9d2ff;
+  font-size: 0.92em;
+}
+.mini .mnq {
+  margin: 6px 0;
+}
+.mini .mnq b {
+  color: #ffd86b;
+}
+.mini button {
+  font: inherit;
+  padding: 6px 12px;
+  border-radius: 9px;
+  border: 1px solid #f5e3a3;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff6d6;
+  cursor: pointer;
+  min-height: 40px;
+}
+.mini button:focus-visible {
+  outline: 2px solid #ffd86b;
+  outline-offset: 2px;
+}
+.mini .mnrow,
+.mini .mnbots,
+.mini .mnnums {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 8px 0;
+}
+.mini .mnpot {
+  border: 2px dashed #a59ec6;
+  border-radius: 12px;
+  padding: 8px;
+  text-align: center;
+}
+.mini .mnpot small {
+  opacity: 0.75;
+}
+.mini .mnbar {
+  display: flex;
+  height: 26px;
+  border: 1px solid #f5e3a3;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.mini .mnbar i {
+  flex: 1;
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+}
+.mini .mnbar i.f {
+  background: #7ee07a;
+}
+.mini .mnbar i.tg {
+  box-shadow: inset -3px 0 0 #ff6b7a;
+}
+.mini .mnbar i.hl:not(.f) {
+  background: rgba(126, 224, 122, 0.25);
+}
+.mini .mnbots button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 64px;
+}
+.mini .mnbots .bt {
+  display: block;
+  width: 18px;
+  height: 26px;
+  border: 1px solid #cfc6ee;
+  border-radius: 4px 4px 6px 6px;
+  background: linear-gradient(to top, #b58cf0 var(--h, 50%), transparent var(--h, 50%));
+}
+.mini .mnrunes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  margin: 10px 0;
+  font-size: 1.3em;
+}
+.mini .rn {
+  min-width: 34px;
+  text-align: center;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.mini button.rn.op {
+  font-size: 1em;
+  background: #3d3570;
+}
+.mini .hl {
+  box-shadow: 0 0 0 2px #7ee07a;
+}
+.mini .mndone {
+  font-size: 0.85em;
+  opacity: 0.8;
+  text-align: center;
+}
+.mini .mnscale,
+.mini .mndial {
+  display: block;
+  width: min(100%, 320px);
+  margin: 0 auto;
+}
+.mini .mnrect {
+  display: block;
+  width: 160px;
+  margin: 4px auto;
+}
+.mini .mnline {
+  position: relative;
+  margin: 18px 6px 8px;
+  height: 34px;
+  border-bottom: 2px solid #cfc6ee;
+}
+.mini .mnticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65em;
+  opacity: 0.8;
+}
+.mini .mnptr,
+.mini .mntg {
+  position: absolute;
+  bottom: -4px;
+  width: 3px;
+  height: 22px;
+  background: #ffd86b;
+  transform: translateX(-1px);
+}
+.mini .mntg {
+  background: #7ee07a;
+  opacity: 0.7;
+}
+.mini .mnnums button {
+  min-width: 52px;
+  font-size: 1.15em;
+}
+.mini .mnnums button.on {
+  background: #6a4fc0;
+  border-color: #ffd86b;
+}
+.mini .mngears {
+  text-align: center;
+  font-size: 34px;
+  line-height: 1;
+  color: #cfc6ee;
+}
+.mini .mngears span {
+  display: inline-block;
+  transform: rotate(var(--r));
+  transition: transform 0.5s;
+}
+.mini .mngears .g2 {
+  font-size: 26px;
+  color: #ffd86b;
+}
+.mini .mntab {
+  margin: 6px auto;
+  border-collapse: collapse;
+}
+.mini .mntab th,
+.mini .mntab td {
+  border: 1px solid #5d548a;
+  padding: 4px 8px;
+  text-align: center;
+}
+.mini .mnsel {
+  display: flex;
+  gap: 3px;
+}
+.mini .mnsel button {
+  min-height: 32px;
+  padding: 2px 8px;
+}
+.mini .mnhint {
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255, 216, 107, 0.12);
+  color: #ffe9a8;
+}
+.mini .mnwin {
+  font-size: 1.2em;
+  color: #ffd86b;
+  text-align: center;
+}
+.mini .mnok {
+  display: block;
+  margin: 8px auto 0;
+}

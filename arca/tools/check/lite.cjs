@@ -29,7 +29,7 @@ const OUT = path.join(__dirname, 'out');
   R.calm = await p.evaluate(() => !!UI.calm);
   // 메뉴 단추
   await p.evaluate(() => { document.querySelectorAll('.titlebox').forEach((e) => e.remove()); busy = false; });
-  await p.click('#menub, .menub, button[aria-label="메뉴"]').catch(() => {});
+  await p.click('.menub').catch(() => {});
   R.menuBtn = await p.evaluate(() => { const m = document.querySelector('.box.menu'); return m && m.querySelector('[data-m="lite"]') ? m.querySelector('[data-m="lite"]').textContent : 'none'; });
   console.log(JSON.stringify(R));
   console.log('errors:', errs.length ? errs : 'none');
