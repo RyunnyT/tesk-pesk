@@ -16,7 +16,7 @@ const { chromium } = require('playwright');
     // 대화 자동 진행: 선택지가 있으면 첫째
     const flushDlg = async () => { for (let i = 0; i < 40 && dl; i++) { if (dl.ch && dl.i === dl.lines.length - 1) { const c = dl.ch[0]; endDlg(); c[1](); } else nextDlg(); await sleep(5); } };
     // 문제 상자 자동 답(정답)
-    const answer = async () => { for (let i = 0; i < 30 && (!$('bt').hidden || (typeof ORB !== 'undefined' && ORB.on && !ORB.done)); i++) { const bs = [...$('bc').children]; const ok = bs.find((x) => x.dataset.v === String((window.__lastQ || {}).a)); (ok || bs[0]).click(); await sleep(450); } };
+    const answer = async () => { for (let i = 0; i < 30 && (!$('bt').hidden || (typeof ORB !== 'undefined' && ORB.on && !ORB.done)); i++) { if (typeof LEARN === 'object' && LEARN.wait) { LEARN.wait.go(); await sleep(120); continue; } const bs = [...$('bc').children].filter((x) => !x.hidden && !x.disabled); const ok = bs.find((x) => x.dataset.v === String((RQ.last || {}).a)); (ok || bs[0]).click(); await sleep(450); } };
     const mq = makeQ; makeQ = function (d) { const q = mq(d); window.__lastQ = q; return q; };
     // 직업
     loadMap('t1', 30, 16, true); calm();

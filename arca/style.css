@@ -2156,3 +2156,219 @@ body.orbing #act {
 body.orbing #skrow {
   display: none !important;
 }
+/* ── 스승의 수업 · 배움 수첩 (26-lesson) ── */
+.box.lesson {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(94%, 560px);
+  max-height: 94%;
+  overflow: auto;
+  padding: 10px 14px 12px;
+  z-index: 9;
+  font-size: clamp(13px, 2.1vw, 16px);
+}
+.stage:has(#lesson:not([hidden])) .toast,
+.stage:has(#lesson:not([hidden])) .pad,
+.stage:has(#lesson:not([hidden])) .btns,
+.stage:has(#lesson:not([hidden])) #skrow,
+.stage:has(#lesson:not([hidden])) #act {
+  display: none !important;
+}
+.lesson .lsh {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.lesson .lsh b {
+  color: #f5e3a3;
+  font-family: "Gowun Batang", serif;
+  font-size: 1.15em;
+}
+.lesson .lsh small {
+  opacity: 0.75;
+  font-size: 0.8em;
+}
+.lesson .lsp {
+  margin: 6px 0;
+  line-height: 1.5;
+}
+.lesson .lsp.small {
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+.lesson .lsfig {
+  display: block;
+  width: min(100%, 360px);
+  margin: 4px auto;
+}
+.lesson .lsshow {
+  margin: 6px 0;
+  padding-left: 22px;
+  line-height: 1.6;
+}
+.lesson .lsshow li {
+  opacity: 0.7;
+}
+.lesson .lsshow li.now {
+  opacity: 1;
+  color: #fff6d6;
+  font-size: 1.08em;
+}
+.lesson .lsq {
+  white-space: pre-line;
+  text-align: center;
+  font-size: 1.25em;
+  margin: 8px 0;
+}
+.lesson .lstip,
+.lesson .lscore {
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: rgba(255, 216, 107, 0.12);
+  color: #ffe9a8;
+  margin: 6px 0;
+}
+.lesson .lsbig {
+  text-align: center;
+  font-size: 1.5em;
+  color: #ffd86b;
+  margin: 8px 0;
+}
+.lesson .lsch,
+.lesson .lsrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 8px 0 4px;
+}
+.lesson button {
+  font: inherit;
+  min-height: 40px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid #a59ec6;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff6d6;
+  cursor: pointer;
+}
+.lesson button.lsmain {
+  border: 2px solid #ffd86b;
+  background: rgba(255, 216, 107, 0.16);
+}
+.lesson button:focus-visible {
+  outline: 2px solid #ffd86b;
+  outline-offset: 2px;
+}
+.lesson .lsch button {
+  flex: 1 1 40%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 1.05em;
+}
+.lesson .lsch button i {
+  font-style: normal;
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50%;
+  background: #a59ec6;
+  color: #1e1b3f;
+  font-size: 0.8em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.lesson .lsch button:disabled {
+  opacity: 0.45;
+}
+.lesson .lsch button.ans {
+  opacity: 1;
+  background: rgba(126, 224, 122, 0.3);
+  border-color: #7ee07a;
+}
+.lesson .lsok {
+  display: block;
+  color: #7ee07a;
+  text-align: center;
+}
+.lesson .lsno {
+  display: block;
+  color: #ffc2c8;
+}
+.lesson .lsno b {
+  color: #7ee07a;
+}
+.lshelp {
+  font: inherit;
+  width: 1.7em;
+  height: 1.7em;
+  margin-left: 6px;
+  border-radius: 50%;
+  border: 1px solid #ffd86b;
+  background: rgba(255, 216, 107, 0.15);
+  color: #ffd86b;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  pointer-events: auto;
+}
+.lscorehint {
+  margin: 4px 0;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 216, 107, 0.12);
+  color: #ffe9a8;
+  font-size: 0.9em;
+  text-align: left;
+}
+.nt {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  opacity: 0.8;
+}
+.nt.on {
+  opacity: 1;
+  border-color: #6f64b0;
+}
+.nt .nth {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.nt .ntcap {
+  color: #ffd86b;
+  font-size: 0.85em;
+}
+.nt .ntcore {
+  color: #ffe9a8;
+  margin: 4px 0;
+}
+.nt .ntex {
+  margin: 4px 0;
+  padding-left: 20px;
+  font-size: 0.9em;
+  opacity: 0.9;
+}
+.nt .ntb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.nt .ntb button {
+  font: inherit;
+  font-size: 0.9em;
+  padding: 3px 12px;
+  border-radius: 999px;
+  border: 1px solid #f5e3a3;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  cursor: pointer;
+}

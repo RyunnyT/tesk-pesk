@@ -241,7 +241,7 @@
         $("csv").hidden = $("clear").hidden = !STU.length;
         $("msg").textContent = STU.length ? "학생 " + STU.length + "명의 기록" : "아직 넣은 기록이 없어요.";
         if (!STU.length) return;
-        const val = (s, k) => ({ nick: s.nick, n: s.n, rate: pct(s.ok, s.n), days: s.days, part: s.pr.part || 0, towns: s.pr.towns || 0, lv: s.pr.lv || 0, recov: s.pr.recov || 0, last: s.last })[k];
+        const val = (s, k) => ({ nick: s.nick, n: s.n, rate: pct(s.ok, s.n), days: s.days, part: s.pr.part || 0, towns: s.pr.towns || 0, lv: s.pr.lv || 0, recov: s.pr.recov || 0, caps: (s.pr.caps || []).length, last: s.last })[k];
         const L = STU.slice().sort((a, b) => {
           const x = val(a, sortS.k),
             y = val(b, sortS.k);
@@ -256,6 +256,7 @@
           ["towns", "되살린 마을"],
           ["lv", "Lv"],
           ["recov", "되찾은 기억"],
+          ["caps", "마무리 ★"],
           ["last", "마지막 날"],
         ];
         $("tS").innerHTML =
@@ -263,7 +264,7 @@
           L.map((s) => {
             const r = pct(s.ok, s.n),
               low = s.n >= 20 && r < 60;
-            return '<tr class="' + (low ? "low" : "") + '"><td>' + esc(s.nick) + "</td><td>" + s.n + "</td><td>" + (low ? "▼ " : "") + meter(r) + "</td><td>" + s.days + "</td><td>" + (s.pr.part || "-") + "부</td><td>" + (s.pr.towns || 0) + "/12</td><td>" + (s.pr.lv || "-") + "</td><td>" + (s.pr.recov || 0) + "</td><td>" + esc(s.last) + "</td></tr>";
+            return '<tr class="' + (low ? "low" : "") + '"><td>' + esc(s.nick) + "</td><td>" + s.n + "</td><td>" + (low ? "▼ " : "") + meter(r) + "</td><td>" + s.days + "</td><td>" + (s.pr.part || "-") + "부</td><td>" + (s.pr.towns || 0) + "/12</td><td>" + (s.pr.lv || "-") + "</td><td>" + (s.pr.recov || 0) + "</td><td>" + (s.pr.caps || []).length + "/12</td><td>" + esc(s.last) + "</td></tr>";
           }).join("") +
           "</tbody>";
         // 단원별 학급 평균
@@ -329,8 +330,8 @@
       $("csv").onclick = () => {
         const q = (s) => '"' + String(s).replace(/"/g, '""') + '"';
         const t =
-          "﻿별명,푼 문제,정답률,공부한 날,진도(부),되살린 마을,Lv,되찾은 기억,마지막 날\n" +
-          STU.map((s) => [q(s.nick), s.n, pct(s.ok, s.n) + "%", s.days, s.pr.part || "", s.pr.towns || 0, s.pr.lv || "", s.pr.recov || 0, s.last].join(",")).join("\n");
+          "﻿별명,푼 문제,정답률,공부한 날,진도(부),되살린 마을,Lv,되찾은 기억,마무리 도장,마지막 날\n" +
+          STU.map((s) => [q(s.nick), s.n, pct(s.ok, s.n) + "%", s.days, s.pr.part || "", s.pr.towns || 0, s.pr.lv || "", s.pr.recov || 0, (s.pr.caps || []).length, s.last].join(",")).join("\n");
         // 틀 안(플레이 링크 같은 곳)에서는 파일 저장이 막혀 있어 글 상자로 보여 준다
         let inFrame = true;
         try {

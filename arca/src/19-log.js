@@ -168,7 +168,9 @@ function logSummary(L) {
 }
 function logProgress() {
   const towns = (typeof PARTTOWN !== "undefined" ? PARTTOWN : []).filter((_, k) => partDone(k)).length;
-  return { part: Math.min(12, curPart() + 1), towns, lv: save.lv, solved: save.solved || 0, recov: (save.st && save.st.recov) || 0, bestCombo: (save.st && save.st.bestCombo) || 0, job: save.job || "" };
+  return { part: Math.min(12, curPart() + 1), towns, lv: save.lv, solved: save.solved || 0, recov: (save.st && save.st.recov) || 0, bestCombo: (save.st && save.st.bestCombo) || 0, job: save.job || "",
+    // 단원 마무리 도장(부 번호 목록)·들은 수업 수·찍기 보호막 횟수(src/24-learn.js·26-lesson.js)
+    caps: Object.keys((save.st && save.st.cap) || {}).map(Number), lessons: Object.keys((save.st && save.st.les) || {}).length, fast: (save.st && save.st.fastN) || 0 };
 }
 // 내보내기 묶음(이름 없음, 게임 속 별명만)
 function logExport() {
@@ -227,6 +229,7 @@ function logCSV() {
         ["공부한 날", S.days + "일"],
         ["지금 진도", P.part + "부 · 마을 " + P.towns + "/12 · Lv " + P.lv],
         ["되찾은 기억", P.recov + "개"],
+        ["마무리 도장 · 수업", "★ " + P.caps.length + "/12 · " + P.lessons + "개"],
       ]
         .map((a) => "<div><small>" + a[0] + "</small><b>" + a[1] + "</b></div>")
         .join("") +
