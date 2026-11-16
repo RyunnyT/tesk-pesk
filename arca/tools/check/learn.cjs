@@ -97,7 +97,7 @@ fs.mkdirSync(OUT, { recursive: true });
   // ④ 단계 풀이 = 정답
   R.steps = await p.evaluate(() => {
     const out = {};
-    for (const [g, t, no, nm] of [[5, 1, 1, '혼합 계산'], [5, 1, 2, '약수와 배수'], [5, 1, 5, '분수 덧뺄셈'], [5, 1, 6, '넓이'], [5, 2, 2, '분수 곱셈'], [5, 2, 4, '소수 곱셈'], [3, 1, 4, '곱셈'], [3, 2, 2, '나눗셈'], [4, 2, 1, '4학년 분수']]) {
+    for (const [g, t, no, nm] of [[5, 1, 1, '혼합 계산'], [5, 1, 2, '약수와 배수'], [5, 1, 5, '분수 덧뺄셈'], [5, 1, 6, '넓이'], [5, 2, 2, '분수 곱셈'], [5, 2, 4, '소수 곱셈'], [3, 1, 4, '곱셈'], [3, 2, 2, '나눗셈'], [4, 2, 1, '4학년 분수'], [5, 1, 3, '규칙과 대응'], [5, 1, 4, '약분과 통분'], [5, 2, 1, '범위와 어림']]) {
       let made = 0, n = 40, sample = '';
       for (let i = 0; i < n; i++) {
         const q = QUIZ.makeQuestion({ grade: g, term: t, unitNos: [no], tier: 1 + (i % 3), contextMode: 'plain', responseMode: 'choice' });

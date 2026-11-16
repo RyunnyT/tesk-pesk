@@ -17,7 +17,7 @@ fs.mkdirSync(OUT, { recursive: true });
   const R = {};
   R.gens = await p.evaluate(() => {
     const out = {};
-    for (const g of [fqTriAngle, fqQuadAngle, fqProtractor, fqGrid, fqAreaTri, fqPolygon, fqSymmetry, fqCongruent, fqCuboid, fqBars, fqShade, fqCircle, fqScale]) {
+    for (const g of [fqTriAngle, fqQuadAngle, fqProtractor, fqGrid, fqAreaTri, fqPolygon, fqSymmetry, fqCongruent, fqCuboid, fqBars, fqShade, fqCircle, fqScale, fqRule, fqCuboid2, fqCong2]) {
       let bad = 0; const uniq = new Set();
       for (let i = 0; i < 300; i++) { const q = g(); uniq.add(q.q + '|' + q.a); if (q.ch.filter((v) => v === q.a).length !== 1 || new Set(q.ch).size !== q.ch.length || !q.fig || !q.steps || q.ch.some((v) => /NaN|undefined|^-/.test(v))) bad++; }
       out[g.name] = '잘못 ' + bad + ' · 서로 다른 문제 ' + uniq.size;
