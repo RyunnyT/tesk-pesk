@@ -23,7 +23,7 @@
 | `src/04b-items.js` | **RPG 아이템 데이터·계산(Pesk 와 같이 쓸 순수 코드)**: 등급 `GRADES`(일반·레어·유니크·레전드), 추가 능력 `SUBS`, 아이템 `ITEMS`(무기 `w_<직업>_<0~6>` 레벨 1·3·6·9·12·15·18, 옷 `o_…` 14벌, 장신구 `c_…`, 마이룸 가구 `d_…`), `makeItem`·`itemStats`·`rollGrade`·`lootPool`·`sellPrice`. 피해 단위 `PWR`=10 |
 | `src/04c-rpg-save.js` | 저장 `save.rpg`(`bag`·`eq{w,o,c1,c2}`·`room`·`body`), 옛 장비 한 번 바꾸기, `rpgSum`·`rpgAtk`(무기+레벨×2)·`rpgHp`·`rpgGiveStory`(이야기 보물=유니크 장신구) |
 | `src/05-player-state.js` | 플레이어·펫·전역 상태, 레벨/하트/스킬 칸 계산 |
-| `src/06-world-semester1.js` | 2~6부 생성기: 길목 `RSPEC`→`genRoute`, 막다른 길 `genDead`, 마을 `TSPEC`→`genTown`, 랜드마크 `LMD`, 보스, 2~6부 퀘스트, 부 정보 `PARTS`, 6부 결말 `ending` |
+| `src/06-world-semester1.js` | 2~6부 생성기: 길목 `RSPEC`→`genRoute`, 막다른 길 `genDead`, 마을 `TSPEC`→`genTown`(배치 틀 `TLAY`·`TLAYS` 11가지, 문→길 `tPave`, 걸어서 가기 `tReach`, 소품 `m.deco`), 랜드마크 `LMD`, 보스, 2~6부 퀘스트, 부 정보 `PARTS`, 6부 결말 `ending` |
 | `src/06a-world-semester2.js` | 2학기(7~12부): 지형 색 `TH.gold·dream·white·snow`, 보스 `noxshade`·`warden`·`noxf`, 인물 모양, 랜드마크 `LMD.mill·spire·compass`, 길목 r15~r27·막다른 길 d6~d8, 마을 t7~t12(`TSPEC2`). `PARTS`·`PARTTOWN`·`CHAIN`·`DEADS` 에 이어 붙이고, 6부 왕궁 광장을 동쪽 출구가 있게 다시 만든 뒤 `wireEntries()`·지문 번호를 다시 돌린다 |
 | `src/06b-study.js` | 공부 연결: 선생님 설정 `studyCfg`(localStorage `arca-study`), 맵→부 `MAP_PART`·`mapPart`, 단원 문제 `studyQ`(makeQ 가 먼저 부름), 지문 채우기 `fillPassages`·부별 추천 지문 `PART_PICKS` |
 | `src/06c-story.js` | 이야기 장면(1~12부): 새 인물(핀·바르그·리토), 메인 지문 `STORY_BOOKS`, 서브 퀘스트 `side:1`(핵심 자리 조건·길 안내에서 빠짐)·펫 퀘스트 `pet:1`(펫이 있을 때만), 2학기 퀘스트, 스승 대사 `MLINES`·`storyJobLines`·`MENTOR_TALK`(직업별·진행별), 마을 사람 대사 `NPCL`(되살리기 전/후), 장면 `SC`(첫 방문)·`SC_BOSS`(보스 직전)·`SC_DONE`(마을 완료), 재생 `playScene`, 7부 나를 잊은 스승 `MENTOR_FORGOT`·`MENTOR_REMEMBER`, 마지막 결말 `storyFinale`(맞힌 문제 수 `save.solved` 를 보여 주고 `save.fin`). 본 장면은 `save.st` 에 기록 |
@@ -53,7 +53,7 @@
 | `teacher.html` | 학급 모아 보기(게임과 따로 여는 선생님 페이지): 학생 JSON 여러 개를 끌어다 놓거나 글로 붙여 넣으면 학생별 정답률·진도, 단원별 학급 평균(▼ 60% 아래), 학급 표 CSV. 파일은 브라우저 안에서만 읽음 |
 | `assets/hd/` | PixelLab 그림: 스킬 효과 `vfx/<이름>.png·json`(VFX 프리셋), `chars/<키>/`(4방향+걷기), `mons`·`pets`·`npc`·`misc`(한 장+움직임 `_0~3`), `props`·`bld`, `icons/<아이템 id>`(32점), 옷 입은 주인공 `chars/av-<m|f>-<옷>`, `tiles/<테마>-path·water·sand·sea`(모서리 16칸)·`solid`. 만드는 법은 `docs/그림_업그레이드_기록.md` 의 'PixelLab 48점 전체 바꾸기' |
 | `tools/pixellab/` | PixelLab 자동 그리기: `run_chars`·`run_objs`·`run_tiles`·`run_bld`(.mjs), 진행 상태 `state_*.json`(다시 실행하면 이어서). 키는 저장소 밖 파일(`PIXELLAB_KEY_FILE`) |
-| `tools/check/` | 검사(Playwright): `fun.cjs` 콤보·스킬·도감·숫자 입력, `econ.cjs` 성장·경제 시뮬레이션(부마다 레벨·금화·공격력·몬스터를 쓰러뜨리는 데 필요한 횟수), `orb.cjs` 약점 구슬 전투, `log.cjs` 학습 기록·보고서·학급 모아 보기, `perf.cjs` 느린 기기 재기(CPU 4배), `lite.cjs` 가벼운 화면, `loop.cjs` 보스 패턴·현상금·열쇠 상자, `mini.cjs` 미니 조작 5종·보스 2단계, `sound.cjs` 음악·효과음·스킬 효과 그림, `learn.cjs` 찍기 막기·단계 풀이·다시 풀기, `ui.cjs` 세 화면 크기 겹침·화면 밖 자동 검사, `lesson.cjs` 수업·배움 수첩·실력 맞춤·단원 마무리, `figq.cjs` 그림 문제(정답 검증·단원별 문제 수·지문 근거), `product.cjs` 튜토리얼·저장 백업·깨진 저장·도전의 탑, `quest.cjs` 새 퀘스트 6종·생성기·옛 저장, `wraps.cjs` 감싸기 지도 → `docs/코드_흐름.md`, `bot.cjs` 1~12부 실제 출구를 따라 끝까지 가는 진행 봇(퀘스트·문지기·잠금 확인). `node arca/tools/check/bot.cjs` |
+| `tools/check/` | 검사(Playwright): `fun.cjs` 콤보·스킬·도감·숫자 입력, `econ.cjs` 성장·경제 시뮬레이션(부마다 레벨·금화·공격력·몬스터를 쓰러뜨리는 데 필요한 횟수), `orb.cjs` 약점 구슬 전투, `log.cjs` 학습 기록·보고서·학급 모아 보기, `perf.cjs` 느린 기기 재기(CPU 4배), `lite.cjs` 가벼운 화면, `loop.cjs` 보스 패턴·현상금·열쇠 상자, `mini.cjs` 미니 조작 5종·보스 2단계, `sound.cjs` 음악·효과음·스킬 효과 그림, `learn.cjs` 찍기 막기·단계 풀이·다시 풀기, `ui.cjs` 세 화면 크기 겹침·화면 밖 자동 검사, `lesson.cjs` 수업·배움 수첩·실력 맞춤·단원 마무리, `figq.cjs` 그림 문제(정답 검증·단원별 문제 수·지문 근거), `product.cjs` 튜토리얼·저장 백업·깨진 저장·도전의 탑, `quest.cjs` 새 퀘스트 6종·생성기·옛 저장, `town.cjs` 마을 배치 틀(모두 걸어서 갈 수 있는지), `wraps.cjs` 감싸기 지도 → `docs/코드_흐름.md`, `bot.cjs` 1~12부 실제 출구를 따라 끝까지 가는 진행 봇(퀘스트·문지기·잠금 확인). `node arca/tools/check/bot.cjs` |
 | `tools/hd/` | 그림 손질: `fix_borders.py`(타일 흰 테두리), `harmonize.py`(테마별 풀색 맞추기), `build_manifest.py`(목록 만들기) |
 | `docs/아르카연대기_교사안내서.pdf`·`docs/아르카연대기_학생_조작안내.pdf` | 선생님용 안내서(시작·설정·부·단원 대응표·배움 장치·수업 활용·RPG·건물·접근성·FAQ)와 학생용 한 장. 만들기: `python3 docs/guide/make_guides.py && node docs/guide/print_pdf.cjs`(부·단원 표는 `docs/guide/units.json`) |
 | `docs/그림_업그레이드_기록.md` | 그림을 2등신 캐주얼풍으로 바꾸는 작업의 기록(결정·그리는 방법·적용 계획). **그림 작업은 이 문서를 먼저 읽는다.** 견본은 `prototypes/4_메이플풍_그림_견본.html`(벡터풍)·`prototypes/5_도트_견본.html`(도트풍, 선생님 참고 그림 기반) |
@@ -90,6 +90,7 @@
 
 ## 콘텐츠 추가하는 법
 - 길목 추가: `RSPEC` 에 항목 추가(`theme`, `tier`, `mons`, `node`, `prev`/`next`, 막다른 길이면 `dead`), `CHAIN` 과 `DEADS` 갱신. 출입 좌표는 `wireEntries()` 가 자동 연결.
+- 마을 배치: `TLAY[마을 id]` = 틀 이름, 틀 함수(`TLAYS`)는 바닥을 그리고 `{lm, slots, main, core, npc, deco, spawn, pcsOk}` 를 돌려준다. 소품은 `PROPS[k]`(08-ui, 그림 `s-<k>`). 바꾼 뒤 `node tools/check/town.cjs`.
 - 마을 추가: `TSPEC` 에 추가(`lm` 랜드마크, `blds`, `npcs`, `spots` 6개 중 첫째가 메인 지문), `PARTS` 와 `PARTTOWN` 에 부 정보 추가. 랜드마크 그림은 `LMD` 에.
 - 몬스터: `MON` 에 `{n,hp,dmg,dif,exp,dust,gold,spd,dr}`; 길목 단계에 따른 강화는 `mstat()`.
 - 새 종류 퀘스트(29-quests): `type` 이 `riddle`·`teach`(n 개)·`choice`(`QX_CHOICE[id]` 에 내용)·`dex`(`where` 길목)·`deliver`(`to`·`toMap`·`got`·`time`)·`escort`(`where`·`exitTo`). 이어지는 사연은 `after:'앞 id'`. 기존 퀘스트 종류를 바꿀 땐 `QX_CONV` 에 넣는다(id 유지).
@@ -100,7 +101,7 @@
 - 문제: `makeQ(dif)` 가 `studyQ(dif)` 를 먼저 부른다. 길목 단계 dif 1~2→은행 tier 1, 3→2, 4~5→3. 보기는 5~6학년 4개·3~4학년 3개(`studyCfg.choices`).
 
 ## 다음 할 일
-**순서와 실행 프롬프트는 `docs/작업_프롬프트.md`**. 2026-11-15 전체 점검(학습 효과·콘텐츠·품질)과 고칠 순서는 **`docs/점검_고칠점.md`**, 그것을 고치는 실행 프롬프트(~~J 찍기 막기·진짜 풀이~~ → ~~K 화면 버그~~ → ~~L 스승의 수업~~ → ~~M 실력 맞춤~~ → ~~N 그림 문제~~ → O 다양함(퀘스트 완료, 마을·길목은 그림 허락 기다림) → ~~P 튜토리얼·백업~~(J~N·P 완료 2026-11-15) → Q 코드 정리(감싸기 지도 `docs/코드_흐름.md` 까지, 본 정리는 O·시범 운영 뒤) · 옛 표기: N 그림 문제 → O 다양함 → P 튜토리얼·백업 → Q 코드 정리)는 **`docs/작업_프롬프트2_고치기.md`**. C·G·H·I 설계안: `docs/설계_미니조작.md`·`docs/제안_소리와효과.md`·`docs/설계_Pesk연결.md`·`docs/설계_단원조작_전체.md`. (~~A 한 판만 더~~(완료) → ~~B 약점 숫자 전투~~(완료) → ~~D 학습 기록·보고서~~(완료) → ~~F 기기 점검~~(완료) → 시범 운영 → ~~C 보스 미니 조작~~(완료) → ~~E~~(완료)·~~G~~(완료) → H Pesk 연결(보류) → I(약점 숫자·톱니 완료, 나머지는 고르시는 대로)).
+**순서와 실행 프롬프트는 `docs/작업_프롬프트.md`**. 2026-11-15 전체 점검(학습 효과·콘텐츠·품질)과 고칠 순서는 **`docs/점검_고칠점.md`**, 그것을 고치는 실행 프롬프트(~~J 찍기 막기·진짜 풀이~~ → ~~K 화면 버그~~ → ~~L 스승의 수업~~ → ~~M 실력 맞춤~~ → ~~N 그림 문제~~ → O 다양함(퀘스트·마을 완료, 길목 남음) → ~~P 튜토리얼·백업~~(J~N·P 완료 2026-11-15) → Q 코드 정리(감싸기 지도 `docs/코드_흐름.md` 까지, 본 정리는 O·시범 운영 뒤) · 옛 표기: N 그림 문제 → O 다양함 → P 튜토리얼·백업 → Q 코드 정리)는 **`docs/작업_프롬프트2_고치기.md`**. C·G·H·I 설계안: `docs/설계_미니조작.md`·`docs/제안_소리와효과.md`·`docs/설계_Pesk연결.md`·`docs/설계_단원조작_전체.md`. (~~A 한 판만 더~~(완료) → ~~B 약점 숫자 전투~~(완료) → ~~D 학습 기록·보고서~~(완료) → ~~F 기기 점검~~(완료) → 시범 운영 → ~~C 보스 미니 조작~~(완료) → ~~E~~(완료)·~~G~~(완료) → H Pesk 연결(보류) → I(약점 숫자·톱니 완료, 나머지는 고르시는 대로)).
 
 1. ~~3단계 · 2학기(7~12부)~~ (완료: 마을·길목·보스·장면·결말). 남은 것: 실제로 끝까지 플레이하며 난이도·분량 조정, 2학기 마을 건물 내부.
 2. ~~4단계 · 지문과 단원 문제~~ (연결 완료, 1년 105자리: 이야기 지문 12편 + 지문 은행 93편). 남은 것: 문제 은행에 없는 단원(예: 4-1 4·5단원, 6-2 3단원) 보충 — Pesk 쪽 `quiz-bank.js` 이므로 합칠 때 정한다.

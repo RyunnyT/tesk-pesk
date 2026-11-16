@@ -1184,6 +1184,300 @@ const TSPEC = [
     ],
   },
 ];
+/* ── 마을 배치 틀(프롬프트 O 1단계, docs/설계_다양함.md §1) ──
+   2~12부 마을마다 배치 틀이 다르다. 틀은 바닥(G)·건물 자리·랜드마크 위치·메인 지문·사람 자리·핵심 자리·소품을 정하고,
+   공통 부분(건물 문 → 가장 가까운 길 잇기, 나무, 지문, 지워진 곳, 막힌 곳 뚫기)은 genTown 이 한다.
+   지키는 것: 크기 44×28, 서쪽(0,14~15)·동쪽(43,14~15) 출구, 지워진 곳 8개(마지막이 핵심 자리), 문 좌표 b.dx·b.dy. */
+const TLAY = { t2: "dock", t3: "grove", t4: "grid", t5: "avenue", t6: "court", t7: "beach", t8: "river", t9: "isles", t10: "terrace", t11: "ring", t12: "star" };
+const TLAYS = {
+  // 부두형: 남쪽이 바다, 나무 부두 둘
+  dock(G, O, w, h, sp) {
+    FL(G, 0, 22, w - 1, h - 1, "~");
+    FL(G, 0, 20, w - 1, 21, "s");
+    FL(G, 0, 14, w - 1, 15, ":");
+    FL(G, 19, 11, 25, 13, "q");
+    [9, 30].forEach((x) => (FL(G, x, 16, x + 1, 19, ":"), FL(G, x, 20, x + 1, 26, "b")));
+    FL(G, 7, 25, 12, 26, "b");
+    FL(G, 28, 25, 33, 26, "b");
+    return {
+      lm: { x: 36, y: 2 },
+      slots: [[3, 4, 5, 4], [11, 4, 5, 4], [26, 4, 5, 4], [16, 16, 5, 4], [36, 16, 5, 4]],
+      main: [24, 11], core: [21, 12],
+      npc: [[13, 12], [31, 12], [11, 18], [32, 18], [26, 16], [17, 12]],
+      deco: [["fishstall", 12, 19], ["fishstall", 27, 19], ["netrack", 5, 19], ["netrack", 34, 21], ["barrel", 8, 24], ["crate", 29, 24], ["lamp", 18, 13], ["lamp", 26, 13]],
+    };
+  },
+  // 부두형 변형(여름): 모래밭이 넓고 파라솔·그물
+  beach(G, O, w, h, sp) {
+    FL(G, 0, 23, w - 1, h - 1, "~");
+    FL(G, 0, 18, w - 1, 22, "s");
+    FL(G, 0, 14, w - 1, 15, ":");
+    FL(G, 19, 11, 25, 13, "q");
+    FL(G, 15, 16, 16, 17, ":");
+    FL(G, 15, 18, 16, 26, "b");
+    FL(G, 36, 16, 37, 17, ":");
+    FL(G, 36, 18, 37, 26, "b");
+    return {
+      lm: { x: 38, y: 2 },
+      slots: [[3, 4, 5, 4], [10, 4, 5, 4], [27, 4, 5, 4], [22, 16, 5, 4], [3, 16, 5, 4]],
+      main: [24, 11], core: [21, 12],
+      npc: [[13, 12], [31, 12], [10, 19], [33, 19], [28, 16], [18, 12]],
+      deco: [["parasol", 6, 21], ["parasol", 12, 20], ["parasol", 21, 21], ["parasol", 30, 20], ["parasol", 41, 21], ["netrack", 33, 17], ["netrack", 39, 17], ["fishstall", 26, 21], ["lamp", 18, 13], ["lamp", 26, 13]],
+    };
+  },
+  // 숲속 오솔길형: 굽은 길 + 시냇물과 통나무 다리, 버섯 밭
+  grove(G, O, w, h, sp) {
+    const py = (a) => (a < 3 || a > w - 4 ? 14 : 14 + Math.round(3 * Math.sin((a - 3) / 6)));
+    for (let a = 0; a < w; a++) FL(G, a, py(a), a, py(a) + 1, ":");
+    for (let y = 1; y < h - 1; y++) {
+      const sx = 32 + Math.round(Math.sin(y / 3) * 1.2);
+      G[y][sx] = G[y][sx] === ":" ? "b" : "-";
+      G[y][sx + 1] = G[y][sx + 1] === ":" ? "b" : "-";
+    }
+    for (let y = 1; y < h - 1; y++) for (let a = 31; a <= 35; a++) if (G[y][a] === ":" && (G[y][a - 1] === "-" || G[y][a + 1] === "-")) G[y][a] = "b";
+    FL(G, 18, 9, 25, 12, "q");
+    return {
+      lm: { x: 19, y: 2 },
+      slots: [[4, 5, 5, 4], [10, 20, 5, 4], [23, 20, 5, 4], [37, 4, 5, 4], [37, 20, 5, 4]],
+      main: [26, 10], core: [22, 11],
+      npc: [[13, 11], [29, 12], [8, 17], [37, 16], [24, 17], [16, 12]],
+      deco: [["mush", 6, 11], ["mush", 7, 11], ["mush", 6, 12], ["mush", 28, 8], ["mush", 29, 8], ["log", 18, 18], ["log", 39, 11], ["pot", 13, 24]],
+      noRowClear: 1,
+    };
+  },
+  // 격자 골목형: 바둑판 길, 시계탑 광장, 대장간 거리, 철로
+  grid(G, O, w, h, sp) {
+    [6, 14, 15, 22].forEach((y) => FL(G, 0, y, w - 1, y, ":"));
+    [7, 15, 28, 36].forEach((x) => FL(G, x, 6, x, 22, ":"));
+    FL(G, 17, 9, 26, 13, "q");
+    FL(G, 1, 25, w - 2, 25, "H");
+    return {
+      lm: { x: 20, y: 1 },
+      slots: [[9, 8, 5, 4], [30, 8, 5, 4], [9, 17, 5, 4], [30, 17, 5, 4], [19, 17, 5, 4]],
+      main: [25, 12], core: [22, 12],
+      npc: [[12, 13], [33, 13], [11, 21], [32, 21], [25, 16], [17, 12]],
+      deco: [["anvil", 2, 9], ["anvil", 4, 9], ["anvil", 39, 9], ["barrel", 41, 9], ["railsign", 6, 24], ["railsign", 37, 24], ["crate", 2, 19], ["lamp", 16, 13], ["lamp", 27, 13]],
+      noRowClear: 1,
+    };
+  },
+  // 큰길형: 아카데미로 이어지는 남북 큰길, 분수 광장, 책 수레
+  avenue(G, O, w, h, sp) {
+    FL(G, 0, 14, w - 1, 15, ":");
+    FL(G, 20, 9, 23, h - 2, ":");
+    for (let y = 16; y <= 24; y++) for (let a = 15; a <= 28; a++) if (((a - 21.5) / 6) ** 2 + ((y - 20) / 4) ** 2 < 1) G[y][a] = "q";
+    return {
+      lm: { x: 14, y: 1 },
+      slots: [[5, 9, 5, 4], [33, 9, 5, 4], [6, 18, 5, 4], [32, 18, 5, 4], [12, 21, 5, 4]],
+      main: [25, 12], core: [22, 12], spawn: [22, 16],
+      npc: [[13, 13], [30, 13], [12, 17], [31, 17], [25, 23], [18, 12]],
+      deco: [["fountain", 21, 20], ["bench", 17, 20], ["bench", 26, 20], ["bookcart", 18, 11], ["bookcart", 25, 11], ["lamp", 19, 17], ["lamp", 24, 17], ["lamp", 19, 24], ["lamp", 24, 24]],
+      pcsOk: (a, y) => !(a >= 19 && a <= 24 && y >= 18 && y <= 22),
+    };
+  },
+  // 안뜰형: 성벽 안, 대칭 정원, 축제 무대, 깃발 길
+  court(G, O, w, h, sp) {
+    FL(G, 0, 14, w - 1, 15, ":");
+    FL(G, 21, 9, 22, 13, ":");
+    const wall = (x0, y0, x1, y1) => FL(G, x0, y0, x1, y1, "W");
+    wall(3, 9, 17, 9);
+    wall(26, 9, 40, 9);
+    wall(3, 9, 3, 12);
+    wall(3, 17, 3, 25);
+    wall(40, 9, 40, 12);
+    wall(40, 17, 40, 25);
+    wall(3, 25, 19, 25);
+    wall(24, 25, 40, 25);
+    FL(G, 20, 16, 23, 24, ":");
+    [[6, 11, 11, 12], [32, 11, 37, 12], [6, 22, 10, 23], [33, 22, 37, 23]].forEach(([a, b, c, d]) => FL(G, a, b, c, d, ","));
+    FL(G, 15, 18, 19, 21, "F");
+    FL(G, 24, 18, 28, 21, "F");
+    return {
+      lm: { x: 12, y: 1 },
+      slots: [[5, 16, 5, 4], [34, 16, 5, 4], [12, 10, 5, 4], [27, 10, 5, 4], [12, 21, 5, 4]],
+      main: [25, 13], core: [22, 12],
+      npc: [[10, 13], [33, 13], [16, 17], [27, 17], [25, 23], [18, 12]],
+      deco: [["banner", 15, 17], ["banner", 19, 17], ["banner", 24, 17], ["banner", 28, 17], ["arch", 21, 16], ["arch", 21, 24], ["pot", 18, 13], ["pot", 25, 13], ["banner", 2, 13], ["banner", 41, 13]],
+      noRowClear: 1,
+    };
+  },
+  // 강가형: 강이 마을을 가르고 다리 둘, 풍차 언덕, 볏단 마당
+  river(G, O, w, h, sp) {
+    FL(G, 0, 14, w - 1, 15, ":");
+    FL(G, 6, 22, 37, 22, ":");
+    FL(G, 6, 16, 6, 21, ":");
+    FL(G, 37, 16, 37, 21, ":");
+    for (let y = 1; y < h - 1; y++) {
+      const rx = 28 + Math.round(Math.sin(y / 4) * 1.5);
+      for (let a = rx; a <= rx + 2; a++) G[y][a] = G[y][a] === ":" ? "b" : "-";
+    }
+    FL(G, 10, 17, 16, 20, "q");
+    return {
+      lm: { x: 19, y: 1 },
+      slots: [[4, 5, 5, 4], [11, 5, 5, 4], [34, 5, 5, 4], [18, 16, 5, 4], [36, 23, 5, 4]],
+      main: [24, 12], core: [22, 12],
+      npc: [[13, 12], [35, 12], [9, 17], [34, 18], [24, 21], [17, 12]],
+      deco: [["hay", 11, 18], ["hay", 12, 18], ["hay", 14, 19], ["hay", 15, 18], ["pumpkin", 3, 19], ["pumpkin", 4, 20], ["crate", 33, 16], ["netrack", 26, 24]],
+      noRowClear: 1,
+    };
+  },
+  // 구름 섬형: 섬 셋이 구름 다리로 이어짐, 떠 있는 책장, 별 창문
+  isles(G, O, w, h, sp) {
+    [[9, 10], [33, 34]].forEach(([a, b]) => FL(G, a, 1, b, h - 2, "-"));
+    FL(G, 0, 14, w - 1, 15, ":");
+    [[9, 10], [33, 34]].forEach(([a, b]) => (FL(G, a, 14, b, 15, "b"), FL(G, a, 5, b, 5, "b"), FL(G, a, 23, b, 23, "b")));
+    FL(G, 0, 5, 8, 5, ":");
+    FL(G, 35, 5, w - 1, 5, ":");
+    FL(G, 11, 5, 13, 5, ":");
+    FL(G, 30, 5, 32, 5, ":");
+    FL(G, 0, 23, w - 1, 23, ":");
+    [[9, 10], [33, 34]].forEach(([a, b]) => FL(G, a, 23, b, 23, "b"));
+    FL(G, 4, 5, 4, 23, ":");
+    FL(G, 39, 5, 39, 23, ":");
+    FL(G, 18, 16, 25, 22, "q");
+    return {
+      lm: { x: 14, y: 1 },
+      slots: [[2, 7, 5, 4], [36, 7, 5, 4], [2, 17, 5, 4], [36, 17, 5, 4], [12, 17, 5, 4]],
+      main: [26, 12], core: [22, 12],
+      npc: [[13, 12], [30, 12], [6, 21], [37, 21], [27, 17], [17, 12]],
+      deco: [["floatshelf", 13, 9], ["floatshelf", 30, 9], ["floatshelf", 19, 19], ["floatshelf", 24, 19], ["starwin", 12, 2], ["starwin", 31, 2], ["fbook", 7, 12], ["star", 37, 12]],
+      noRowClear: 1,
+    };
+  },
+  // 언덕 계단형: 바위 턱 두 줄로 세 단, 계단(틈)으로 오르내림, 지워진 화단과 빈 액자 길
+  terrace(G, O, w, h, sp) {
+    FL(G, 1, 9, w - 2, 9, "#");
+    FL(G, 1, 20, w - 2, 20, "#");
+    [6, 7, 21, 22, 36, 37].forEach((x) => (G[9][x] = ":"));
+    [12, 13, 30, 31].forEach((x) => (G[20][x] = ":"));
+    FL(G, 0, 14, w - 1, 15, ":");
+    FL(G, 21, 8, 22, 13, ":");
+    FL(G, 6, 3, 7, 8, ":");
+    FL(G, 36, 3, 37, 8, ":");
+    FL(G, 6, 10, 7, 13, ":");
+    FL(G, 36, 10, 37, 13, ":");
+    FL(G, 12, 16, 13, 25, ":");
+    FL(G, 30, 16, 31, 25, ":");
+    FL(G, 2, 25, w - 3, 25, ":");
+    return {
+      lm: { x: 19, y: 1 },
+      slots: [[9, 3, 5, 4], [29, 3, 5, 4], [3, 21, 5, 4], [36, 21, 5, 4], [19, 21, 5, 4]],
+      main: [25, 12], core: [22, 12],
+      npc: [[11, 12], [33, 12], [9, 24], [27, 24], [17, 16], [17, 12]],
+      deco: [["erased", 15, 4], ["erased", 26, 4], ["erased", 3, 12], ["erased", 40, 12], ["frame", 10, 26], ["frame", 16, 26], ["frame", 26, 26], ["frame", 33, 26], ["lantern", 25, 17], ["paper", 40, 17]],
+      noRowClear: 1,
+      pcsOk: (a, y) => y !== 9 && y !== 20,
+    };
+  },
+  // 탑 둘레형: 탑을 감싸는 둥근 길, 얼어붙은 분수, 이름 없는 묘비
+  ring(G, O, w, h, sp) {
+    for (let y = 1; y < h - 1; y++)
+      for (let a = 1; a < w - 1; a++) {
+        const d = Math.hypot((a - 21.5) / 15, (y - 13.5) / 9);
+        if (d > 0.9 && d < 1.06) G[y][a] = ":";
+      }
+    FL(G, 0, 14, 7, 15, ":");
+    FL(G, 36, 14, w - 1, 15, ":");
+    FL(G, 15, 16, 28, 20, "q");
+    FL(G, 21, 16, 22, 21, ":");
+    return {
+      lm: { x: 19, y: 6 },
+      slots: [[2, 2, 5, 4], [37, 2, 5, 4], [2, 19, 5, 4], [37, 19, 5, 4], [12, 6, 5, 4]],
+      main: [26, 17], core: [17, 17], spawn: [22, 19],
+      npc: [[11, 15], [32, 15], [17, 20], [27, 20], [32, 9], [18, 19]],
+      deco: [["icefount", 16, 18], ["icefount", 27, 18], ["grave", 9, 25], ["grave", 14, 25], ["grave", 20, 25], ["grave", 26, 25], ["grave", 32, 25], ["crystal", 6, 9], ["snowman", 37, 10]],
+      noRowClear: 1,
+      pcsOk: (a, y) => !(a >= 18 && a <= 25 && y <= 15),
+    };
+  },
+  // 별 모양 광장: 다섯 갈래 길, 나침반 제단, 모두의 벽
+  star(G, O, w, h, sp) {
+    const cx = 21.5, cy = 17;
+    const arms = [[21.5, 9], [1, 14], [w - 2, 14], [9, 26], [34, 26]];
+    arms.forEach(([ax, ay]) => {
+      const n = Math.ceil(Math.hypot(ax - cx, ay - cy) * 2);
+      for (let i = 0; i <= n; i++) {
+        const a = Math.round(cx + ((ax - cx) * i) / n), y = Math.round(cy + ((ay - cy) * i) / n);
+        for (let dy = 0; dy <= 1; dy++) for (let dx = 0; dx <= 1; dx++) if (y + dy > 0 && y + dy < h - 1) G[y + dy][Math.min(w - 1, a + dx)] = ":";
+      }
+    });
+    FL(G, 0, 14, 2, 15, ":");
+    FL(G, w - 3, 14, w - 1, 15, ":");
+    for (let y = 12; y <= 22; y++)
+      for (let a = 15; a <= 28; a++) {
+        const ang = Math.atan2(y - cy, a - cx), r = Math.hypot((a - cx) / 1.25, y - cy);
+        const R = 3 + 2.2 * Math.max(0, Math.cos(5 * (ang + Math.PI / 2)) ** 3);
+        if (r < R) G[y][a] = "q";
+      }
+    return {
+      lm: { x: 18, y: 1 },
+      slots: [[3, 4, 5, 4], [35, 4, 5, 4], [2, 18, 5, 4], [37, 18, 5, 4], [26, 4, 5, 4]],
+      main: [25, 12], core: [17, 17], spawn: [22, 19],
+      npc: [[13, 13], [30, 13], [16, 21], [27, 21], [24, 15], [19, 13]],
+      deco: [["altar", 21, 17], ["banner", 11, 9], ["banner", 32, 9], ["lantern", 14, 24], ["lantern", 29, 24], ["star", 8, 11], ["star", 35, 11], ["sign", 20, 24]],
+      noRowClear: 1,
+    };
+  },
+};
+// 기본(광장형) — 틀이 없는 마을
+function tlayPlaza(G, O, w, h, sp) {
+  FL(G, 0, 14, w - 1, 15, ":");
+  for (let y = 10; y <= 19; y++) for (let a = 15; a <= 29; a++) if (((a - 22) / 7) ** 2 + ((y - 14.5) / 4.5) ** 2 < 1) G[y][a] = "q";
+  FL(G, 0, 14, w - 1, 15, ":");
+  FL(G, 4, 16, 4, 23, ":");
+  FL(G, 39, 16, 39, 23, ":");
+  FL(G, 4, 23, 39, 23, ":");
+  if (sp.theme === "coast") {
+    FL(G, 0, 0, w - 1, 2, "~");
+    FL(G, 0, 3, w - 1, 3, "s");
+    FL(G, 10, 0, 11, 2, "b");
+  }
+  const slots = [[3, 7, 5, 4], [8, 18, 5, 4], [17, 18, 5, 4], [30, 18, 5, 4]];
+  if (sp.lm.x < 30) slots.push([33, 7, 5, 4]);
+  return { slots, main: [24, 12], core: [22, 12], npc: [[13, 12], [31, 12], [12, 17], [32, 17], [26, 17], [17, 12]], deco: [] };
+}
+const TWALK = (g) => !["~", "-", "#", "W"].includes(g);
+// 그 칸에서 가장 가까운 길(: q b)까지 풀밭으로 이어 길을 깐다. 나무는 치운다
+function tPave(m, sx, sy, roadOnly) {
+  const { w, h, G, O } = m, seen = new Map(), q = [[sx, sy]];
+  seen.set(sx + "," + sy, null);
+  const isRoad = (a, y) => [":", "q", "b"].includes(G[y][a]) && !O[y][a];
+  while (q.length) {
+    const [a, y] = q.shift();
+    if ((a !== sx || y !== sy) && isRoad(a, y)) {
+      let k = a + "," + y;
+      while (k) {
+        const [pa, pb] = k.split(",").map(Number);
+        if (!roadOnly && G[pb][pa] !== "b" && G[pb][pa] !== "q") G[pb][pa] = ":";
+        if (O[pb][pa] === "T") O[pb][pa] = "";
+        k = seen.get(k);
+      }
+      return true;
+    }
+    for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+      const na = a + dx, ny = y + dy;
+      if (na < 1 || ny < 1 || na > w - 2 || ny > h - 2) continue;
+      const k2 = na + "," + ny;
+      if (seen.has(k2) || O[ny][na] === "B" || (O[ny][na] && O[ny][na] !== "T") || !TWALK(G[ny][na])) continue;
+      seen.set(k2, a + "," + y);
+      q.push([na, ny]);
+    }
+  }
+  return false;
+}
+// 출발점에서 걸어갈 수 있는 칸
+function tReach(m, sx, sy) {
+  const { w, h, G, O } = m, R = new Set([sx + "," + sy]), q = [[sx, sy]];
+  while (q.length) {
+    const [a, y] = q.shift();
+    for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+      const na = a + dx, ny = y + dy, k = na + "," + ny;
+      if (na < 0 || ny < 0 || na > w - 1 || ny > h - 1 || R.has(k) || O[ny][na] || !TWALK(G[ny][na])) continue;
+      R.add(k);
+      q.push([na, ny]);
+    }
+  }
+  return R;
+}
 function genTown(sp, seed) {
   const w = 44,
     h = 28,
@@ -1200,49 +1494,22 @@ function genTown(sp, seed) {
     spawn: [22, 16],
     patch: 1,
   });
-  FL(G, 0, 14, w - 1, 15, ":");
-  for (let y = 10; y <= 19; y++)
-    for (let a = 15; a <= 29; a++) if (((a - 22) / 7) ** 2 + ((y - 14.5) / 4.5) ** 2 < 1) G[y][a] = "q";
-  FL(G, 0, 14, w - 1, 15, ":");
-  FL(G, 4, 16, 4, 23, ":");
-  FL(G, 39, 16, 39, 23, ":");
-  FL(G, 4, 23, 39, 23, ":");
-  if (sp.theme === "coast") {
-    FL(G, 0, 0, w - 1, 2, "~");
-    FL(G, 0, 3, w - 1, 3, "s");
-    FL(G, 10, 0, 11, 2, "b");
-  }
-  const L = sp.lm,
-    ldx = L.lm === "tower" ? L.x + 1 : 21;
-  FL(G, ldx, L.y + L.h, ldx + 1, 13, ":");
+  const lay = TLAY[sp.id];
+  const Ly = (lay && TLAYS[lay] ? TLAYS[lay] : tlayPlaza)(G, O, w, h, sp);
+  m.lay = lay || "plaza";
+  if (Ly.spawn) m.spawn = Ly.spawn;
+  const L = { ...sp.lm, ...(Ly.lm || {}) },
+    ldx = L.lm === "tower" ? L.x + 1 : L.x + Math.floor(L.w / 2) - 1;
   const lm = { ...L, dx: ldx, dy: L.y + L.h - 1 };
   if (L.lm === "tower") {
     lm.tower = 1;
     lm.lit = partDone(sp.part);
   }
-  const slots = [
-    [3, 7, 5, 4],
-    [8, 18, 5, 4],
-    [17, 18, 5, 4],
-    [30, 18, 5, 4],
-  ];
-  if (L.x >= 30) slots[0] = [3, 7, 5, 4];
-  else slots.push([33, 7, 5, 4]);
   m.bld = [lm];
   sp.blds.forEach(([nm2, roof, roofD], i) => {
-    const s = slots[i];
+    const s = Ly.slots[i];
     if (!s) return;
-    const b = {
-      n: nm2,
-      x: s[0],
-      y: s[1],
-      w: s[2],
-      h: s[3],
-      roof,
-      roofD,
-      wall: ["#f3dcc0", "#f6e6c8", "#efe2cc", "#e8d4b0"][i % 4],
-    };
-    m.bld.push(b);
+    m.bld.push({ n: nm2, x: s[0], y: s[1], w: s[2], h: s[3], roof, roofD, wall: ["#f3dcc0", "#f6e6c8", "#efe2cc", "#e8d4b0"][i % 4] });
   });
   m.bld.forEach((b) => {
     if (!b.dx) {
@@ -1250,12 +1517,26 @@ function genTown(sp, seed) {
       b.dy = b.y + b.h - 1;
     }
     FL(O, b.x, b.y, b.x + b.w - 1, b.y + b.h - 1, "B");
-    if (!b.lm) {
-      const yy = b.dy + 1;
-      if (yy < h && yy !== 14 && yy !== 15) {
-        for (let y = yy; y < 23 && G[y][b.dx] !== ":"; y++) G[y][b.dx] = ":";
-        if (b.dy + 1 < 14) for (let y = b.dy + 1; y < 14; y++) G[y][b.dx] = ":";
+    FL(G, b.x, b.y, b.x + b.w - 1, b.y + b.h - 1, ".");
+  });
+  // 소품(그 마을만의 장소)
+  m.deco = [];
+  (Ly.deco || []).forEach(([k, a, y]) => {
+    if (a < 1 || y < 1 || a > w - 2 || y > h - 2 || O[y][a]) return;
+    if (G[y][a] === "~" || G[y][a] === "-") return;
+    O[y][a] = "p";
+    m.deco.push({ k, x: a, y });
+  });
+  // 문 앞 → 길
+  m.bld.forEach((b) => {
+    const yy = b.dy + 1;
+    if (yy < h - 1) {
+      if (G[yy][b.dx] === "#" || G[yy][b.dx] === "W") G[yy][b.dx] = ":";
+      if (O[yy][b.dx] === "p") {
+        O[yy][b.dx] = "";
+        m.deco = m.deco.filter((d) => !(d.x === b.dx && d.y === yy));
       }
+      tPave(m, b.dx, yy);
     }
   });
   const keep = new Set(["0,14", "0,15", w - 1 + ",14", w - 1 + ",15"]);
@@ -1267,8 +1548,7 @@ function genTown(sp, seed) {
   if (sp.theme === "forest") {
     for (let y = 1; y < h - 1; y++)
       for (let a = 1; a < w - 1; a++)
-        if (!O[y][a] && G[y][a] === "." && (y < 5 || y > 24 || a < 3 || a > 40) && hsh(a, y + seed) % 2 === 0)
-          O[y][a] = "T";
+        if (!O[y][a] && G[y][a] === "." && (y < 5 || y > 24 || a < 3 || a > 40) && hsh(a, y + seed) % 2 === 0) O[y][a] = "T";
   }
   for (let y = 1; y < h - 1; y++)
     for (let a = 1; a < w - 1; a++) {
@@ -1277,37 +1557,69 @@ function genTown(sp, seed) {
       if (k % 17 === 0) O[y][a] = "T";
       else if (k % 5 === 0) G[y][a] = ",";
     }
-  for (let y = 12; y <= 17; y++) for (let a = 0; a < w; a++) if (O[y][a] === "T" && a > 0 && a < w - 1) O[y][a] = "";
-  m.spots = sp.spots.map(([id, kind, n], i) => ({
-    id: id || sp.id + "s" + i,
-    kind,
-    n,
-    t: id ? n : "지문",
-    main: i === 0,
-  }));
+  // 길 바로 옆 나무는 치운다(예전: 12~17줄 전체)
+  for (let y = 1; y < h - 1; y++)
+    for (let a = 1; a < w - 1; a++) {
+      if (O[y][a] !== "T") continue;
+      let nearRoad = false;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ([":", "q", "b"].includes(G[y + dy][a + dx])) nearRoad = true;
+      if (nearRoad || (!Ly.noRowClear && y >= 12 && y <= 17)) O[y][a] = "";
+    }
+  O[m.spawn[1]][m.spawn[0]] = "";
+  const free = (p) => {
+    // 그 자리나 가까운 빈칸
+    for (let r = 0; r < 6; r++)
+      for (let dy = -r; dy <= r; dy++)
+        for (let dx = -r; dx <= r; dx++) {
+          const a = p[0] + dx, y = p[1] + dy;
+          if (a > 0 && y > 0 && a < w - 1 && y < h - 1 && !O[y][a] && TWALK(G[y][a]) && G[y][a] !== "b") return [a, y];
+        }
+    return p;
+  };
+  m.spots = sp.spots.map(([id, kind, n], i) => ({ id: id || sp.id + "s" + i, kind, n, t: id ? n : "지문", main: i === 0 }));
   const sp0 = picks(
     m,
     6,
-    (a, y) => y > 3 && y < 25 && Math.abs(y - 14.5) > 1.5 && !(a >= 20 && a <= 23 && y < 13),
+    (a, y) => y > 3 && y < h - 3 && G[y][a] !== ":" && G[y][a] !== "q" && !O[y + 1][a] && TWALK(G[y + 1][a]) && Math.hypot(a - m.spawn[0], y - m.spawn[1]) > 4,
     seed * 5,
   );
   m.spots.forEach((s, i) => {
-    const p = i === 0 ? [24, 12] : sp0[i] || [6 + i * 5, 25];
+    const p = i === 0 ? free(Ly.main) : sp0[i] || free([6 + i * 5, 25]);
     s.tx = p[0];
     s.ty = p[1];
     O[s.ty][s.tx] = "K";
     if (G[s.ty][s.tx] === "~") G[s.ty][s.tx] = "s";
   });
-  const pos = [
-    [13, 12],
-    [31, 12],
-    [12, 17],
-    [32, 17],
-    [26, 17],
-    [17, 12],
+  m.npcs = sp.npcs.map(([id, lines], i) => {
+    const p = free(Ly.npc[i]);
+    return [id, p[0], p[1], lines];
+  });
+  const core = free(Ly.core);
+  const pOk = Ly.pcsOk || (() => true);
+  m.PCS = [
+    ...picks(m, 7, (a, y) => pOk(a, y) && Math.hypot(a - core[0], y - core[1]) > 4 && Math.hypot(a - m.spawn[0], y - m.spawn[1]) > 3, seed * 9).map(([a, y]) => [a, y]),
+    core,
   ];
-  m.npcs = sp.npcs.map(([id, lines], i) => [id, pos[i][0], pos[i][1], lines]);
-  m.PCS = [...picks(m, 7, (a, y) => Math.abs(a - 22) > 3 || y > 17, seed * 9).map(([a, y]) => [a, y]), [22, 12]];
+  // 모두 걸어서 갈 수 있게: 못 가는 곳은 가장 가까운 길까지 잇는다
+  const need = () => [
+    [0, 14],
+    [w - 1, 14],
+    ...m.bld.map((b) => [b.dx, b.dy + 1]),
+    ...m.spots.map((s) => [s.tx, s.ty + 1]),
+    ...m.npcs.map((n) => [n[1], n[2]]),
+    ...m.PCS,
+  ];
+  for (let pass = 0; pass < 3; pass++) {
+    const R = tReach(m, m.spawn[0], m.spawn[1]);
+    const bad = need().filter(([a, y]) => y < h && !R.has(a + "," + y));
+    if (!bad.length) break;
+    bad.forEach(([a, y]) => {
+      if (y >= h - 1) return;
+      if (G[y][a] === "#" || G[y][a] === "W") G[y][a] = ":";
+      if (O[y][a] === "T") O[y][a] = "";
+      tPave(m, a, y);
+    });
+  }
   m.exits = [{ x0: 0, y0: 14, x1: 0, y1: 15, to: sp.prev, side: "e", d: "l" }];
   if (sp.next) m.exits.push({ x0: w - 1, y0: 14, x1: w - 1, y1: 15, to: sp.next, side: "w", d: "r" });
   m.mons = [];

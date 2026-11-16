@@ -479,6 +479,26 @@ const PROPS = {
   fbook: (c, X, Y) => (P(c, X + 3, Y + 4, 9, 6, "#534AB7"), P(c, X + 4, Y + 5, 7, 4, "#f5efe2"), P(c, X + 7, Y + 4, 1, 6, "#3C3489"), P(c, X + 5, Y + 14, 6, 1, "rgba(0,0,0,0.15)")),
   star: (c, X, Y) => (P(c, X + 7, Y + 3, 2, 8, "#ffd86b"), P(c, X + 4, Y + 6, 8, 2, "#ffd86b"), P(c, X + 7, Y + 6, 2, 2, "#fff6d0")),
 };
+// 마을 배치 틀의 그 마을만의 소품(그림이 없을 때 간단히) — 그림은 assets/hd/props/s-<이름>.png
+Object.assign(PROPS, {
+  fishstall: (c, X, Y) => (P(c, X + 1, Y + 4, 14, 2, "#c0563f"), P(c, X + 2, Y + 6, 1, 9, "#6b4a2a"), P(c, X + 13, Y + 6, 1, 9, "#6b4a2a"), P(c, X + 2, Y + 10, 12, 4, "#9ad0e8"), P(c, X + 4, Y + 10, 3, 1, "#7a8aa0"), P(c, X + 9, Y + 11, 3, 1, "#7a8aa0")),
+  parasol: (c, X, Y) => (P(c, X + 7, Y + 5, 1, 10, "#6b4a2a"), P(c, X + 2, Y + 3, 12, 3, "#e05a4a"), P(c, X + 5, Y + 3, 2, 3, "#ffffff"), P(c, X + 10, Y + 3, 2, 3, "#ffffff")),
+  anvil: (c, X, Y) => (P(c, X + 4, Y + 11, 8, 4, "#7a5230"), P(c, X + 3, Y + 7, 10, 3, "#3a3a44"), P(c, X + 6, Y + 10, 4, 1, "#3a3a44")),
+  fountain: (c, X, Y) => (P(c, X + 1, Y + 9, 14, 5, "#a8a8b0"), P(c, X + 2, Y + 10, 12, 3, "#6ab4e0"), P(c, X + 7, Y + 3, 2, 7, "#a8a8b0"), P(c, X + 6, Y + 2, 4, 1, "#bfe6ff")),
+  bookcart: (c, X, Y) => (P(c, X + 2, Y + 8, 12, 4, "#8a5a30"), P(c, X + 3, Y + 5, 2, 3, "#c0563f"), P(c, X + 6, Y + 5, 2, 3, "#3a7ac0"), P(c, X + 9, Y + 5, 2, 3, "#1D9E75"), P(c, X + 3, Y + 12, 3, 3, "#3a2418"), P(c, X + 10, Y + 12, 3, 3, "#3a2418")),
+  banner: (c, X, Y) => (P(c, X + 7, Y + 1, 1, 14, "#6b4a2a"), P(c, X + 8, Y + 2, 6, 4, "#E24B4A"), P(c, X + 8, Y + 6, 4, 2, "#ffd86b")),
+  netrack: (c, X, Y) => { P(c, X + 2, Y + 4, 1, 11, "#6b4a2a"); P(c, X + 13, Y + 4, 1, 11, "#6b4a2a"); P(c, X + 2, Y + 4, 12, 1, "#6b4a2a"); for (let i = 0; i < 4; i++) (P(c, X + 3 + i * 3, Y + 5, 1, 7, "#d8c8a0"), P(c, X + 3, Y + 6 + i * 2, 10, 1, "#d8c8a0")); },
+  railsign: (c, X, Y) => (P(c, X + 7, Y + 4, 2, 11, "#5a5a64"), P(c, X + 3, Y + 3, 10, 2, "#f0f0f0"), P(c, X + 3, Y + 6, 10, 2, "#E24B4A")),
+  floatshelf: (c, X, Y) => (P(c, X + 3, Y + 2, 10, 10, "#7a4e2d"), P(c, X + 4, Y + 4, 8, 2, "#c0563f"), P(c, X + 4, Y + 8, 8, 2, "#3a7ac0"), P(c, X + 5, Y + 14, 6, 1, "rgba(0,0,0,.2)"), P(c, X + 1, Y + 1, 1, 1, "#fff3c4")),
+  starwin: (c, X, Y) => (P(c, X + 3, Y + 2, 10, 13, "#8a8aa8"), P(c, X + 4, Y + 3, 8, 11, "#1e2a5a"), P(c, X + 6, Y + 6, 1, 1, "#ffd86b"), P(c, X + 9, Y + 9, 1, 1, "#ffffff")),
+  frame: (c, X, Y) => (P(c, X + 3, Y + 2, 10, 9, "#d9a83a"), P(c, X + 5, Y + 4, 6, 5, "#f4f0e8"), P(c, X + 5, Y + 11, 1, 4, "#6b4a2a"), P(c, X + 10, Y + 11, 1, 4, "#6b4a2a")),
+  erased: (c, X, Y) => (P(c, X + 1, Y + 6, 14, 8, "#e8e4ee"), P(c, X + 2, Y + 7, 12, 6, "#6b5a48"), P(c, X + 4, Y + 9, 1, 1, "#d8d4e0")),
+  icefount: (c, X, Y) => (P(c, X + 1, Y + 9, 14, 5, "#a8b8c8"), P(c, X + 2, Y + 10, 12, 3, "#dff2ff"), P(c, X + 7, Y + 3, 2, 7, "#cfe6f5"), P(c, X + 5, Y + 2, 6, 2, "#ffffff")),
+  grave: (c, X, Y) => (P(c, X + 4, Y + 4, 8, 10, "#9a9aa4"), P(c, X + 5, Y + 3, 6, 1, "#9a9aa4"), P(c, X + 3, Y + 14, 10, 1, "#6b5a48")),
+  altar: (c, X, Y) => (P(c, X + 1, Y + 6, 14, 8, "#b0a898"), P(c, X + 3, Y + 7, 10, 6, "#d9cdb2"), P(c, X + 7, Y + 7, 2, 6, "#c0563f"), P(c, X + 3, Y + 9, 10, 2, "#3a7ac0")),
+  arch: (c, X, Y) => (P(c, X + 2, Y + 4, 2, 11, "#3B6D11"), P(c, X + 12, Y + 4, 2, 11, "#3B6D11"), P(c, X + 2, Y + 2, 12, 3, "#3B6D11"), P(c, X + 5, Y + 2, 2, 2, "#f48fb1"), P(c, X + 10, Y + 3, 2, 2, "#f48fb1")),
+  sign: (c, X, Y) => (P(c, X + 7, Y + 6, 2, 9, "#6b4a2a"), P(c, X + 2, Y + 3, 12, 5, "#c9a06a")),
+});
 const PROPSET = {
   coast: ["barrel", "crate", "net", "lamp"],
   stone: ["crate", "lamp", "barrel", "crate"],
@@ -524,6 +544,7 @@ function decoMap(m, bc) {
     }
   });
   if (m.kind !== "town") return;
+  (m.deco || []).forEach((d) => PROPS[d.k] && PROPS[d.k](bc, d.x * T, d.y * T));
   const set = PROPSET[m.theme] || PROPSET.town;
   let n = 0;
   for (let y = 2; y < m.h - 2 && n < 14; y++)
