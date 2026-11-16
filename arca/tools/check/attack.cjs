@@ -24,10 +24,14 @@ const { chromium } = require('playwright');
     pl.x = m.x - 22; pl.y = m.y; pl.inv = 0; m.acd = 0;
     const seen = new Set();
     let contact = false; const fc = fieldContact; fieldContact = function (q) { contact = true; return fc.apply(this, arguments); };
-    for (let i = 0; i < 40 && !contact; i++) { update(); if (m.atk) seen.add(m.atk.ph); }
-    out.mon = [...seen].join('→') + (contact ? ' → 닿음(피하기 문제)' : '');
+    pl.hp = 5; const hpA = pl.hp; let hitAt = -1;
+    for (let i = 0; i < 40 && hitAt < 0; i++) { update(); if (m.atk) seen.add(m.atk.ph); if (pl.hp < hpA || pl.inv > 0) hitAt = i; }
+    out.mon = [...seen].join('→') + ' → 하트 ' + (hpA - pl.hp) + ' 줄어듦' + (contact ? ', 문제 뜸(잘못)' : ', 문제 안 뜸');
     if (!seen.has('wind') || !seen.has('go')) F('일반 몬스터 공격 모션 없음 ' + out.mon);
-    if (!contact) F('덤벼서 닿지 않음');
+    if (hitAt < 0) F('덤벼서 닿지 않음');
+    if (contact || busy || (typeof ORB === 'object' && ORB.on)) F('덤비기에 맞았는데 문제가 뜸');
+    for (let i = 0; i < 30; i++) update();
+    if (contact) F('맞은 뒤 바로 문제가 뜸');
     clear();
     // 비켜서면 헛손질
     loadMap('r1', 2, 10, true); clear();
