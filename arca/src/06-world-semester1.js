@@ -1774,8 +1774,8 @@ function wireEntries() {
 }
 function ending() {
   busy = true;
-  const nox = { n: "녹스" },
-    momo = { n: "모모" },
+  const nox = typeof storyWho === "function" ? storyWho("nox") : { n: "녹스" },
+    momo = typeof storyWho === "function" ? storyWho("momo") : { n: "모모" },
     nar = { n: "이야기" };
   openDlg(
     nox,

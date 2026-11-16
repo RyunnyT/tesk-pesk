@@ -70,10 +70,10 @@ function hdPreload() {
 }
 
 /* ── 사람 ── */
-const HD_ALIAS = { lis2: "lis" };
+const HD_ALIAS = { lis2: "lis", nox: "nox-scribe" };
 function hdCharKey(p) {
   if (!p) return null;
-  if (p.n === "나") return typeof rpgLook === "function" ? rpgLook() : "hero-" + (save.job || "none");
+  if (p.n === "나" || p.me) return typeof rpgLook === "function" ? rpgLook() : "hero-" + (save.job || "none");
   const id = HD_ALIAS[p.id] || p.id;
   return id && HDA.chars[id] ? id : null;
 }
@@ -242,8 +242,13 @@ const PET_FACE = { dog: 1, cat: 1, fox: -1, rabbit: 1, chick: -1 }; // 그림이
       q = c.getContext("2d");
     q.imageSmoothingEnabled = false;
     q.clearRect(0, 0, c.width, c.height);
-    const cx = (A.b[0] + A.b[2]) / 2;
-    q.drawImage(im, Math.round(cx - 24), A.b[1] - 2, 48, 44, 0, 0, 48, 44);
+    // 얼굴이 잘 보이게: 그림 위쪽(머리~가슴, 키의 60%)을 칸에 꽉 차게 키움. 펫·부엉이는 몸 전체
+    const cx = (A.b[0] + A.b[2]) / 2,
+      bh = A.b[3] - A.b[1],
+      whole = n.owl || n.petSp,
+      sh = whole ? Math.max(44, bh + 4) : Math.max(20, Math.round(bh * 0.6)),
+      sw = Math.round((sh * 48) / 44);
+    q.drawImage(im, Math.round(cx - sw / 2), A.b[1] - (whole ? 2 : 1), sw, sh, 0, 0, 48, 44);
     c.hidden = false;
     $("dlg").classList.add("pf");
   };

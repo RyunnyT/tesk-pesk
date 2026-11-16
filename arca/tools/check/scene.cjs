@@ -33,6 +33,12 @@ const { chromium } = require('playwright');
     // 길목 첫 방문은 컷 없음
     delete save.st.in_r6; loadMap('r6', 2, 10, true); busy = false; dl = null; if (SC.r6) storyOnce('in_r6', SC.r6);
     if (!$('scut').hidden) fails.push('길목에서 컷이 뜸');
+    // 이야기 장면에 나오는 모든 인물이 새 그림 얼굴을 찾는지
+    const ws = new Set();
+    [SC, SC_BOSS, SC_DONE].forEach((L) => Object.values(L || {}).forEach((ls) => (Array.isArray(ls) ? ls : []).forEach((l) => Array.isArray(l) && ws.add(l[0]))));
+    const noFace = [...ws].filter((w) => { const n = storyWho(w); return w !== 'nar' && !hdCharKey(n) && !(n.owl && HDA.npc[n.id]) && !(n.petSp && HDA.pets[n.petSp]); });
+    out.faces = ws.size + '명 중 옛 얼굴 ' + noFace.length;
+    if (noFace.length) fails.push('옛 얼굴: ' + noFace.join(','));
     return { fails, out };
   });
   console.log(JSON.stringify(r, null, 1), 'errs', errs);
