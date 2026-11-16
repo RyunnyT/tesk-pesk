@@ -40,6 +40,16 @@ const out = process.argv[2];
       A.forEach((n) => { if (!isFinite(n.x) || !isFinite(n.y)) fails.push(id + ' 사람 자리 잘못'); });
       busy = false; dl = null;
     }
+    // 끼임: 마이룸에 들어갔다 나오면 건물 안이 아닌 곳, 건물 안에 놓여도 빠져나옴(2026-11-16 시계탑에 낌)
+    for (const id of ids) {
+      const lmk = MAPS[id].bld[0];
+      loadMap(id, lmk.dx, lmk.dy + 1, true); pl.y = (lmk.dy + 1) * T + 2;
+      loadMap('home', 5, 5, true); const e = MAPS.home.exits[0]; loadMap(e.to, e.at[0], e.at[1], true);
+      if (hitbox(pl.x, pl.y, false)) fails.push(id + ' 마이룸에서 나오니 낌');
+      loadMap(id, lmk.x + 1, lmk.y + 2, true);
+      if (hitbox(pl.x, pl.y, false)) fails.push(id + ' 건물 안에 놓였는데 못 빠져나옴');
+    }
+    busy = false; dl = null;
     loadMap('t12', MAPS.t12.spawn[0], MAPS.t12.spawn[1], true);
     const wall = npcs.filter((n) => n.amb && n.amb.act === 'wall').length;
     if (wall < 6) fails.push('모두의 벽 사람 ' + wall);

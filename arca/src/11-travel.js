@@ -49,10 +49,11 @@ for (const id in MAPS) {
       const back =
         pl.hp <= 0 || !MAPS[M.id]
           ? { map: save.lastTown || "t1", tx: MAPS[save.lastTown || "t1"].spawn[0], ty: MAPS[save.lastTown || "t1"].spawn[1] }
-          : { map: M.id, tx: Math.floor(pl.x / T), ty: Math.floor((pl.y - 12) / T) };
+          : { map: M.id, tx: Math.floor(pl.x / T), ty: Math.floor(pl.y / T) }; // 발이 있는 칸(예전 (pl.y-12)/T 는 한 칸 위 = 건물 안으로 갈 때가 있었다)
       save.ret = back;
     }
     lm1(id, tx, ty, quiet);
+    plUnstick();
     if (id === "home") {
       const e = MAPS.home.exits[0],
         r = save.ret;
@@ -63,6 +64,45 @@ for (const id in MAPS) {
         e.to = "t1";
         e.at = [10, 15];
       }
+    }
+  };
+}
+
+/* 끼임 풀기: 내 자리가 막힌 곳(건물·나무·물)이면 가장 가까운 빈 칸으로. 맵에 들어올 때와, 움직일 수 없이 1초 넘게 막혀 있을 때 */
+function plUnstick() {
+  if (!M || typeof hitbox !== "function" || !hitbox(pl.x, pl.y, false)) return false;
+  const sx = Math.floor(pl.x / T),
+    sy = Math.floor(pl.y / T),
+    seen = new Set([sx + "," + sy]),
+    q = [[sx, sy]];
+  while (q.length) {
+    const [a, y] = q.shift();
+    if (!hitbox(a * T + 8, y * T + 12, false)) {
+      pl.x = a * T + 8;
+      pl.y = y * T + 12;
+      return true;
+    }
+    for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+      const na = a + dx,
+        ny = y + dy,
+        k = na + "," + ny;
+      if (na < 0 || ny < 0 || na >= MW || ny >= MH || seen.has(k)) continue;
+      seen.add(k);
+      q.push([na, ny]);
+    }
+  }
+  return false;
+}
+{
+  let stuckT = 0;
+  const upU = update;
+  update = function () {
+    upU();
+    if (busy || mode !== "map" || pl.z > 0) return (stuckT = 0);
+    stuckT = hitbox(pl.x, pl.y, false) ? stuckT + 1 : 0;
+    if (stuckT > 20 && plUnstick()) {
+      stuckT = 0;
+      toast("끼어 있던 자리에서 빠져나왔어요");
     }
   };
 }
