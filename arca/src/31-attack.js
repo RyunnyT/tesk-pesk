@@ -1,14 +1,17 @@
 /* ════════ 몬스터 공격 모션 · 보스 범위 공격 · 화난 보스의 무차별 공격 (2026-11-16 선생님 요청) ════════
    1) 일반 몬스터: 가까이(30점 안) 오면 멈춰서 몸을 떨며 「!」(0.7초, 기 모으기) → 그 방향으로 짧게 덤벼듦(0.3초).
-      덤벼서 닿거나 몸으로 부딪히면 문제 없이 바로 하트(막기·펫 막기 있음), 내가 비켜서면 헛손질 "휙!". 다시 덤비기까지 3.5~5초.
+      덤벼서 닿으면 문제 없이 바로 하트 1(막기·펫 막기 있음), 그냥 몸으로 부딪히면 서로 밀려나기만, 내가 비켜서면 헛손질 "휙!". 다시 덤비기까지 3.5~5초.
       문제는 내가 공격(Q·스킬)할 때만 뜬다(2026-11-16 선생님 요청: 닿을 때 문제가 뜨면 내 공격처럼 보임).
    2) 보스: 예고 동안 몸이 커졌다 작아지며 빛남(기 모으기) → 칠 때 땅이 울리고 충격파 고리.
       고유 패턴(21-loop BOSS_PAT)과 번갈아 「땅 울리기」 범위 공격(보스 둘레 큰 원, 멀리 떨어지면 피함).
    3) 무차별 공격: 보스와 싸우다 문제를 틀리면(공격 실패) 보스가 화가 나 빨간 범위가 연달아 3번(3~4학년 2번) 쏟아짐.
       한 번 맞을 때 하트 1(보스 원래 피해보다 작게), 예고는 그대로 보여 줘서 피할 수 있다. 풀이 화면이 닫힌 뒤 시작.
    · 흔들림 끄기(UI.calm)면 흔들림·충격파를 줄인다. 자동 검사에서 끄려면 MATK.off = true. */
-const MATK = { off: false, rings: [] };
-const matkWind = () => ((studyCfg.grade || 5) <= 4 ? 18 : 14);
+const MATK = { off: false, rings: [], gcd: 0 };
+// 기 모으기(장면 수): 앞쪽 길목·어린 학년일수록 길게(피하기 쉽게). 공격 간격도 앞쪽 길목은 길게
+const matkTier = () => Math.max(1, Math.min(5, (M && M.tier) || 1));
+const matkWind = () => ((studyCfg.grade || 5) <= 4 ? 18 : 14) + (5 - matkTier()) * 2;
+const matkGap = () => 60 + (5 - matkTier()) * 20;
 
 /* 1) 일반 몬스터 */
 {
@@ -31,10 +34,12 @@ const matkWind = () => ((studyCfg.grade || 5) <= 4 ? 18 : 14);
           if (m.atk && !A.hit && typeof fxPop === "function") fxPop(m.x, m.y - 20, "휙!", "#c9c5d8");
           m.atk = null;
           m.acd = 70 + (hsh(m.x | 0, tk) % 30);
+          MATK.gcd = matkGap();
         }
       }
     up0();
     if (!live || busy || mode !== "map") return;
+    if (MATK.gcd > 0) MATK.gcd--;
     for (const m of live) {
       if (m.dead) continue;
       const A = m.atk;
@@ -43,7 +48,7 @@ const matkWind = () => ((studyCfg.grade || 5) <= 4 ? 18 : 14);
         dy = pl.y - m.y,
         d = Math.hypot(dx, dy) || 1;
       if (!A) {
-        if (m.acd <= 0 && d < 30 && d > 9 && pl.inv <= 0 && !(typeof ORB === "object" && ORB.on) && !B) {
+        if (m.acd <= 0 && MATK.gcd <= 0 && !live.some((q) => q.atk) && d < 30 && d > 9 && pl.inv <= 0 && !(typeof ORB === "object" && ORB.on) && !B) {
           m.atk = { ph: "wind", t: matkWind(), ax: dx / d, ay: dy / d };
           if (typeof sfx === "function" && d < 40) sfx("warn");
         }
@@ -66,7 +71,8 @@ const matkWind = () => ((studyCfg.grade || 5) <= 4 ? 18 : 14);
 function matkHit(m) {
   const MI = mstat(m);
   m.atk.hit = 1;
-  let dm = MI.dmg || 1;
+  // 일반 몬스터에 닿으면 언제나 하트 1(보스는 원래 피해) — 하트 균형(tools/check/hearts.cjs)
+  let dm = MI.boss ? MI.dmg || 1 : 1;
   if (FLD.guard) {
     FLD.guard = 0;
     dm = 0;
@@ -82,7 +88,8 @@ function matkHit(m) {
     shakeT = UI.calm ? 0 : 6;
     if (typeof sfx === "function") sfx("hurt");
   } else if (typeof sfx === "function") sfx("block");
-  pl.inv = 45;
+  pl.inv = 60;
+  MATK.gcd = matkGap();
   const dd = Math.hypot(pl.x - m.x, pl.y - m.y) || 1;
   tryMove(pl, ((pl.x - m.x) / dd) * 12, ((pl.y - m.y) / dd) * 8, false);
   tryMove(m, ((m.x - pl.x) / dd) * 6, 0, false);
@@ -130,6 +137,8 @@ function matkHit(m) {
     mons.forEach((q) => (q.atk = null));
     if (MATK.off) return fc0.apply(this, arguments);
     if (busy || mode !== "map" || m.dead || pl.inv > 0) return;
+    // 답 구슬을 고르는 동안(문제를 푸는 중)은 부딪혀도 안 다침
+    if (typeof ORB === "object" && ORB.on) return;
     if (typeof petOn === "function" && petOn(4) && !m.pb) {
       m.pb = 1;
       fxPop(pl.x, pl.y - 24, save.pet.name + " 막음!", "#9fe0ff");
@@ -137,9 +146,12 @@ function matkHit(m) {
       pl.inv = 45;
       return;
     }
-    m.atk = { ph: "bump" };
-    matkHit(m);
-    m.atk = null;
+    // 그냥 부딪힘은 서로 밀려나기만(하트는 「!」 예고 뒤 덤비기에 맞을 때만 — 하트 균형, tools/check/hearts.cjs)
+    const dd = Math.hypot(pl.x - m.x, pl.y - m.y) || 1;
+    tryMove(pl, ((pl.x - m.x) / dd) * 8, ((pl.y - m.y) / dd) * 5, false);
+    tryMove(m, ((m.x - pl.x) / dd) * 8, 0, false);
+    pl.inv = Math.max(pl.inv, 12);
+    if (typeof fxPop === "function" && !(tk % 3)) fxPop(pl.x, pl.y - 24, "툭", "#c9c5d8");
   };
 }
 

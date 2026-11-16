@@ -71,6 +71,23 @@ const { chromium } = require('playwright');
     if (typeof LEARN === 'object' && LEARN.wait) LEARN.wait.go();
     out.angry = BP.rage;
     if (!(BP.rage > 0)) F('틀려도 화나지 않음');
+    // 4) 구슬 문제 고정: 조준 중에 다른 곳이 makeQ 를 불러도 화면·채점은 처음 문제 그대로
+    clear(); BP.zones = []; BP.rage = 0; MATK.off = true;
+    loadMap('r1', 2, 10, true); clear();
+    const m3 = mons.find((q) => !q.dead && !MON[q.type].boss);
+    pl.x = m3.x - 14; pl.y = m3.y; m3.hpNow = 9999;
+    fieldStrike(m3, null);
+    if (typeof ORB === 'object' && ORB.on) {
+      const Q0 = ORB.Q, combo0 = FLD.streak;
+      makeQ(1); makeQ(1);
+      const right = [...$('bc').children].findIndex((x) => !x.hidden && x.dataset.v === String(Q0.a));
+      const vis = [...$('bc').children].filter((x) => !x.hidden);
+      orbThrow(vis.findIndex((x) => x.dataset.v === String(Q0.a)));
+      for (let i = 0; i < 40 && ORB.fly; i++) { drawFx(); await new Promise((r) => setTimeout(r, 5)); }
+      out.orbFix = ORB.res && ORB.res.ok;
+      if (!(ORB.res && ORB.res.ok)) F('구슬 채점이 바뀐 문제로 됨');
+    } else out.orbFix = '구슬 아님';
+    MATK.off = false;
     return { fails, out };
   });
   console.log(JSON.stringify(r, null, 1), 'errs', errs);

@@ -30,6 +30,20 @@ const out = process.argv[2];
       }
     }
     if (Object.keys(sig).length < 6) fails.push('배치 틀이 6가지보다 적음 ' + JSON.stringify(sig));
+    // 마을 사람들의 움직임·모두의 벽(src/33-life.js)
+    save.job = 'knight';
+    for (const id of Object.keys(LIFE)) {
+      loadMap(id, MAPS[id].spawn[0], MAPS[id].spawn[1], true);
+      const A = npcs.filter((n) => n.amb);
+      if (A.length < LIFE[id].length) fails.push(id + ' 움직이는 사람 ' + A.length + '/' + LIFE[id].length);
+      for (let i = 0; i < 30; i++) update();
+      A.forEach((n) => { if (!isFinite(n.x) || !isFinite(n.y)) fails.push(id + ' 사람 자리 잘못'); });
+      busy = false; dl = null;
+    }
+    loadMap('t12', MAPS.t12.spawn[0], MAPS.t12.spawn[1], true);
+    const wall = npcs.filter((n) => n.amb && n.amb.act === 'wall').length;
+    if (wall < 6) fails.push('모두의 벽 사람 ' + wall);
+    rows.push({ id: 't12', 이름: '모두의 벽', 틀: '-', 소품: wall + '명', 갈수있는칸: '-' });
     return { fails, rows, sig };
   }, !!out);
   console.table(r.rows);

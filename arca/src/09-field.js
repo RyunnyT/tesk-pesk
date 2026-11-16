@@ -118,6 +118,8 @@ function fieldStrike(m, sk) {
     setTimeout(() => {
       if (m.hpNow <= 0) {
         m.hpNow = null;
+        // 그 사이 쓰러졌거나 다른 몬스터를 쳐서 B 가 바뀌었으면 이 몬스터로 다시 잡는다
+        if (!B || B.m !== m) B = { m, MI, hp: 0, g: FLD.g, core: m.core, field: 1 };
         win();
         return;
       }

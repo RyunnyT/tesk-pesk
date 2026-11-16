@@ -5,7 +5,12 @@
    · 속은 기존 문제 상자(09-field 의 askField)를 그대로 쓴다: 상자를 숨기고, 구슬이 맞으면 숨은 답 버튼을 대신 누른다.
      그래서 콤보·힌트·오답 노트·다시 만나기·직업 공부 도움이 그대로 이어진다. 숫자 직접 넣기(숫자 판)는 지금처럼 상자로.
    · 선생님 설정 '전투 방식'(studyCfg.battle: orb 기본 / box 예전 상자). */
-const ORB = { on: false, m: null, fly: null, res: null, t0: 0 };
+const ORB = { on: false, m: null, fly: null, res: null, t0: 0, Q: null };
+// 지금 조준 중인 문제: 시작할 때 RQ.last 를 따로 잡아 둔다(다른 곳에서 makeQ 를 불러 RQ.last 가 바뀌어도 화면·채점이 어긋나지 않게)
+const orbQ = () => {
+  const Q = ORB.Q || RQ.last || {};
+  return orbBtns().some((b) => b.dataset.v === String(Q.a)) ? Q : RQ.last || Q;
+};
 // 처음엔 길목 1에서만 시험했다. 2026-11-15 선생님이 "바뀐 걸 모르겠다" → 모든 길목·보스로 켬(null = 모든 곳)
 const ORB_ONLY = null;
 const ORBCOL = ["#6aa9ec", "#7ee07a", "#ffb84a", "#f08ad0"];
@@ -48,7 +53,7 @@ qs.innerHTML = '<div class="qsh"><b id="qst"></b><small id="qsm"></small><button
 $("stage").appendChild(qs);
 const orbBtns = () => [...$("bc").children].filter((b) => !b.hidden);
 function orbRender(title) {
-  const Q = RQ.last || {},
+  const Q = orbQ(),
     short = isShortQ(Q.q);
   $("qst").textContent = title;
   $("qsm").textContent = $("bth").textContent.replace("맞히면 그대로 · 틀리면 다시", "맞히면 약점 · 틀리면 다시");
@@ -79,7 +84,7 @@ function orbHit() {
   const f = ORB.fly,
     m = ORB.m;
   ORB.fly = null;
-  const ok = f.v === String((RQ.last || {}).a);
+  const ok = f.v === String(orbQ().a);
   f.b.click();
   // 마법사 '시간 늦추기': 그 버튼만 꺼지고 문제는 이어짐 → 띠를 다시 그린다
   if (!ok && $("bm").textContent.startsWith("시간 늦추기")) {
@@ -93,7 +98,7 @@ function orbHit() {
   ORB.res = { ok, t: 0, x: m.x, y: m.y };
   $("qsa").querySelectorAll("button").forEach((x, k) => {
     x.disabled = true;
-    if (orbBtns()[k] && orbBtns()[k].dataset.v === String(RQ.last.a)) x.classList.add("ans");
+    if (orbBtns()[k] && orbBtns()[k].dataset.v === String(orbQ().a)) x.classList.add("ans");
   });
   $("qsr").hidden = false;
   $("qsr").textContent = $("bm").textContent;
@@ -150,6 +155,7 @@ function orbEnd() {
     ORB.on = true;
     ORB.done = false;
     ORB.m = B.m;
+    ORB.Q = RQ.last;
     ORB.t0 = tk;
     orbRender(title);
     if (save.st && !save.st.orbTip) {
@@ -245,7 +251,7 @@ function orbEnd() {
       x.stroke();
       x.globalAlpha = 1;
       // 짧은 식은 머리 위 말풍선
-      const Q = RQ.last || {};
+      const Q = orbQ();
       if (isShortQ(Q.q)) {
         const t = qBody(Q.q);
         x.font = "bold 9px sans-serif";
