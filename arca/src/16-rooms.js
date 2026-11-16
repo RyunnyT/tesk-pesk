@@ -145,3 +145,66 @@ PARTTOWN.forEach((town) => {
     toast("상자 안에 금화 " + gd + "개와 별빛 가루가 있었어요!");
   };
 }
+
+/* ── 랜드마크 안: 등대·큰 나무(2026-11-16 선생님 요청 「참나무나 등대에는 못 들어가」) ──
+   각 마을 랜드마크 중 등대(tower)·큰 나무(oak)에 문을 달고 안을 만든다. 1부 등대(lh1)는 원래 있음.
+   안 사람은 있는 인물 그림을 빌리고, 마을을 다 되살렸는지(partDone)에 따라 말이 바뀐다. 상자는 처음 한 번 선물. */
+const LMROOM = {
+  tower: {
+    fur: [
+      { id: "window", x: 2, y: 0 },
+      { id: "window", x: 12, y: 0 },
+      { id: "lens", x: 7, y: 3, w: 2, h: 2 },
+      { id: "desk", x: 12, y: 7, w: 2, h: 1 },
+      { id: "shelf", x: 1, y: 3, w: 3, h: 1 },
+      { id: "chest", x: 15, y: 3, w: 1, h: 1, act: "gift", n: "상자 열어 보기" },
+      { id: "plant", x: 2, y: 9, w: 1, h: 1 },
+    ],
+    npc: ["pat", "등대 견습생"],
+    before: (n) => ["여기는 " + n + " 안이에요. 맨 위 렌즈 보이죠?", "렌즈 속 「빛의 기록」이 지워져서 불이 안 켜져요… 마을의 지워진 곳을 다 다시 쓰면 다시 빛날 거래요."],
+    after: (n) => [jo(n, "이", "가") + " 다시 빛나요! 배들이 길을 잃지 않아요.", "렌즈는 별빛으로 닦아요. 문제를 맞힐 때 모은 그 별빛이요!"],
+  },
+  oak: {
+    fur: [
+      { id: "rug", x: 7, y: 6 },
+      { id: "plant", x: 1, y: 3, w: 1, h: 1 },
+      { id: "plant", x: 16, y: 3, w: 1, h: 1 },
+      { id: "plant", x: 1, y: 9, w: 1, h: 1 },
+      { id: "plant", x: 16, y: 9, w: 1, h: 1 },
+      { id: "shelf", x: 6, y: 3, w: 3, h: 1 },
+      { id: "desk", x: 12, y: 5, w: 2, h: 1 },
+      { id: "chest", x: 3, y: 3, w: 1, h: 1, act: "gift", n: "상자 열어 보기" },
+    ],
+    npc: ["layla", "숲지기"],
+    before: (n) => ["쉿… 여기는 " + n + " 속 빈 방이에요.", "나무가 자기 이름을 잊어서 속이 이렇게 차가워요. 마을을 다 되살리면 따뜻해질 거예요."],
+    after: (n) => [jo(n, "이", "가") + " 이름을 되찾았어요! 나무 속이 따뜻해요.", "벽의 나이테를 세어 보면 천 년도 넘었대요. 백 년씩 묶어 세면 금방이에요."],
+  },
+};
+PARTTOWN.forEach((town) => {
+  const m = MAPS[town];
+  if (!m) return;
+  (m.bld || []).forEach((b) => {
+    const R = LMROOM[b.lm];
+    if (!R || b.to) return;
+    const id = "lm_" + town,
+      nid = "lmn_" + b.lm + "_" + town;
+    D[nid] = { ...D[R.npc[0]], n: R.npc[1] };
+    if (typeof HD_ALIAS === "object") HD_ALIAS[nid] = R.npc[0];
+    bRoom(id, b.n + " 안", town, [b.dx, b.dy + 1], R.fur.map((f) => ({ ...f })), [[nid, 10, 8, ["…"]]]);
+    MAPS[id].roomKind = "lm";
+    MAPS[id].roomTown = town;
+    b.to = id;
+    b.at = [8, 9];
+  });
+});
+{
+  const tk1 = talk;
+  talk = function (n) {
+    if (!n.id || !n.id.startsWith("lmn_")) return tk1(n);
+    const [, kind, town] = n.id.split("_"),
+      R = LMROOM[kind],
+      nm2 = (MAPS[town].bld.find((b) => b.lm === kind) || {}).n || "",
+      done = typeof partDone === "function" && partDone((MAP_PART[town] || 1) - 1);
+    return openDlg(n, (done ? R.after : R.before)(nm2));
+  };
+}
