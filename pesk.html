@@ -26,6 +26,7 @@
 <script src="boss-sprites.js"></script>
 <script src="shared/pesk-writing-store.js?v=20261021sem1"></script>
 <script src="shared/pesk-quiz-store.js?v=20261006split1"></script>
+<script src="shared/stock-list.js?v=20261116names"></script>
 <script src="shared/econ-core.js?v=20261112auc"></script>
 <script src="shared/pesk-econ-ui.js?v=20261112auc"></script>
 <script src="shared/pesk-seat-auction.js?v=20261009seat3"></script>
@@ -1256,6 +1257,11 @@ const _DEFAULT_STOCKS = [
   ['032830','삼성생명',8800],['003670','포스코퓨처엠',20000],['000810','삼성화재',32000],
   ['036570','엔씨소프트',21000],['251270','넷마블',5500],['259960','크래프톤',30000],
 ];
+// 종목 이름: 이름표 → 저장된 이름 → 코드 순. 우리반 펀드처럼 이름표에 없는 것은 저장된 이름을 쓴다.
+function stockNameOf(code, saved){
+  const listed = window.TeskStockList && window.TeskStockList.names[String(code)];
+  return listed || (saved && String(saved)!==String(code) ? String(saved) : '') || String(code||'');
+}
 function _defaultStockPrices(){
   const o={};
   _DEFAULT_STOCKS.forEach(([code,,price])=>{ o[code]=Number(price); });
@@ -4471,11 +4477,12 @@ function buildStockTab(me, coins){
   // 투자 현황
   let investRows = '';
   if(myPortfolio.length > 0){
-    investRows = myPortfolio.map(p=>{
+    investRows = myPortfolio.map(p0=>{
+      const p = {...p0, name: stockNameOf(p0.code, p0.name)};
       const curPrice = stockPrices[p.code] || p.avgPrice;
       const totalVal = curPrice * p.qty;
       const gain = (curPrice - p.avgPrice) * p.qty;
-      const gainPct = ((curPrice - p.avgPrice)/p.avgPrice*100).toFixed(1);
+      const gainPct = (p.avgPrice>0 ? (curPrice - p.avgPrice)/p.avgPrice*100 : 0).toFixed(1);
       const isUp = gain >= 0;
       return '<div class="port-item" style="flex-wrap:wrap;">'
         + '<div class="port-icon">📊</div>'
@@ -4847,17 +4854,8 @@ function buildTradeView(me){
   }
   const KOSPI_MAP = {};
   _DEFAULT_STOCKS.forEach(([c,n])=>{ KOSPI_MAP[c]=n; });
-  // 추가 종목 (tesk KOSPI100 참조)
-  Object.assign(KOSPI_MAP, {
-    '005930':'삼성전자','000660':'SK하이닉스','373220':'LG에너지솔루션','207940':'삼성바이오로직스',
-    '006400':'삼성SDI','051910':'LG화학','005380':'현대자동차','000270':'기아',
-    '035420':'NAVER','035720':'카카오','105560':'KB금융','055550':'신한지주',
-    '086790':'하나금융지주','316140':'우리금융지주','017670':'SK텔레콤','030200':'KT',
-    '034730':'SK','010130':'고려아연','003550':'LG','066570':'LG전자',
-    '012330':'현대모비스','028260':'삼성물산','009150':'삼성전기','018260':'삼성에스디에스',
-    '032830':'삼성생명','003670':'포스코퓨처엠','000810':'삼성화재','036570':'엔씨소프트',
-    '251270':'넷마블','259960':'크래프톤',
-  });
+  // 종목 이름은 교사 앱과 같은 이름표(shared/stock-list.js)에서 가져온다
+  if(window.TeskStockList) Object.assign(KOSPI_MAP, window.TeskStockList.names);
   // 우리반 펀드: 학급 종목 전체의 평균 등락을 따라가는 상품 (1주 1,000 메소 안팎이라 누구나 살 수 있다)
   if(window.EconCore) KOSPI_MAP[window.EconCore.INDEX_CODE] = window.EconCore.INDEX_NAME + ' (전체 종목 평균)';
   const idx = window.EconCore ? window.EconCore.INDEX_CODE : '';

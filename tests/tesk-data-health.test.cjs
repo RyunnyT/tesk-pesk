@@ -46,3 +46,19 @@ test('백업 알림: 기록 없음·14일 이상만, 미루기 존중', ()=>{
   assert.strictEqual(H.backupDue('', now, new Date(2026, 9, 22).toISOString()), null);
   assert.deepStrictEqual(H.backupDue('', now, new Date(2026, 9, 20).toISOString()), {days:null, never:true});
 });
+
+// 교사 화면을 열 때 이 컴퓨터의 낡은 학생 잔액을 서버에 덮어쓰지 않는다 (학생 돈이 되돌아가던 문제)
+test('처음 올리기는 서버에 없는 문서만 올린다', async()=>{
+  const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+  const html=fs.readFileSync(path.join(__dirname,'..','tesk_teacher_v2.html'),'utf8');
+  const start=html.indexOf('const FORCE_SYNC_KEYS'),end=html.indexOf('setTimeout(()=>_forceSyncAll()',start);
+  assert.ok(start>0&&end>start);
+  const server={'tesk-students':[{num:1,points:900}]},saved=[];
+  const local={'tesk-students':[{num:1,points:100}],'tesk-jobs':[{title:'은행원'}]};
+  const ctx={TESK_ROOM:'r',console,load:(k,d)=>k in local?local[k]:d,saveFirebase:async(k,v)=>{saved.push(k);server[k]=v;},
+    window:{_fbReady:true,_db:{},_fsDoc:(_db,...p)=>p.at(-1),_fsGetDoc:async k=>({exists:()=>k in server})}};
+  vm.runInNewContext(html.slice(start,end)+';this.run=_forceSyncAll;',ctx);
+  await ctx.run();
+  assert.deepEqual(saved,['tesk-jobs']);
+  assert.equal(server['tesk-students'][0].points,900,'서버의 학생 잔액은 그대로');
+});

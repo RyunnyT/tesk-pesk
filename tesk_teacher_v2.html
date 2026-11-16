@@ -1510,7 +1510,7 @@ window.addEventListener('error', function(e){
       <div id="econ-panel-stock" style="display:none;">
         <div id="class-index-card"></div>
         <div class="card" style="margin-bottom:16px;">
-          <div class="card-header"><div class="card-title">📈 코스피 100 주식 시장</div>
+          <div class="card-header"><div class="card-title">📈 주식 시장 (코스피 주요 50종목)</div>
             <div style="display:flex;gap:6px;">
               <button id="btn-real-stock" class="btn btn-sm btn-primary" onclick="syncRealStockPrices()">🌐 실시간 가격 반영 (네이버·Yahoo·Daum)</button>
               <button id="btn-stock-auto-sync" class="btn btn-sm btn-secondary" onclick="toggleStockAutoSync()">⏱️ 자동 갱신 끄기</button>
@@ -2582,10 +2582,13 @@ async function retryFailedSaves(){
   showToast('⏳ 다시 저장하는 중…');
   let ok = 0;
   for(const k of keys){
+    // 학생이 직접 바꾸는 문서(잔액·주식·예금 등)는 이 컴퓨터의 낡은 사본으로 다시 올리지 않는다
+    if(SERVER_OWNED_KEYS.includes(k)){ delete _saveFailures[k]; ok++; continue; }
     const v = load(k, undefined);
     if(v === undefined){ continue; }
     if(await saveFirebase(k, v)) ok++;
   }
+  renderSaveFailureBar();
   showToast(ok === keys.length ? '✅ 모두 서버에 저장했어요' : '⚠️ ' + (keys.length - ok) + '개 자료는 아직 저장하지 못했어요');
 }
 
@@ -4053,9 +4056,10 @@ const KOSPI100=[
   {code:'068270',name:'셀트리온',base:1700},{code:'326030',name:'SK바이오팜',base:890},
   {code:'302440',name:'SK바이오사이언스',base:380},{code:'247540',name:'에코프로비엠',base:2200},
   {code:'086520',name:'에코프로',base:550},{code:'010140',name:'삼성중공업',base:95},
-  {code:'009540',name:'한국조선해양',base:1300},{code:'042660',name:'한화오션',base:350},
-  {code:'267260',name:'HD현대',base:720},{code:'329180',name:'HD한국조선해양',base:1800},
+  {code:'009540',name:'HD한국조선해양',base:1300},{code:'042660',name:'한화오션',base:350},
+  {code:'267260',name:'HD현대일렉트릭',base:720},{code:'329180',name:'HD현대중공업',base:1800},
 ];
+// 종목을 고치면 shared/stock-list.js(학생 앱 이름표)도 함께 고친다 — tests/stock-list.test.cjs 가 확인한다.
 let stockPrices=load('tesk-stock-prices',{});
 let stockRawPrices=load('tesk-stock-raw-prices',{});
 let portfolios=load('tesk-portfolios',{});
@@ -4076,12 +4080,22 @@ function initStockPrices(){
 initStockPrices();
 
 // ★ Firebase 강제 동기화 (pesk가 읽을 수 있도록 모든 주요 데이터를 Firebase에 올림)
-function _forceSyncAll(){
-  if(!window._fbReady||!window._db) return;
-  ['tesk-shop','tesk-jobs','tesk-students','tesk-bank-plans','tesk-bank-badge-bonus','tesk-salary-tax-enabled'].forEach(k=>{
+/* 서버에 아직 없는 문서만 올린다. 이미 있는 문서는 절대 덮어쓰지 않는다.
+   예전에는 화면을 열 때마다(3초·10초 뒤) 이 컴퓨터에 남아 있던 학생 잔액(tesk-students)을 통째로 올렸다.
+   교사 화면은 학생 잔액을 실시간으로 받지 않아서 그 사본은 낡아 있고, 올리는 순간 그 사이 학생이
+   주식을 팔거나 예금을 찾거나 보상을 받아 늘어난 현금이 옛 값으로 되돌아갔다 ("돈이 증발했어요"의 정체).
+   상점 재고(tesk-shop)도 학생 구매로 바뀌므로 같은 이유로 덮어쓰지 않는다. */
+const FORCE_SYNC_KEYS = ['tesk-shop','tesk-jobs','tesk-students','tesk-bank-plans','tesk-bank-badge-bonus','tesk-salary-tax-enabled'];
+async function _forceSyncAll(){
+  if(!window._fbReady||!window._db||!window._fsGetDoc) return;
+  for(const k of FORCE_SYNC_KEYS){
     const v=load(k,null);
-    if(v!==null) saveFirebase(k,v);
-  });
+    if(v===null) continue;
+    try{
+      const snap=await window._fsGetDoc(window._fsDoc(window._db,'classrooms',TESK_ROOM,'data',k));
+      if(!snap.exists()) await saveFirebase(k,v);
+    }catch(e){ console.warn('[Tesk Teacher] 처음 올리기 확인 실패:',k,e); }
+  }
 }
 // Firebase 준비되면 강제 동기화 (안전하게 폴링 방식)
 setTimeout(()=>_forceSyncAll(),3000);
@@ -4392,7 +4406,7 @@ async function syncRealStockPrices(opts={}){
   const nextRawPrices = {...stockRawPrices};
   let updated = 0, failed = 0;
   try{
-    const targets = _realtimeTargetStocks();
+    let targets = _realtimeTargetStocks();
     if(targets.length===0){
       showToast('⚠️ 갱신할 종목이 없어요.');
       return;
@@ -4418,6 +4432,7 @@ async function syncRealStockPrices(opts={}){
     }
 
     if(!usedWorker){
+    targets = _realtimeTargetStocks(true); updated = 0;
     const primaryProxy = await _selectNaverProxy(targets[0].code);
     const CHUNK = 6; // 동시 요청 줄임 — 프록시가 폭주하면 일부만 응답하던 문제 해결
     const TIMEOUT_MS = 8000; // 4.5초→8초 (느린 프록시도 대응)
@@ -4471,10 +4486,11 @@ async function syncRealStockPrices(opts={}){
     } // end if(!usedWorker) — 프록시 폴백 경로
 
     if(updated===0){
-      localStorage.setItem('tesk-last-real-stock-sync', new Date().toISOString());
-      localStorage.setItem('tesk-last-real-stock-sync-status', '실시간 시세 실패 · 시뮬레이션 변동으로 대체');
-      showToast('⚠️ 실시간 시세를 불러오지 못해 시뮬레이션 변동으로 대체합니다.');
-      refreshStockPrices();
+      // 시세를 못 받으면 가격을 그대로 둔다. 무작위 변동으로 바꾸지 않는다 — 학생 자산이 근거 없이 오르내리면 안 된다.
+      // 마지막 갱신 시각도 쓰지 않아서, 같은 시간대에 화면을 다시 열면 한 번 더 시도한다.
+      localStorage.setItem('tesk-last-real-stock-sync-status', '실시간 시세를 불러오지 못했어요 (' + new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) + ') · 가격은 그대로예요');
+      renderStockAutoSyncStatus();
+      showToast('⚠️ 실시간 시세를 불러오지 못했어요. 가격은 그대로 둡니다.');
       return;
     }
 
@@ -4504,9 +4520,12 @@ async function syncRealStockPrices(opts={}){
 const _NAVER_PROXIES = ['', 'https://corsproxy.io/?url=','https://api.allorigins.win/raw?url='];
 let _naverProxyHint = localStorage.getItem('tesk-naver-proxy') || '';
 
-function _realtimeTargetStocks(){
+// 학생이 살 수 있는 종목은 모두 실제 시세를 받는다. 일부만 받으면, 한 번도 갱신되지 않은 종목을
+// 학생이 산 뒤 다음 갱신에서 가격이 실제 값으로 한꺼번에 튄다.
+// limited=true 는 Worker 를 못 써서 느린 공용 프록시로 받을 때만: 앞의 30개 + 보유 종목.
+function _realtimeTargetStocks(limited){
+  if(!limited) return KOSPI100.slice();
   const set = new Set();
-  // 속도 최적화: 기본 30개 + 실제 보유 종목 우선
   KOSPI100.slice(0,30).forEach(s=>set.add(s.code));
   Object.values(portfolios||{}).forEach(arr=>(arr||[]).forEach(p=>{ if(p?.code) set.add(String(p.code)); }));
   if(typeof _peskPortfoliosCache !== 'undefined'){

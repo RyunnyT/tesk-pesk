@@ -1,4 +1,4 @@
-const PESK_CACHE = 'pesk-shell-v65-no-monster-list';
+const PESK_CACHE = 'pesk-shell-v66-stock-names';
 const PESK_ASSETS = [
   './landing.html',
   './pesk.html',
@@ -14,6 +14,7 @@ const PESK_ASSETS = [
   './shared/pesk-class-quest-ui.js?v=20261009fail1',
   './shared/pesk-writing-store.js?v=20261021sem1',
   './shared/pesk-quiz-store.js?v=20261006split1',
+  './shared/stock-list.js?v=20261116names',
   './shared/econ-core.js?v=20261112auc',
   './shared/pesk-econ-ui.js?v=20261112auc',
   './shared/pesk-seat-auction.js?v=20261009seat3',
