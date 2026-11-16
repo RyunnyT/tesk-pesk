@@ -16,7 +16,7 @@ const { chromium } = require('playwright');
     const rows = [];
     segs.forEach((sg) => {
       const lv0 = S.lv;
-      let monHits = [], bossHits = [], monRaw = [];
+      let monHits = [], bossHits = [], monRaw = [], monPow = [];
       // 이 부의 장비 상태로 공격력
       const atkNow = () => 10 + 6 * wT + 2 * (S.lv - 1);
       sg.maps.forEach((id) => {
@@ -25,7 +25,7 @@ const { chromium } = require('playwright');
           const mm = { map: id, type: t };
           const MI = mstat(mm);
           if (MI.boss) { bossHits.push(Math.ceil(MI.hp / atkNow())); gainS(MI.exp, MI.gold, MI.dust); return; }
-          monHits.push(Math.ceil(MI.hp / atkNow())); monRaw.push(MI.hp / atkNow());
+          monHits.push(Math.ceil(MI.hp / atkNow())); monRaw.push(MI.hp / atkNow()); monPow.push(Math.ceil(MI.hp / (atkNow() + (typeof GROW === 'object' ? GROW.pow : 0) * (S.lv - 1))));
           // 한 번 + 퀘스트·가루 때문에 평균 0.6번 더
           gainS(MI.exp * 1.6, MI.gold * 1.6, MI.dust * 1.6);
           S.kills += 1.6;
@@ -49,7 +49,7 @@ const { chromium } = require('playwright');
       const avg = (a) => (a.length ? (a.reduce((x, y) => x + y, 0) / a.length).toFixed(1) : '-');
       rows.push({ cumExp: Math.round(S.cum || 0), part: sg.part, lv: lv0 + '→' + S.lv, gold: Math.round(S.gold), dust: Math.round(S.dust), weapon: wT + '(Lv' + ITEMS['w_' + job + '_' + wT].lv + ')', outfitLv: oLv, atk: atkNow(), hitsMon: avg(monHits), hitsMax: Math.max(0, ...monHits), boss: bossHits.join('/'), keyBox: Math.round(boxes),
         // 정답률 60% 학생이 일반 몬스터 한 마리에 푸는 문제 수(틀리면 0 + 다시 풀어 맞히면 절반, src/24-learn.js): 한 번에 0.72배 피해·1.4문제
-        q60: monRaw.length ? (Math.max(1, monRaw.reduce((a, b) => a + b, 0) / monRaw.length / 0.72) * 1.4).toFixed(1) : '-' });
+        hitsPow: monPow.length ? (monPow.reduce((a, b) => a + b, 0) / monPow.length).toFixed(1) : '-', q60: monRaw.length ? (Math.max(1, monRaw.reduce((a, b) => a + b, 0) / monRaw.length / 0.72) * 1.4).toFixed(1) : '-' });
     });
     return rows;
   }, 'knight');
