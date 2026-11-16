@@ -35,6 +35,7 @@ const out = process.argv[2];
       rows.push({ id, 이름: m.short, 장치: m.dev ? RDEV_NAME[m.dev.k] : '-', 몬스터: [...kinds].join(' ') });
     }
     // 장치 9종 실제로
+    MR.off = true; // 수학 판은 mathroute.cjs 가 본다(여기선 장치 그대로)
     const go = async (id, tx, ty) => { loadMap(id, tx, ty, true); busy = false; document.querySelectorAll('#dlg').forEach((e) => (e.hidden = true)); dl = null; mons.forEach((q) => (q.dead = 1e9)); await sleep(30); };
     const steps = async (n) => { for (let i = 0; i < n; i++) update(); };
     const at = (a, y) => { pl.x = a * T + 8; pl.y = y * T + 12; };

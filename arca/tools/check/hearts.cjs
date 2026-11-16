@@ -88,9 +88,10 @@ const { chromium } = require('playwright');
     for (const id of (window.__hunt || ['r1', 'r7', 'r13', 'r19', 'r25'])) rows.push(await runOne(id, 0.6, true));
     return rows;
   });
-  console.table(r.map((x) => ({ 길목: x.id, 부: x.part, 방식: x.hunt, 남은몬스터: x.left, 정답률: x.acc, 최대하트: x.maxHp, 잃은하트: x.lost, 쓰러짐: x.deaths, 처치: x.kills, 문제: x.qs, 초: x.sec, 끝까지: x.done })));
+  console.table(r.map((x) => ({ 길목: x.id, 부: x.part, 방식: x.hunt, 남은몬스터: x.left, 정답률: x.acc, 최대하트: x.maxHp, 잃은하트: x.lost, 쓰러짐: x.deaths, 처치: x.kills, 문제: x.qs, 초: x.sec, 분당문제: x.sec ? +(x.qs * 60 / x.sec).toFixed(1) : 0, 끝까지: x.done })));
   const bad = r.filter((x) => x.acc === 0.6 && x.deaths > 0 && x.hunt === '지나가기');
   console.log('사냥(2분 동안 피하지 않고 계속 싸움, 참고)', r.filter((x) => x.hunt === '사냥').map((x) => x.id + ' 하트 ' + x.lost + '/' + x.maxHp + ' 쓰러짐 ' + x.deaths).join(' · '));
+  { const H = r.filter((x) => x.hunt === '사냥'); const q = H.reduce((a, x) => a + x.qs, 0), t = H.reduce((a, x) => a + x.sec, 0); console.log('사냥 분당 문제 수(목표 8 이상, 참고)', t ? (q * 60 / t).toFixed(1) : 0); }
   console.log('60% 학생이 쓰러진 길목', bad.map((x) => x.id), 'errs', errs);
   await b.close();
   process.exit(bad.length || errs.length ? 1 : 0);
