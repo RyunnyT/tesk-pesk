@@ -16,7 +16,7 @@ const path = require('path');
     document.querySelectorAll('.titlebox').forEach((e) => e.remove());
     const fails = [], table = {};
     const F = (m) => fails.push(m);
-    const lastOk = (st, a) => { const L = String(st).split('→').pop().replace(/,(?=\d{3})/g, ''); return L.replace(/cm²?|°|L|개|살/g, '').includes(String(a).replace(/,/g, '')); };
+    const lastOk = (st, a) => { const L = String(st).split('→').pop().replace(/,(?=\d{3})/g, ''); return L.includes(String(a).replace(/,/g, '')) || L.replace(/cm²?|°|L|개|살/g, '').includes(String(a).replace(/,/g, '')); };
     // ①
     studyCfg.grade = 5; const M0 = M;
     for (let part = 1; part <= 12; part++) {
@@ -56,12 +56,24 @@ const path = require('path');
       }
       gens[g.name] = '잘못 ' + bad + ' · 서로 다른 문제 ' + u.size;
     }
+    // ④ 3~6학년 모든 단원(은행 문제 120개씩): 풀이 비율 90% 이상, 풀이 끝 = 정답
+    const allG = {};
+    for (const g of [3, 4, 5, 6]) for (const t of [1, 2]) QUIZ.unitsOf(g, t).forEach((u, i) => {
+      let made = 0;
+      for (let k = 0; k < 120; k++) {
+        const q = QUIZ.makeQuestion({ grade: g, term: t, unitNos: [u.no || i + 1], tier: 1 + (k % 3), contextMode: 'plain', responseMode: 'choice' });
+        const a = String(q.answer), st = stepSolve({ q: q.q, a });
+        if (st) { made++; if (!lastOk(st, a)) F(g + '-' + t + ' 풀이 끝 ≠ 정답: ' + q.q.replace(/\n/g, ' ') + ' [' + a + '] ⇒ ' + st); if (/NaN|undefined/.test(st)) F('풀이 글 이상: ' + st); }
+      }
+      allG[g + '-' + t + ' ' + u.name] = made + '/120';
+      if (made < 108) F(g + '-' + t + ' ' + u.name + ' 풀이 ' + made + '/120');
+    });
     // 6학년 「직육면체의 부피와 겉넓이」는 원래 생성기 그대로
     if (fqHit('직육면체의 부피와 겉넓이')[1].includes(fqCuboid2)) F('6학년 단원에 새 직육면체 생성기가 섞임');
-    return { table, bank, gens, fails };
+    return { table, bank, gens, allG, fails };
   });
   console.table(r.table);
-  console.log(JSON.stringify({ bank: r.bank, gens: r.gens }, null, 1));
+  console.log(JSON.stringify({ bank: r.bank, gens: r.gens, allG: r.allG }, null, 1));
   console.log('fails', JSON.stringify(r.fails.slice(0, 20), null, 1), 'errs', errs);
   await b.close();
   process.exit(r.fails.length || errs.length ? 1 : 0);
