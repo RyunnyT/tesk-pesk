@@ -65,8 +65,9 @@
       {page:'writing',icon:'pen',title:'글쓰기 피드백',desc:'학생들이 남긴 글을 읽고 답해주세요.',count:unreadWritings},
       {page:'counsel',icon:'chat',title:'학생 상담 요청',desc:'새로운 상담 요청을 확인해 주세요.',count:pendingCounsels}
     ].filter(r=>r.count>0);
+    rows=rows.slice().sort((x,y)=>(y.tone==='danger')-(x.tone==='danger'));   // 걱정되는 글은 항상 맨 위
     const list=rows.length
-      ? rows.map(r=>`<button class="attention-row" onclick="goPage('${esc(r.page)}')"><span class="attention-icon">${icon(r.icon)}</span><span class="attention-text"><strong>${esc(r.title)}</strong><small>${esc(r.desc)}</small></span>${r.count===null?'':`<span class="attention-count">${Number(r.count)||0}<small>${esc(r.unit||'건')}</small></span>`}<span class="attention-arrow" aria-hidden="true">↗</span></button>`).join('')
+      ? rows.map(r=>`<button class="attention-row${r.tone==='danger'?' attention-danger':''}" onclick="goPage('${esc(r.page)}')"><span class="attention-icon">${icon(r.icon)}</span><span class="attention-text"><strong>${esc(r.title)}</strong><small>${esc(r.desc)}</small></span>${r.count===null?'':`<span class="attention-count">${Number(r.count)||0}<small>${esc(r.unit||'건')}</small></span>`}<span class="attention-arrow" aria-hidden="true">↗</span></button>`).join('')
       : `<div class="attention-row attention-clear" role="status"><span class="attention-icon">${icon('check')}</span><span class="attention-text"><strong>지금 먼저 처리할 일이 없어요</strong><small>글쓰기 · 상담 · 승인 · 생기부 초안을 모두 확인했어요.</small></span></div>`;
     box.innerHTML=list+'<p class="attention-note">'+(studentCount?'불러온 학급 데이터 기준 · 처리할 것이 있는 항목만 보여요.':'학생 관리에서 여러 명을 한 번에 추가할 수 있어요.')+'</p>';
   }

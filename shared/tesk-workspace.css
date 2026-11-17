@@ -44,3 +44,26 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{
 @media(max-width:760px){.page [style*="grid-template-columns:minmax(280px"],.page [style*="grid-template-columns:minmax(180px"],.page [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:minmax(0,1fr)!important}.page .stat-grid[style]{grid-template-columns:repeat(2,minmax(0,1fr))!important}.page .shop-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.page .shop-item{min-width:0}.page .card-header{overflow-wrap:anywhere}.page .form-input{max-width:100%}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 @media print{:root{--bg:#fff;--card:#fff;--surface:#fff;--glass:#fff}body{background:#fff}.sidebar,.topbar,.sidebar-backdrop,.home-command-bar,.skip-link{display:none!important}.main{margin:0;width:100%}.content{padding:0}.card{break-inside:avoid;box-shadow:none}}
+
+/* 걱정되는 표현 알림 (shared/safety-signals.js) */
+.attention-row.attention-danger{border-color:#f3b4a6;background:#fff3ef}
+.attention-row.attention-danger>.attention-icon{background:#fde2da;color:#c2410c}
+.attention-row.attention-danger strong{color:#b42318}
+.safety-card{border:1.5px solid #f3b4a6;background:#fff7f4;margin-bottom:16px}
+.safety-card .card-title{color:#b42318}
+.safety-help{font-size:12px;color:var(--sub);margin:4px 0 10px;line-height:1.6}
+.safety-item{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid #f6d5cc;font-size:13px}
+.safety-match{font-size:12px;color:#b42318;margin-top:3px;line-height:1.5}
+.safety-actions{display:flex;gap:6px}
+.safety-banner{border:1.5px solid #f3b4a6;background:#fff3ef;border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.6}
+.safety-banner b{color:#b42318}
+.safety-banner p{margin:6px 0}.safety-banner span{color:var(--sub);font-size:12px}
+.writing-safety-badge{padding:2px 6px;border-radius:99px;font-size:10px;font-weight:800;background:#fde2da;color:#b42318;margin-left:4px}
+.teach-request.urgent{border-left:4px solid #dc2626}
+
+/* 오늘의 지문 사실 확인 */
+.lit-checks{margin-top:12px;padding:12px 14px;border:1.5px solid #f3d6a6;border-radius:12px;background:#fffaf0;font-size:13px}
+.lit-check{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;padding:9px 0;border-top:1px solid #f3e3c4;line-height:1.6}
+.lit-check.wrong .lit-sev{background:#fde2da;color:#b42318}
+.lit-sev{display:inline-block;font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:99px;background:#fdf0d5;color:#92400e;margin-right:4px}
+.lit-check-actions{display:flex;gap:6px}

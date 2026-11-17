@@ -52,7 +52,7 @@
   const actions={back:()=>{examDetailId=null;renderExam();},print:()=>print(ex.name,examTable(ex)),questions:b=>run('exam-save',b,()=>saveExam(ex,{questions:readQuestions(ex),twinDraft:[],twinReviewed:false})),follow:b=>run('exam-save',b,()=>saveExam(ex,{followUp:document.getElementById('teach-exam-follow').value})),review:b=>run('exam-save',b,()=>saveExam(ex,{twinReviewed:document.getElementById('teach-twin-reviewed').checked})),'print-twins':()=>{if(!ex.twinReviewed)return showToast('문제·정답·풀이를 확인하고 검토 상태를 저장해주세요.');print(ex.name+' 보충 문제',(ex.twinDraft||[]).map(q=>'<article><h3>'+q.sourceNo+'번 연습</h3><pre>'+E(q.question)+'</pre></article>').join('')+'<div style="break-before:page"><h2>교사용 정답·풀이</h2>'+(ex.twinDraft||[]).map(q=>'<article><b>'+q.sourceNo+'번</b><pre>'+E(q.answer+'\n'+q.explanation)+'</pre></article>').join('')+'</div>');},twins:b=>run('exam-ai',b,async()=>{if(editor.dataset.dirty==='true')throw Error('수정한 문항 내용을 먼저 저장해주세요.');const qs=(ex.questions||[]).filter(q=>q.confirmed&&s.questions.some(x=>x.no===q.no&&x.wrong>0)).slice(0,10);if(!qs.length)throw Error('오답 결과와 확인한 원문이 있는 문항이 필요합니다.');const r=await callTeachAI(C.twinPrompt(ex,qs),{temperature:0.15,maxTokens:7000,allowPartial:false,continueOnLength:false});await saveExam(ex,{twinDraft:C.validateTwins(r,qs),twinReviewed:false});}),extract:b=>run('exam-extract',b,async()=>{if(!ex.paperText?.trim())throw Error('읽어온 시험지 본문이 없습니다. 원문을 직접 입력해주세요.');const before=JSON.stringify(readQuestions(ex)),raw=await callTeachAI(C.instructions+'\n시험 본문에서 번호별 원문을 그대로 추출하고 정답·학습 내용을 초안으로 작성하세요. 읽을 수 없는 문항은 생략하세요. 출력 {"questions":[{"no":1,"text":"본문의 연속된 원문","answer":"정답 초안","skill":"학습 내용 초안"}]}\nINPUT_JSON\n'+JSON.stringify({totalQ:ex.totalQ,text:ex.paperText}),{temperature:0.1,maxTokens:9000,allowPartial:false,continueOnLength:false});if(before!==JSON.stringify(readQuestions(ex)))throw Error('입력 중 문항이 바뀌었습니다. 다시 실행해주세요.');const qs=C.questions(C.parse(raw).questions.map(q=>({...q,confirmed:false})),ex.totalQ);for(const q of qs){if(!q.text||!ex.paperText.replace(/\s+/g,' ').includes(q.text.replace(/\s+/g,' ')))throw Error(q.no+'번 인용을 본문에서 확인할 수 없습니다.');}for(const q of qs){const tr=el.querySelector('[data-question="'+q.no+'"]');if(tr.querySelector('[data-q="confirmed"]').checked)continue;for(const k of ['text','answer','skill'])tr.querySelector('[data-q="'+k+'"]').value=q[k];}showToast('초안을 채웠어요. 시험지와 대조한 뒤 확인·저장해주세요.');})};bind(el,actions);
  };
  const feedbackDrafts=new Map();
- generateWritingFeedbackOnlyAI=async function(w){const r=C.validateWriting(await callTeachAI(C.writingPrompt(w),{temperature:0.15,maxTokens:2000,allowPartial:false,continueOnLength:false}),w);feedbackDrafts.set(C.signature(w),r);return r.feedback;};
+ generateWritingFeedbackOnlyAI=async function(w){const m=aiMasker(w.studentNum),mw=maskWriting(w,m);/* 이름을 가린 글로 묻고 인용도 가린 글에서 확인한다 */const r=m.unmaskDeep(C.validateWriting(await callTeachAI(C.writingPrompt(mw),{temperature:0.15,maxTokens:2000,allowPartial:false,continueOnLength:false,privacy:m}),mw));feedbackDrafts.set(C.signature(w),r);return r.feedback;};
  const originalWritingDetail=renderPeskWritingDetail;
  renderPeskWritingDetail=function(id){originalWritingDetail(id);const w=peskWritingsAll.find(x=>x.id===id),el=document.getElementById('writing-content');if(!w)return;el.classList.add('teach-ui');const form=document.getElementById('pesk-feedback-form-'+id);if(!form)return;
   form.dataset.basis=C.signature(w);
@@ -74,7 +74,8 @@
  function counselMatches(r){return studentMatch(r)&&(counselFilter==='all'||counselState(r)===counselFilter)&&(r.studentName+' '+r.studentNum+' '+r.type).includes(counselQuery);}
  const sessionsOf=r=>C.counselSessions(r);
  function requestCard(r,read){
-  return '<article class="teach-request"><b>'+E(r.studentName)+'</b> · '+E(r.date)+(read?' · <small>읽음 '+E(r.readAt||'')+'</small>':'')+'<p>'+E(r.reason||r.message||'')+'</p><div class="teach-head teach-left">'
+  const urg=window.SafetySignals?SafetySignals.urgencyOf(r):0,flag=window.safetyFor?safetyFor('request',r.id):null;
+  return '<article class="teach-request'+(urg===2||flag?' urgent':'')+'"><b>'+E(r.studentName)+'</b> · '+E(r.date)+(urg===2?' · <b style="color:#dc2626">많이 급해요</b>':urg===1?' · <b style="color:#b45309">조금 급해요</b>':'')+(read?' · <small>읽음 '+E(r.readAt||'')+'</small>':'')+'<p>'+E(String(r.reason||r.message||'').replace(/\s*\[(?:많이|조금) 급해요\]\s*$/,''))+'</p>'+(flag?safetyBannerHtml(flag):'')+'<div class="teach-head teach-left">'
    +(read?'':'<button class="btn btn-sm btn-secondary" data-request-read="'+E(r.id)+'">읽음 처리</button>')
    +(r.status==='accepted'
      ?(counselRecords.some(c=>c.id===r.counselId)?'<button class="btn btn-sm btn-primary" data-request-open="'+E(r.counselId)+'">상담 기록 열기</button>':'')
@@ -93,9 +94,10 @@
   try{counselRequests=await persist('tesk-counsel-requests',req.id,{...req,status:'accepted',counselId:cid},JSON.stringify(req));}catch(e){showToast('상담은 시작했지만 신청 상태는 갱신하지 못했어요.');}
   counselDetailId=cid;counselPanel='';renderCounsel();showToast('상담을 시작했어요. 결과를 누적 입력하거나 AI로 분석할 수 있어요.');});}
  renderCounsel=function(){if(counselDetailId)return renderCounselDetail(counselDetailId);const el=document.getElementById('counsel-content');el.classList.add('teach-ui');
-  const pending=counselRequests.filter(r=>r.status==='pending'&&studentMatch(r)),read=counselRequests.filter(r=>r.status==='read'&&studentMatch(r)),accepted=counselRequests.filter(r=>r.status==='accepted'&&studentMatch(r));
+  const rank=r=>(window.safetyFor&&safetyFor('request',r.id)?10:0)+(window.SafetySignals?SafetySignals.urgencyOf(r):0);
+  const pending=counselRequests.filter(r=>r.status==='pending'&&studentMatch(r)).sort((a,b)=>rank(b)-rank(a)),read=counselRequests.filter(r=>r.status==='read'&&studentMatch(r)),accepted=counselRequests.filter(r=>r.status==='accepted'&&studentMatch(r));
   const who=counselStudentNum!=null?(students.find(s=>Number(s.num)===Number(counselStudentNum))?.name||counselStudentNum+'번'):'';
-  el.innerHTML='<div class="card"><div class="teach-head"><h3>상담과 다음 약속</h3>'+button('상담 기록 작성','new','btn-primary')+'</div><p>학생의 말과 교사 관찰을 구분하고, 함께 정한 지원을 다시 확인합니다. 감정만으로 위험 등급을 정하지 않습니다.</p>'
+  el.innerHTML=(window.safetyListHtml?safetyListHtml():'')+'<div class="card"><div class="teach-head"><h3>상담과 다음 약속</h3><span>'+('Notification' in window&&Notification.permission!=='granted'?'<button class="btn btn-sm btn-secondary" onclick="enableCounselNotice()">🔔 긴급 알림 켜기</button> ':'')+button('상담 기록 작성','new','btn-primary')+'</span></div><p>학생의 말과 교사 관찰을 구분하고, 함께 정한 지원을 다시 확인합니다. 감정만으로 위험 등급을 정하지 않습니다.</p>'
    +(who?'<p class="teach-filter-chip"><b>'+E(who)+'</b> 학생의 상담만 보는 중 '+button('전체 보기','all-students')+'</p>':'')
    +'<div class="teach-stats">'+Object.entries(states).map(([k,v])=>'<span>'+v+' <b>'+counselRecords.filter(r=>studentMatch(r)&&counselState(r)===k).length+'건</b></span>').join('')+'</div>'
    +'<h4>새 상담 신청 '+pending.length+'건</h4><p class="teach-hint">먼저 <b>읽음 처리</b>(확인만)할지, <b>상담 진행</b>할지 골라 주세요.</p>'+(pending.map(r=>requestCard(r,false)).join('')||'<p>대기 중인 상담 신청이 없어요.</p>')
@@ -116,19 +118,20 @@
   closeModal('modal-new-counsel');counselDetailId=id;counselPanel='';renderCounsel();showToast('상담과 다음 약속을 저장했어요.');
  });};
  // ── 상담 AI: 준비(할 일·발문) / 누적 기록 분석. 결과는 확인 후 [누적 기록에 저장]하면 기록에 쌓인다 ──
- const AI_KIND={prep:{title:'🧭 상담 준비 · 할 일과 발문',rows:[['기록 근거','quote'],['교사가 할 일','todo'],['처음 건넬 말','opening'],['이야기를 듣는 발문','questions'],['마무리 질문','closing'],['피할 말·행동','avoid']]},
+ const AI_KIND={parent:{title:'👪 학부모 상담 준비',rows:[['기록 근거','quote'],['처음 건넬 말','opening'],['전할 관찰 사실','share'],['가정에 여쭐 질문','ask'],['함께 해 볼 일','together'],['피할 표현','avoid']]},prep:{title:'🧭 상담 준비 · 할 일과 발문',rows:[['기록 근거','quote'],['교사가 할 일','todo'],['처음 건넬 말','opening'],['이야기를 듣는 발문','questions'],['마무리 질문','closing'],['피할 말·행동','avoid']]},
   review:{title:'📈 누적 기록 분석',rows:[['기록 근거','quote'],['지난 상담과 달라진 점','change'],['이어지는 약속·남은 과제','kept'],['교사가 할 일','todo'],['다음 상담 발문','questions'],['다음에 확인할 점','nextFocus']]}};
  function aiResultHtml(kind,result){return AI_KIND[kind].rows.map(([label,k])=>{const v=result[k];return '<div class="teach-ai-row"><b>'+label+'</b>'+(Array.isArray(v)?'<ul>'+v.map(x=>'<li>'+E(x)+'</li>').join('')+'</ul>':'<p>'+E(v)+'</p>')+'</div>';}).join('');}
  function aiNotesHtml(r){const notes=Array.isArray(r.aiNotes)?r.aiNotes:[];if(!notes.length)return '';
-  return '<details class="card teach-ai-notes" open><summary>AI 분석 기록 '+notes.length+'회 · 선생님이 저장한 것만</summary>'+notes.slice().reverse().map(n=>'<article><div class="teach-head teach-left"><b>'+E(AI_KIND[n.kind]?.title||'AI 분석')+' · '+E(n.date||'')+(n.sessions?' · 누적 '+n.sessions+'회 기준':'')+'</b><button class="btn btn-sm btn-secondary" data-ai-note-delete="'+E(n.id)+'">삭제</button></div>'+(AI_KIND[n.kind]?aiResultHtml(n.kind,n.result||{}):'')+'</article>').join('')+'</details>';}
+  return '<details class="card teach-ai-notes" open><summary>AI 분석 기록 '+notes.length+'회 · 선생님이 저장한 것만</summary>'+notes.slice().reverse().map(n=>'<article><div class="teach-head teach-left"><b>'+E(AI_KIND[n.kind]?.title||'AI 분석')+' · '+E(n.date||'')+(n.sessions?' · 누적 '+n.sessions+'회 기준':'')+(n.ai?' · '+E(aiStampText(n.ai)):'')+'</b><button class="btn btn-sm btn-secondary" data-ai-note-delete="'+E(n.id)+'">삭제</button></div>'+(AI_KIND[n.kind]?aiResultHtml(n.kind,n.result||{}):'')+'</article>').join('')+'</details>';}
  async function runCounselAI(btn,r,kind){const id=r.id;await run('counsel-ai',btn,async()=>{const sig=JSON.stringify(r);
-  const raw=await callTeachAI(kind==='prep'?C.counselPrepPrompt(r):C.counselReviewPrompt(r),{temperature:0.1,maxTokens:2400,allowPartial:false,continueOnLength:false});
-  const result=kind==='prep'?C.validateCounselPrep(raw,r):C.validateCounselReview(raw,r);
+  const m=aiMasker(r.studentNum),mr=maskCounsel(r,m);   // 기록 속 이름(다른 학생 포함)을 가려서 보낸다
+  const raw=await callTeachAI(kind==='prep'?C.counselPrepPrompt(mr):kind==='parent'?C.counselParentPrompt(mr):C.counselReviewPrompt(mr),{temperature:0.1,maxTokens:2400,allowPartial:false,continueOnLength:false,privacy:m});
+  const result=m.unmaskDeep(kind==='prep'?C.validateCounselPrep(raw,mr):kind==='parent'?C.validateCounselParent(raw,mr):C.validateCounselReview(raw,mr));
   if(counselDetailId!==id||JSON.stringify(counselRecords.find(c=>c.id===id))!==sig)throw Error('상담 기록이 바뀌었습니다. 다시 실행해주세요.');
   const box=document.getElementById('teach-counsel-ai');
   box.innerHTML='<div class="teach-ai-result"><h4>'+AI_KIND[kind].title+'</h4><p class="teach-hint">기록을 인용한 참고 제안입니다. 학생과 확인하며 쓰고, 필요한 것만 저장하세요.</p>'+aiResultHtml(kind,result)+'<div class="teach-head teach-left">'+button('💾 누적 기록에 저장','ai-save','btn-primary')+button('닫기','ai-close')+'</div></div>';
   bind(box,{'ai-close':()=>{box.innerHTML='';},'ai-save':b=>run('counsel-ai-save',b,async()=>{const live=counselRecords.find(c=>c.id===id);if(!live)throw Error('상담 기록을 찾지 못했어요.');
-   const note={id:uid(),kind,date:localDate(),at:new Date().toISOString(),sessions:sessionsOf(live).length,result};
+   const note={id:uid(),kind,date:localDate(),at:new Date().toISOString(),sessions:sessionsOf(live).length,result,ai:aiStamp('counsel-'+kind)};
    counselRecords=await persist('tesk-counsels',id,{...live,aiNotes:[...(Array.isArray(live.aiNotes)?live.aiNotes:[]),note].slice(-20)},JSON.stringify(live));
    counselPanel='';renderCounselDetail(id);showToast('AI 분석을 누적 기록에 저장했어요.');})});
  });}
@@ -138,7 +141,7 @@
  renderCounselDetail=function(id){const r=counselRecords.find(c=>c.id===id);if(!r){counselDetailId=null;return renderCounsel();}const el=document.getElementById('counsel-content');el.classList.add('teach-ui');const labels=[['학생이 한 말','voice'],['교사가 관찰한 사실','content'],['학생이 원하는 도움','need'],['함께 정한 지원','plan'],['재확인 결과','outcome']];const sessions=sessionsOf(r);
   const sessionForm='<div class="teach-grid">'+field('상담한 날짜','teach-session-date',localDate(),'date')+'<label>진행 상태<select id="teach-session-state">'+Object.entries(states).map(([k,v])=>'<option value="'+k+'" '+(counselState(r)===k?'selected':'')+'>'+v+'</option>').join('')+'</select></label></div>'+area('이번 상담 내용 · 결과 (학생의 말, 관찰, 변화)','teach-session-note','',4)+area('다음 약속 · 다음에 확인할 것 (선택)','teach-session-next','',2)+field('다음에 다시 확인할 날짜 (선택)','teach-session-review',r.reviewDate||'','date')+'<div class="teach-head">'+button('누적 결과 저장','session-save','btn-primary')+button('취소','panel-close')+'</div>';
   el.innerHTML='<div class="teach-head teach-left">'+button('목록으로','back')+button('기록 전체 수정','edit')+button('기록 인쇄','print')+button('기록 삭제','delete')+'</div>'
-   +'<div class="card teach-next-step"><h3>'+E(r.studentName)+' · '+E(states[counselState(r)])+(sessions.length?' · 누적 '+sessions.length+'회':'')+'</h3><p>다음에 할 일을 골라 주세요.</p><div class="teach-head teach-left">'+button('📝 상담 결과 누적 입력','session','btn-primary')+button('🧭 상담 준비 AI · 할 일과 발문','prep','btn-purple')+button('📈 누적 기록 AI 분석'+(sessions.length?'':' (결과 입력 후)'),'ai','btn-purple')+'</div>'
+   +'<div class="card teach-next-step"><h3>'+E(r.studentName)+' · '+E(states[counselState(r)])+(sessions.length?' · 누적 '+sessions.length+'회':'')+'</h3><p>다음에 할 일을 골라 주세요.</p><div class="teach-head teach-left">'+button('📝 상담 결과 누적 입력','session','btn-primary')+button('🧭 상담 준비 AI · 할 일과 발문','prep','btn-purple')+button('👪 학부모 상담 준비 AI','parent','btn-purple')+button('📈 누적 기록 AI 분석'+(sessions.length?'':' (결과 입력 후)'),'ai','btn-purple')+'</div>'
    +'<div id="teach-counsel-panel">'+(counselPanel==='session'?sessionForm:'')+'</div><div id="teach-counsel-ai"></div></div>'
    +aiNotesHtml(r)
    +'<div class="card"><h4>누적 상담 결과 '+sessions.length+'회</h4>'+(sessions.slice().reverse().map((x,i)=>'<article><b>'+(sessions.length-i)+'회차 · '+E(x.date||'')+(x.state?' · '+E(states[x.state]||''):'')+'</b><pre>'+E(x.note)+'</pre>'+(x.next?'<p>다음 약속: '+E(x.next)+'</p>':'')+'</article>').join('')||'<p>아직 누적한 결과가 없어요. [상담 결과 누적 입력]으로 상담할 때마다 기록해 두세요.</p>')+'</div>'
@@ -154,6 +157,7 @@
     const next=C.counsel({...live,state,reviewDate:review||'',sessions:[...sessionsOf(live),{id:uid(),date,note,next:nextText,state,at:new Date().toISOString()}]});
     counselRecords=await persist('tesk-counsels',id,next,JSON.stringify(live));counselPanel='';renderCounselDetail(id);showToast('상담 결과를 누적했어요. ('+sessionsOf(next).length+'회차)');}),
    prep:b=>runCounselAI(b,r,'prep'),
+   parent:b=>runCounselAI(b,r,'parent'),
    ai:b=>{if(!sessions.length)return showToast('상담 결과를 먼저 누적 입력해 주세요. 그 기록을 바탕으로 분석해요.');runCounselAI(b,r,'review');}});
   el.querySelectorAll('[data-ai-note-delete]').forEach(b=>b.onclick=()=>deleteAINote(id,b.dataset.aiNoteDelete,b));el.querySelectorAll('[data-timeline]').forEach(b=>b.onclick=()=>{counselDetailId=b.dataset.timeline;counselPanel='';renderCounsel();});
  };

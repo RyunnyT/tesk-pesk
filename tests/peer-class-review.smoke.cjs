@@ -44,6 +44,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   assert.equal(await f.evaluate(()=>opts.thinkingBudget),4096);assert.equal(await f.evaluate(()=>opts.maxTokens),16384);
   // Exercise the real Gemini adapter with a fake network response, never real student data or credentials.
   const config=await f.evaluate(async()=>{
+   settings.aiNotice={version:1,at:'2026-11-17'};   // 처음 한 번 뜨는 AI 안내는 이미 본 것으로
    _getApiCreds=()=>({provider:'gemini-2.5-flash',key:'fictional-test-key'});
    _fetchJsonWithRetry=async(url,options)=>{window.requestBody=JSON.parse(options.body);return {candidates:[{finishReason:'STOP',content:{parts:[{thought:true,text:'not output'},{text:JSON.stringify(reply)}]}}]};};
    const raw=await originalAI('가상 학급',opts);if(raw.includes('not output'))throw Error('thought leaked');

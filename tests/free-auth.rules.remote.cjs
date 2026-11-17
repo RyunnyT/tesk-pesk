@@ -43,7 +43,7 @@ const D='classrooms/room/data/';
 
 // ── 전환 전 학급: 지금까지와 같다 ──
 check('legacy anonymous reads roster',D+'tesk-students','get',ids.anon,true,{w:legacy});
-check('legacy anonymous writes roster',D+'tesk-students','update',ids.anon,true,{w:legacy});
+check('legacy anonymous writes roster',D+'tesk-students','update',ids.anon,true,{w:legacy,old:{value:[],rev:3},next:{value:[],rev:4}});
 check('legacy anonymous reads accounts (unchanged risk)',D+'tesk-accounts','get',ids.anon,true,{w:legacy});
 check('legacy counsels stay private',D+'tesk-counsels','get',ids.anon,false,{w:legacy});
 check('legacy anonymous cannot write teacher keys',D+'tesk-settings','update',ids.anon,false,{w:legacy});
@@ -67,7 +67,16 @@ check('secured anonymous writing create denied',D+'pesk-writings/items/w','creat
 for(const key of ['tesk-students','tesk-shop','pesk-deposits','pesk-portfolios','pesk-peer-survey','pesk-quiz-progress','pesk-quiz-summary']){
  check('student reads '+key,D+key,'get',ids.student,true);
 }
-for(const key of ['tesk-students','pesk-deposits','pesk-portfolios','pesk-checklists','tesk-counsel-requests'])check('student writes '+key,D+key,'update',ids.student,true);
+for(const key of ['tesk-students','pesk-deposits','pesk-portfolios','pesk-checklists','tesk-counsel-requests'])check('student writes '+key,D+key,'update',ids.student,true,{old:{value:[],rev:3},next:{value:[],rev:4}});
+// 돈 문서: rev 가 정확히 1 오른 쓰기만 (낡은 사본 덮어쓰기 방지)
+for(const key of ['tesk-students','pesk-deposits','pesk-portfolios','tesk-shop','pesk-auctions','pesk-purchases']){
+ check('stale overwrite denied (same rev) '+key,D+key,'update',ids.student,false,{old:{value:[],rev:3},next:{value:[],rev:3}});
+ check('overwrite without rev denied '+key,D+key,'update',ids.student,false,{old:{value:[],rev:3},next:{value:[]}});
+ check('teacher stale overwrite denied '+key,D+key,'update',ids.teacher,false,{old:{value:[],rev:3},next:{value:[],rev:2}});
+ check('teacher rev+1 allowed '+key,D+key,'update',ids.teacher,true,{old:{value:[],rev:3},next:{value:[],rev:4}});
+}
+check('first write (create) needs no rev',D+'pesk-deposits','create',ids.student,true,{next:{value:{}}});
+check('non-money doc ignores rev',D+'pesk-checklists','update',ids.student,true,{old:{value:{},rev:3},next:{value:{}}});
 for(const key of ['tesk-accounts','tesk-counsels','tesk-friends','tesk-activities']){
  check('student private read denied '+key,D+key,'get',ids.student,false);
  check('student private write denied '+key,D+key,'update',ids.student,false);
@@ -150,8 +159,8 @@ check('writing rules do not open quiz paths',D+'pesk-avatars/students/1','update
 // ── 학급 공동 기금 · 경매 (학생이 기부·입찰하며 씀) / 교사 전용 경제 설정 ──
 check('student cannot write class fund (hidden feature)',D+'pesk-class-fund','update',ids.student,false);
 for(const key of ['pesk-auctions']){
- check('student writes '+key,D+key,'update',ids.student,true);
- check('legacy anonymous writes '+key,D+key,'update',ids.anon,true,{w:legacy});
+ check('student writes '+key,D+key,'update',ids.student,true,{old:{value:[],rev:3},next:{value:[],rev:4}});
+ check('legacy anonymous writes '+key,D+key,'update',ids.anon,true,{w:legacy,old:{value:[],rev:3},next:{value:[],rev:4}});
  check('other room student denied '+key,D+key,'update',ids.studentB,false);
 }
 for(const key of ['tesk-bank-settings','tesk-wealth-tax','tesk-stock-index','tesk-econ-snapshots','pesk-econ-archive-2026-W41']){

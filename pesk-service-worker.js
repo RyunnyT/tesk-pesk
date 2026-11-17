@@ -1,4 +1,4 @@
-const PESK_CACHE = 'pesk-shell-v66-stock-names';
+const PESK_CACHE = 'pesk-shell-v70-ops';
 const PESK_ASSETS = [
   './landing.html',
   './pesk.html',
@@ -15,6 +15,11 @@ const PESK_ASSETS = [
   './shared/pesk-writing-store.js?v=20261021sem1',
   './shared/pesk-quiz-store.js?v=20261006split1',
   './shared/stock-list.js?v=20261116names',
+  './shared/version.js?v=20261117a',
+  './shared/error-report.js?v=20261117a',
+  './shared/site-notice.js?v=20261117a',
+  './shared/econ-guard.js?v=20261117a',
+  './shared/usage-meter.js?v=20261117a',
   './shared/econ-core.js?v=20261112auc',
   './shared/pesk-econ-ui.js?v=20261112auc',
   './shared/pesk-seat-auction.js?v=20261009seat3',
@@ -25,7 +30,7 @@ const PESK_ASSETS = [
   './shared/pesk-boss-catalog.js?v=20260910rpg2',
   './shared/pesk-subjects.js',
   './shared/todo-schedule.js?v=20261004todo2',
-  './shared/literacy-core.js?v=20261005lit2',
+  './shared/literacy-core.js?v=20261117b',
   './shared/pesk-progression.js?v=20261004grow1',
   './shared/economy-ownership.js?v=20260930bank1',
   './shared/pesk-student-auth-free.js?v=20261001app1',

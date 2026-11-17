@@ -111,7 +111,12 @@ function renderEconIndicators(){
   const today = new Date().toISOString().slice(0, 10);
   const weekAgo = [...snaps].reverse().find(x => x.date <= new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10));
   if(m.students && (!snaps.length || snaps[snaps.length - 1].date !== today) && Object.keys(_peskDepositsCache || {}).length + Object.keys(_peskPortfoliosCache || {}).length){
-    const next = snaps.filter(x => x.date !== today).concat({date: today, cash: m.cash, deposits: m.deposits, stocks: m.stocks, total: m.total, gini: m.gini, top10: m.top10Share}).slice(-120);
+    // 최근 14일은 학생별 잔액도 남긴다 — 잔액이 설명 없이 되돌아갔을 때 '어제 값'을 찾을 수 있게 (shared/econ-audit.js)
+    const balances = {};
+    (students || []).forEach(s => { const a = typeof computeStudentAssets === 'function' ? computeStudentAssets(Number(s.num)) : {}; balances[s.num] = [Number(s.points || 0), Number(a.depositTotal || 0), Number(a.stockValue || 0)]; });
+    const cutoff = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
+    const next = snaps.filter(x => x.date !== today).map(x => x.date < cutoff && x.balances ? (({balances, ...rest}) => rest)(x) : x)
+      .concat({date: today, cash: m.cash, deposits: m.deposits, stocks: m.stocks, total: m.total, gini: m.gini, top10: m.top10Share, balances}).slice(-120);
     save('tesk-econ-snapshots', next);
   }
   const diff = (now, prev) => { if(prev == null) return ''; const d = now - prev; return ' <span style="font-size:10px;color:' + (d >= 0 ? '#15803d' : '#b91c1c') + ';">' + (d >= 0 ? '▲' : '▼') + Math.abs(d).toLocaleString() + '</span>'; };

@@ -355,6 +355,14 @@ select.field-input:focus{border-color:var(--master);}
               <option value="dark">다크</option>
             </select>
           </div>
+          <div class="field">
+            <label><input type="checkbox" id="notice-students"> 학생 화면(Pesk)에도 보이기</label>
+          </div>
+          <div class="field">
+            <label>보이는 마지막 날 (비우면 끌 때까지)</label>
+            <input class="field-input" type="date" id="notice-until">
+          </div>
+          <div style="font-size:12px;color:var(--sub);margin:-4px 0 10px;">교사 화면(Tesk)에는 항상 보여요. 선생님이 닫으면 그 공지는 그 기기에서 다시 뜨지 않아요.</div>
           <div class="form-actions">
             <button class="btn btn-master" onclick="saveNotice(true)">✅ 공지 활성화</button>
             <button class="btn btn-ghost" onclick="saveNotice(false)">⏸ 비활성화</button>
@@ -527,6 +535,8 @@ async function loadAllData(){
       const nd = noticeSnap.data();
       document.getElementById('notice-text').value = nd.text||'';
       document.getElementById('notice-color').value = nd.color||'tesk';
+      if(document.getElementById('notice-students')) document.getElementById('notice-students').checked = !!nd.students;
+      if(document.getElementById('notice-until')) document.getElementById('notice-until').value = nd.until ? String(nd.until).slice(0,10) : '';
     }
 
     // 통계 업데이트
@@ -776,7 +786,9 @@ async function saveNotice(active){
   try{
     await window._fsSetDoc(
       window._fsDoc(window._db,'master','notices'),
-      { text, color, active, updatedAt: new Date().toISOString() }
+      { text, color, active, students: !!document.getElementById('notice-students')?.checked,
+        until: document.getElementById('notice-until')?.value ? document.getElementById('notice-until').value + 'T23:59:59+09:00' : '',
+        updatedAt: new Date().toISOString() }
     );
     document.getElementById('notice-status-text').textContent = active ? '✅ 활성화됨' : '⏸ 비활성화됨';
     document.getElementById('stat-notice').textContent = active ? '활성' : '비활성';

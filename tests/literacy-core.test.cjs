@@ -89,3 +89,20 @@ test('rendered sheet escapes text and never emphasises passage words',()=>{
   const text=html.slice(html.indexOf('lit-text'),html.indexOf('한눈에 정리'));assert.ok(!/<(b|strong|em|mark)\b/.test(text));
   assert.equal((L.renderSheet(s,{reveal:true}).match(/data-lit-blank=/g)||[]).length,0);
 });
+
+test('사실 검수: 지문에 있는 문장만 받고, 고친 문장으로 바꾸고, 남은 확인 항목을 센다',()=>{
+  const L=require('../shared/literacy-core.js');
+  const sheet={title:'물',paragraphs:['물은 온도에 따라 모습이 바뀌어.','물은 90도에서 끓기 시작해.']};
+  const p=L.buildReviewPrompt(sheet,{level:'low'});
+  assert.match(p.system,/감수자/);assert.match(p.user,/2문단: 물은 90도에서/);
+  const issues=L.validateReview(JSON.stringify({issues:[
+    {quote:'물은 90도에서 끓기 시작해.',problem:'물은 100도에서 끓는다',fix:'물은 100도에서 끓기 시작해.',severity:'틀림'},
+    {quote:'지문에 없는 문장입니다',problem:'x',severity:'틀림'}]}),sheet);
+  assert.equal(issues.length,1);
+  assert.match(L.applyFix(sheet,issues[0]).paragraphs[1],/100도/);
+  const review={issues,claims:[{text:'물은 90도에서 끓기 시작해.',sure:false}],closed:[]};
+  assert.deepEqual([L.openChecks(review).total,L.openChecks(review).wrong],[2,1]);
+  assert.equal(L.openChecks({...review,closed:['i0','c0']}).total,0);
+  assert.equal(L.openChecks(null).total,0);
+  const r=L.fromAi({claims:[{text:'a',sure:false},{text:''}]},{level:'low'});assert.equal(r.claims.length,1);
+});

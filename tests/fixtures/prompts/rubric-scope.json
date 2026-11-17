@@ -1,0 +1,56 @@
+[
+ {
+  "measure": {
+   "chars": 132,
+   "sentences": 8,
+   "paragraphs": 1
+  },
+  "blocked": false,
+  "assessable": [
+   "purpose",
+   "content",
+   "evidence",
+   "organization",
+   "cohesion",
+   "expression",
+   "conventions"
+  ],
+  "skipped": [
+   {
+    "key": "audience",
+    "label": "독자 고려·전달 효과",
+    "need": "공백 제외 글자 150개 이상"
+   }
+  ],
+  "reason": "분량이 짧아 1개 영역은 평가하지 않았어요. (132자 · 8문장 · 1문단)"
+ },
+ {
+  "measure": {
+   "chars": 65,
+   "sentences": 5,
+   "paragraphs": 1
+  },
+  "blocked": false,
+  "assessable": [
+   "purpose",
+   "evidence",
+   "organization",
+   "cohesion",
+   "expression",
+   "conventions"
+  ],
+  "skipped": [
+   {
+    "key": "content",
+    "label": "내용 생성·정교화",
+    "need": "공백 제외 글자 100개 이상"
+   },
+   {
+    "key": "audience",
+    "label": "독자 고려·전달 효과",
+    "need": "공백 제외 글자 150개 이상"
+   }
+  ],
+  "reason": "분량이 짧아 2개 영역은 평가하지 않았어요. (65자 · 5문장 · 1문단)"
+ }
+]

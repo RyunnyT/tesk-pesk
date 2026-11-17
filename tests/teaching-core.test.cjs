@@ -34,3 +34,22 @@ test('counsel prep and cumulative review AI need real quotes and reject diagnosi
  assert.equal(C.validateCounselReview(review,withSession).change,'놀림 이야기가 줄었다');
  assert.doesNotMatch(C.counselPrepPrompt({...withSession,studentName:'김비밀'}),/김비밀/);assert.match(C.counselReviewPrompt(withSession),/짝 활동이 재미있었다고 말함/);
 });
+
+test('근거 인용 대조: 공백·줄바꿈·따옴표 차이만 넘어간다',()=>{
+  const C=require('../shared/teaching-core.js');
+  assert.equal(C.quoteIn('오늘은  학교에\n갔다','오늘은 학교에 갔다'),true);
+  assert.equal(C.quoteIn('그는 “안녕”이라고 했다','그는 "안녕"이라고 했다'),true);
+  assert.equal(C.quoteIn('오늘은 학교에 갔다','오늘은 학교에 갔었다'),false,'글자가 바뀐 인용은 거절');
+  assert.equal(C.quoteIn('오늘은 학교에 갔다','갔다'),false,'너무 짧은 인용은 근거가 아니다');
+});
+
+test('학부모 상담 준비: 기록 인용과 진단·탓하는 표현 차단',()=>{
+  const C=require('../shared/teaching-core.js');
+  const r={voice:'쉬는 시간에 같이 놀고 싶어요',content:'쉬는 시간에 혼자 서 있는 모습을 보았다',sessions:[]};
+  assert.match(C.counselParentPrompt(r),/학부모를 탓하거나 가정의 원인을 추정하지 않습니다/);
+  const ok={quote:'같이 놀고 싶어요',opening:'오늘 시간 내 주셔서 고맙습니다.',share:['쉬는 시간에 혼자 서 있는 모습을 보았어요'],ask:['집에서는 친구 이야기를 하나요?'],together:'쉬는 시간 놀이 하나 정하기',avoid:'성격 탓하는 말'};
+  assert.equal(C.validateCounselParent(JSON.stringify(ok),r).share.length,1);
+  assert.throws(()=>C.validateCounselParent(JSON.stringify({...ok,share:['가정교육 문제로 보여요']}),r),/진단·위험/);
+  assert.throws(()=>C.validateCounselParent(JSON.stringify({...ok,together:'분리불안이 의심돼요'}),r),/진단·위험/);
+  assert.throws(()=>C.validateCounselParent(JSON.stringify({...ok,quote:'기록에 없는 말이에요'}),r),/없는 인용/);
+});

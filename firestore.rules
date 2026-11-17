@@ -101,6 +101,14 @@ service cloud.firestore {
         'tesk-teacher-notif'
       ];
     }
+    // 돈 문서: rev 가 1씩 오르는 쓰기만 허용 (shared/econ-guard.js)
+    function isRevKey(key) {
+      return key in ['tesk-students', 'pesk-portfolios', 'pesk-deposits', 'tesk-shop', 'pesk-auctions', 'pesk-purchases'];
+    }
+    function revOk(key) {
+      return !isRevKey(key) || resource == null
+        || request.resource.data.get('rev', 0) == resource.data.get('rev', 0) + 1;
+    }
     // 전환한 학급의 학생이 쓸 수 있는 문서 — 계정 문서와 옛 글 묶음 문서는 빠진다.
     function isStudentCompatibleKey(key) {
       return key in [
@@ -123,7 +131,7 @@ service cloud.firestore {
     // 교사만 읽는 문서: 상담·생활기록부(누가기록)·관찰 기록·자리배치 근거
     function isTeacherOnlyKey(key) {
       return key in ['tesk-accounts', 'tesk-counsels', 'tesk-friends', 'tesk-activities',
-        'tesk-records', 'tesk-observations', 'tesk-seats'];
+        'tesk-records', 'tesk-observations', 'tesk-seats', 'tesk-safety-acks'];
     }
 
     // ── 전환한 학급의 글 (개별 문서) ── 본인 글만, 교사 피드백·읽음 표시는 못 바꾼다.
@@ -262,14 +270,21 @@ service cloud.firestore {
         }
 
         allow read: if isMaster() || ownsRoom(roomId)
-          || (!isSecuredRoom(roomId) && !(key in ['tesk-counsels', 'tesk-records', 'tesk-observations', 'tesk-seats']))
+          || (!isSecuredRoom(roomId) && !(key in ['tesk-counsels', 'tesk-records', 'tesk-observations', 'tesk-seats', 'tesk-safety-acks', 'tesk-friends', 'tesk-activities']))
           || (!isTeacherOnlyKey(key) && isStudentOfRoom(roomId));
 
         // Teachers can write every class data document in their own room.
         // Students can write only the Pesk-facing data documents listed above.
-        allow write: if isMaster() || ownsRoom(roomId)
+        // 돈 문서(잔액·주식·예금·상점·경매·구매)는 rev 가 정확히 1 오른 쓰기만 받는다 — 낡은 사본으로 통째로 덮어쓰기 방지.
+        // 앱(shared/econ-guard.js)이 트랜잭션 안에서 읽은 rev 에 1을 더해 쓴다. 문서가 처음 생길 때(create)는 검사하지 않는다.
+        allow create: if isMaster() || ownsRoom(roomId)
           || (!isSecuredRoom(roomId) && isPeskWritableDataKey(key))
           || (isStudentOfRoom(roomId) && isStudentCompatibleKey(key));
+        allow update: if (isMaster() || ownsRoom(roomId)
+          || (!isSecuredRoom(roomId) && isPeskWritableDataKey(key))
+          || (isStudentOfRoom(roomId) && isStudentCompatibleKey(key)))
+          && revOk(key);
+        allow delete: if isMaster() || ownsRoom(roomId);
       }
     }
 
@@ -283,7 +298,7 @@ service cloud.firestore {
         && request.resource.data.ownerUid == resource.data.ownerUid
         && request.resource.data.roomId == resource.data.roomId
         && ownsRoom(resource.data.roomId));
-      allow delete: if isMaster();
+      allow delete: if isMaster() || (isApprovedTeacher() && resource.data.ownerUid == myUid());
     }
 
     match /master/{doc} {

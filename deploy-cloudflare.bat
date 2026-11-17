@@ -23,6 +23,8 @@ if exist "%~dp0shared" (
     mkdir "%DEPLOY_DIR%\shared"
     copy "%~dp0shared\*.js" "%DEPLOY_DIR%\shared\" >nul
     if exist "%~dp0shared\*.css" copy "%~dp0shared\*.css" "%DEPLOY_DIR%\shared\" >nul
+    rem 기본 지문 은행(literacy-bank.json) 같은 자료 파일
+    if exist "%~dp0shared\*.json" copy "%~dp0shared\*.json" "%DEPLOY_DIR%\shared\" >nul
 )
 
 echo [3/6] PWA 자산(매니페스트/서비스워커/아이콘) + 아바타 스프라이트 복사...

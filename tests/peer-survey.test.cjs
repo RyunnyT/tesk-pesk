@@ -81,6 +81,9 @@ function teacher(){
   Object.assign(c,{TESK_ROOM:'demo',peskSurveyAll:{},peskSurveyRounds:{},activePeskSurveyRoundId:'round-1',friendRoundView:'r2',friendData:[],accountUidForStudent:()=>'',showToast:m=>f.alerts.push(m),renderFriends:()=>{},openAppFormModal:async()=>({label:'2회차'}),_fbReady:true});
   const s=html('tesk_teacher_v2.html');vm.runInContext(s.slice(s.indexOf('let friendBestPicks='),s.indexOf('function openFriendSurvey()')),c);
   c.renderFriends=()=>{};
+  // AI에 보내기 전 이름 가리기 (shared/ai-privacy.js)
+  c.AiPrivacy=require('../shared/ai-privacy.js');c.settings={};
+  vm.runInContext(s.slice(s.indexOf('function aiMasker('),s.indexOf('function maskWriting(')),c);
   return f;
 }
 test('teacher round creation and activation preserve concurrent responses on retries',async()=>{

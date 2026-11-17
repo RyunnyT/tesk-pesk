@@ -31,6 +31,9 @@ export const MASTER_EMAILS = ['asx0203@gmail.com'];
 // 비워두면 기존 프록시 방식으로 자동 폴백합니다(동작 변화 없음).
 export const STOCK_PRICE_WORKER_URL = 'https://stock-price-worker.asx0203.workers.dev';
 
+// 오류 모으기 Worker 주소 (worker/log-worker.js). 비워 두면 오류를 보내지 않고 각 기기의 최근 오류 목록에만 남긴다.
+export const ERROR_WORKER_URL = '';
+
 // 경제 로직을 서버(Cloud Functions)로 처리할지 여부.
 //  false → 기존 클라이언트 트랜잭션 방식(함수 배포 전 기본값, 동작 변화 없음)
 //  true  → 경제 서버 호출 (전체 경제 경로 이전 전에는 켜지 않는다)
@@ -70,5 +73,6 @@ if (typeof window !== 'undefined') {
   window.TESK_USE_SERVER_ECONOMY = USE_SERVER_ECONOMY;
   window.TESK_USE_SERVER_STUDENT_AUTH = USE_SERVER_STUDENT_AUTH;
   window.TESK_STOCK_WORKER_URL = STOCK_PRICE_WORKER_URL;
+  window.TESK_ERROR_WORKER_URL = ERROR_WORKER_URL;
   window.TESK_PESK_DEMO = PESK_DEMO;
 }

@@ -189,8 +189,9 @@
   busy.add(num);await drawReport();
   try{
    const d=await gather(num),{packet,sig}=stateFor(d);
-   const raw=await callTeachAI(SU().prompt(packet),{temperature:0.25,maxTokens:9000,allowPartial:false,continueOnLength:false});
-   const checked=SU().validate(raw,packet);
+   const m=aiMasker(num),{_aliases:al,...rest}=packet,mp={...m.maskDeep(rest),...(al?{_aliases:al}:{})};   // 자유 서술 속 이름까지 가린다
+   const raw=await callTeachAI(SU().prompt(mp),{temperature:0.25,maxTokens:9000,allowPartial:false,continueOnLength:false,privacy:m});
+   const checked=m.unmaskDeep(SU().validate(raw,mp));
    if(stateFor(await gather(num)).sig!==sig){showToast('만드는 동안 자료가 바뀌었어요. 다시 만들어 주세요.');return;}
    // 교사용은 이름을 되돌리고, 학부모용은 이름 없는 원문(친구 A → 한 친구)을 씁니다
    const teacher=SU().restore(checked,packet,roster());
@@ -282,8 +283,9 @@
   if(classBusy)return;classBusy=true;mountClass(analysis);
   try{
    const g=gatherClass(analysis),packet=SU().buildClass(g.input),sig=JSON.stringify(SU().classPrompt(packet));
-   const raw=await callTeachAI(SU().classPrompt(packet),{temperature:0.25,maxTokens:8000,allowPartial:false,continueOnLength:false});
-   const r=SU().restoreClass(SU().validateClass(raw,packet),packet,roster());
+   const m=aiMasker(null),{_aliases:al,...rest}=packet,mp={...m.maskDeep(rest),...(al?{_aliases:al}:{})};
+   const raw=await callTeachAI(SU().classPrompt(mp),{temperature:0.25,maxTokens:8000,allowPartial:false,continueOnLength:false,privacy:m});
+   const r=m.unmaskDeep(SU().restoreClass(SU().validateClass(raw,mp),packet,roster()));
    classResults.set(g.roundId,{sig,packet,result:r});showToast('학급 결과지를 만들었어요.');
   }catch(err){showToast('학급 결과지를 만들지 못했어요: '+err.message);}
   finally{classBusy=false;if(document.getElementById('su-class'))mountClass(analysisNow());}

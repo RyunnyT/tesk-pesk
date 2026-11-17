@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tesk & Pesk 이용 안내</title>
+<style>
+:root{--bg:#f6f7f4;--card:#fff;--text:#1d2420;--sub:#5d6660;--line:#e3e7e2;--accent:#2d7a47;--warn:#b42318;--warn-bg:#fff3ef}
+@media (prefers-color-scheme:dark){:root{--bg:#141815;--card:#1d221e;--text:#e8ece9;--sub:#a5aea8;--line:#2f3631;--accent:#7fc59a;--warn:#ff9b85;--warn-bg:#2b1c18}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,'Malgun Gothic',system-ui,sans-serif;line-height:1.75}
+main{max-width:760px;margin:0 auto;padding:28px 16px 60px}
+h1{font-size:24px;margin:0 0 4px}
+.lead{color:var(--sub);font-size:14px;margin:0 0 18px}
+.draft{background:var(--warn-bg);color:var(--warn);border:1px solid currentColor;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;margin-bottom:18px}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+h2{font-size:16px;margin:0 0 8px;color:var(--accent)}
+p,li{font-size:14px}
+ul{padding-left:20px;margin:6px 0}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border-top:1px solid var(--line);padding:7px 6px;text-align:left;vertical-align:top}
+th{width:30%;color:var(--sub);font-weight:700}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Tesk & Pesk 이용 안내</h1>
+  <p class="lead">선생님이 학급을 운영하는 Tesk와 학생이 쓰는 Pesk에 대한 안내입니다.</p>
+  <div class="draft" role="note">초안 — 법률 검토 전입니다. 학교·교육청의 개인정보 지침이 우선합니다. 학부모 안내가 필요하면 아래 내용을 학교 사정에 맞게 고쳐 쓰세요.</div>
+
+  <section>
+    <h2>이 서비스는</h2>
+    <ul>
+      <li>개인이 무료로 운영하는 학급 운영 도구입니다. 요금을 받지 않습니다.</li>
+      <li>무료 클라우드(Google Firebase 무료 요금제)를 쓰기 때문에 하루 사용량에 한도가 있습니다. 한도에 닿으면 그날은 저장이 잠시 멈추고, 한국 시간 오후 4~5시쯤 다시 열립니다.</li>
+      <li>자료가 사라지는 일에 대비해 선생님이 설정 화면에서 <b>백업 파일</b>을 가끔 내려받아 두기를 권합니다.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>모으는 자료</h2>
+    <table>
+      <tr><th>선생님</th><td>구글 계정 이메일·이름(로그인용), 학급 이름</td></tr>
+      <tr><th>학생</th><td>이름·번호, 로그인 아이디·비밀번호, 쓴 글, 상담 신청, 친구관계 설문 응답, 학급 화폐·모험 기록</td></tr>
+      <tr><th>선생님이 적는 것</th><td>상담 기록, 관찰 메모(누가 기록), 생활기록부 초안 — 선생님만 봅니다</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>어디에 두고, 누가 보나</h2>
+    <ul>
+      <li>자료는 Google Firebase(Cloud Firestore)에 저장되고, 화면 파일은 Cloudflare Pages에서 내려받습니다. 저장 지역은 Firebase 프로젝트 설정을 따릅니다.</li>
+      <li>담임 선생님과 서비스 운영자가 볼 수 있습니다. 운영자는 장애를 고칠 때만 봅니다.</li>
+      <li><b>알아 두실 점:</b> 지금 구조에서는 학급 주소를 아는 사람이 기술적으로 일부 자료(학생 명단, 글, 상담 신청, 설문 응답 등)에 접근할 수 있습니다. 아주 민감한 내용(가정사 등)은 앱에 적지 말고 직접 이야기하도록 안내해 주세요.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>AI 기능</h2>
+    <ul>
+      <li>AI 기능은 선생님이 직접 넣은 AI 키로, 선생님 브라우저에서 Google·Anthropic·OpenAI로 자료를 보냅니다. 키가 없으면 선생님이 요청문을 복사해 쓰시는 AI 채팅에 붙여 넣는 방식으로도 씁니다.</li>
+      <li>학생 이름은 「학생 03」처럼 바꿔서 보냅니다. 글·상담 기록의 내용은 그대로 보냅니다.</li>
+      <li>무료 AI 키·무료 AI 채팅은 보낸 내용이 서비스 개선에 쓰이거나 사람이 검토할 수 있다고 각 회사 약관에 적혀 있습니다. 학생 자료에는 결제를 연결한 키를 권합니다.
+        <ul><li><a href="https://ai.google.dev/gemini-api/terms" rel="noopener">Google Gemini API 약관</a> · <a href="https://www.anthropic.com/legal/commercial-terms" rel="noopener">Anthropic 약관</a> · <a href="https://openai.com/policies/business-terms/" rel="noopener">OpenAI 약관</a></li></ul></li>
+      <li>AI 결과는 초안입니다. 선생님이 읽고 고친 것만 학생에게 전합니다. 학생 화면에는 AI가 바로 보내는 내용이 없습니다.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>보관과 삭제</h2>
+    <ul>
+      <li>선생님은 설정 화면의 <b>학급 자료 모두 지우기</b>로 언제든 학급 자료를 지울 수 있습니다(학생 계정·글·상담·설문 포함). 지우기 전에 백업 파일을 내려받게 합니다.</li>
+      <li>학생 로그인 계정(Firebase 인증)은 브라우저에서 지울 수 없어 남지만, 학급 자료가 지워지면 어느 학급에도 들어갈 수 없습니다.</li>
+      <li>학년이 끝나면 백업을 내려받은 뒤 학급 자료를 정리해 주세요.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>오류 기록</h2>
+    <p>화면에서 오류가 나면 오류 종류와 문구(학생 이름·글 내용은 빼고)를 운영자에게 보낼 수 있습니다. 각 기기에는 최근 오류 20건이 남고, 선생님 설정 화면에서 볼 수 있습니다.</p>
+  </section>
+
+  <section>
+    <h2>문의</h2>
+    <p>담임 선생님께 먼저 말씀해 주세요. 선생님은 운영자에게 문의할 수 있습니다. <span style="color:var(--sub)">(운영자 연락처는 운영자가 정해 여기에 적습니다.)</span></p>
+  </section>
+</main>
+</body>
+</html>

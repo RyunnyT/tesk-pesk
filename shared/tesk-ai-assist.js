@@ -69,6 +69,7 @@
   m.hidden=false;
   m.innerHTML=parts.map(p=>`<span>${esc(p)}</span>`).join('')
    +(n?`<span class="ai-meta-warn">⚠ 확인 필요 ${n}곳 — 노란 표시를 채운 뒤 사용하세요</span>`:'<span class="ai-meta-ok">✓ 확인 필요 표시 없음</span>')
+   +(info.lint||[]).filter(x=>x.level!=='info'||x.code==='weekday-fixed').map(x=>`<span class="${x.level==='error'?'ai-meta-err':x.level==='warn'?'ai-meta-warn':'ai-meta-ok'}" title="${esc(x.match||'')}">${x.level==='error'?'⛔':x.level==='warn'?'⚠':'✓'} ${esc(x.message)}${x.match?' — '+esc(x.match):''}</span>`).join('')
    +'<span class="ai-meta-hint">결과를 눌러 바로 고칠 수 있어요</span>';
  }
  function setEditable(pre,on){
@@ -82,7 +83,7 @@
   pre.removeAttribute('aria-busy');pre.classList.remove('is-loading');
   const placeholder=isPlaceholder(text);
   setEditable(pre,!placeholder);
-  if(!placeholder)resultMeta[id]={at:opts?.at||new Date().toISOString(),ref:opts?.ref??refIncluded(KIND_BY_RESULT[id]),edited:!!opts?.edited};
+  if(!placeholder)resultMeta[id]={at:opts?.at||new Date().toISOString(),ref:opts?.ref??refIncluded(KIND_BY_RESULT[id]),edited:!!opts?.edited,lint:opts?.lint||resultMeta[id]?.lint||[]};
   else delete resultMeta[id];
   renderMeta(id);
   if(!restoring)saveSoon();

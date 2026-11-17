@@ -11,10 +11,10 @@
     const rec=_ensureRecord(num),base={...rec.fields},signals=collectStudentSignals(num);
     if(notesOnly&&!rec.notes.length)throw skip('관찰 메모를 먼저 추가해주세요.');
     if(!signals.lines.length)throw skip('작성 근거가 없어요. 관찰 메모나 평가·글쓰기 기록을 먼저 추가해주세요.');
-    const byArea={};rec.notes.forEach(n=>(n.areaTags||[]).forEach(tag=>{(byArea[tag]||=[]).push(`${n.date||''} - ${window.RecordCheck?RecordCheck.maskName(n.text,student.name):n.text}`);}));
+    const byArea={};rec.notes.forEach(n=>(n.areaTags||[]).forEach(tag=>{(byArea[tag]||=[]).push(`${n.date||''} - ${_maskForAi(n.text,student)}`);}));
     const prompt=notesOnly?buildNotesToDraftPrompt(student,byArea,signals.fullCtx.join('\n')):buildRecordDraftPrompt(student,signals.fullCtx.join('\n'));
-    const json=await callTeachAIJson(prompt,{maxTokens:14000,temperature:0.08,allowPartial:false,continueOnLength:false},'RECORD_FIELDS의 키를 가진 JSON 객체. 근거가 없는 영역은 빈 문자열.');
-    stageRecordDraft(num,json,base,{quiet});
+    const json=await callTeachAIJson(prompt,{maxTokens:14000,temperature:0.08,allowPartial:false,continueOnLength:false,privacy:aiMasker(num,{selfAlias:RecordCheck.MASK})},'RECORD_FIELDS의 키를 가진 JSON 객체. 근거가 없는 영역은 빈 문자열.');
+    stageRecordDraft(num,json,base,{quiet,ai:aiStamp('record-'+RecordPrompts.version)});
   }
   async function generateRecords(notesOnly=false){
     const num=Number(selectedRecordStudent),student=students.find(s=>Number(s.num)===num);
@@ -29,6 +29,9 @@
   /* 여러 학생을 차례로 처리합니다. 검토하지 않은 초안이 있는 학생은 덮어쓰지 않도록 건너뜁니다. */
   async function generateRecordsBatch(nums,notesOnly,onProgress,shouldStop){
     const results=[];
+    // 키 없이 붙여 넣는 방식이면 callTeachAI 가 이 표시를 보고 일괄 생성을 막는다(창이 학생 수만큼 뜨지 않게)
+    window._aiBatchRunning=nums.length>1;
+    try{
     for(let i=0;i<nums.length;i++){
       const num=Number(nums[i]),name=students.find(s=>Number(s.num)===num)?.name||num+'번';
       if(shouldStop?.()){results.push({num,name,status:'stopped'});continue;}
@@ -42,6 +45,7 @@
     }
     onProgress?.({index:nums.length,total:nums.length,results,done:true});
     return results;
+    }finally{window._aiBatchRunning=false;}
   }
   function stageRecordDraft(num,fields,base,opts){
     const values={};
@@ -53,6 +57,7 @@
       Object.keys(values).forEach(k=>{rec.aiDraft.values[k]=values[k];rec.aiDraft.base[k]=base?.[k];});
       rec.aiDraft.createdAt=new Date().toISOString();
     }else rec.aiDraft={values,base:{...base},createdAt:new Date().toISOString()};
+    if(opts?.ai)rec.aiDraft.ai=opts.ai;
     save('tesk-records',records);
     if(Number(selectedRecordStudent)===Number(num))renderRecordReview();
     if(typeof renderRecordOverview==='function')renderRecordOverview();
@@ -85,7 +90,7 @@
   }
   function reportSignature(r){return JSON.stringify([r.examList,r.writeList.map(w=>[w.id,w.date,w.content,w.feedback]),r.counselCount,r.recentMoods,r.hasRisk,r.receivedBest,r.receivedAvoid,r.friendResponseCount]);}
   function saveRecommendation(num,opinion,signature,promptVersion){
-    _ensureRecord(num).reportRecommendation={opinion,signature,promptVersion:promptVersion||null,createdAt:new Date().toISOString()};save('tesk-records',records);
+    _ensureRecord(num).reportRecommendation={opinion,signature,promptVersion:promptVersion||null,createdAt:new Date().toISOString(),ai:aiStamp(promptVersion)};save('tesk-records',records);
   }
   /* 이전 버전은 문장 하나(text)만 저장했습니다. 그대로 읽어 보여주되 근거 표시는 재생성해야 붙습니다. */
   function savedOpinion(rec){return rec?.reportRecommendation?.opinion ?? rec?.reportRecommendation?.text ?? null;}

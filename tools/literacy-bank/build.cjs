@@ -43,6 +43,8 @@ for(const subject of SUBJECTS) for(const [tag, level] of LEVELS){
   summary.push(subject + '-' + tag + ': ' + ok + '/' + list.length);
 }
 fs.writeFileSync(path.join(DIR, 'literacy-bank.csv'), '﻿' + L.toCsv(rows), 'utf8');
+// 사이트에 함께 올리는 기본 은행 (교사 앱이 구글 시트보다 먼저 읽는다)
+fs.writeFileSync(path.join(DIR, '..', '..', 'shared', 'literacy-bank.json'), JSON.stringify({builtAt: new Date().toISOString().slice(0,10), csv: L.toCsv(rows)}), 'utf8');
 // 되읽기 검사: 시트가 돌려줄 CSV 를 앱이 그대로 읽을 수 있는지
 const back = L.parseBank(L.toCsv(rows));
 const backBad = back.rows.filter(r => !r.ok);

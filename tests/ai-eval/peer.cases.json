@@ -1,0 +1,10 @@
+{"note":"가상 학급 설문 한 회차. 자유 서술에 친구 이름을 넣어 가리기를 확인한다.",
+"classSize":8,
+"analysis":{"roundId":"r1","roundLabel":"2학기 1회차","uniqueResponders":6,"responseRate":75,"rows":[
+ {"studentNum":1,"studentName":"김하늘","categoryKeys":["play","study"],"categories":{"play":[2,3],"study":[4]},"reflection":{"belonging":2,"friendHelp":2,"adultHelp":4,"hardMoment":"박다온이 쉬는 시간에 나만 빼고 놀자고 했을 때 속상했어요","goodMoment":"이서준이 수학을 알려줘서 좋았어요"},"schemaVersion":3,"nominationLimits":{"play":3,"study":3}},
+ {"studentNum":2,"studentName":"박다온","categoryKeys":["play"],"categories":{"play":[3]},"reflection":{"belonging":4},"schemaVersion":3,"nominationLimits":{"play":3}},
+ {"studentNum":3,"studentName":"이서준","categoryKeys":["play","study"],"categories":{"play":[1,2],"study":[1]},"reflection":{"belonging":5},"schemaVersion":3,"nominationLimits":{"play":3,"study":3}},
+ {"studentNum":4,"studentName":"정수아","categoryKeys":["study"],"categories":{"study":[1]},"reflection":{"belonging":3},"schemaVersion":3,"nominationLimits":{"study":3}},
+ {"studentNum":5,"studentName":"최지우","categoryKeys":[],"categories":{},"reflection":{"belonging":1,"hardMoment":"아무도 같이 안 놀아줘요"},"schemaVersion":3,"nominationLimits":{"play":3}},
+ {"studentNum":6,"studentName":"한도윤","categoryKeys":["play"],"categories":{"play":[3]},"reflection":{"belonging":4},"schemaVersion":3,"nominationLimits":{"play":3}}
+]},"targets":[1,5]}

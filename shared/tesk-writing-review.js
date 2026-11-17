@@ -94,7 +94,8 @@
     const basis = sig(w);
     proof.busy = true; drawProof();
     try{
-      const raw = await callTeachAI(P.prompt(w.content, proof.level), {temperature:0.05, maxTokens:4000, allowPartial:false, continueOnLength:false});
+      const m = aiMasker(w.studentNum);
+      const raw = unmaskProofRaw(await callTeachAI(P.prompt(m.mask(w.content), proof.level), {temperature:0.05, maxTokens:4000, allowPartial:false, continueOnLength:false, privacy:m}), m);
       const live = find(proof.id);
       if(!live || sig(live) !== basis) throw new Error('학생이 글을 고쳤어요. 다시 살펴봐 주세요.');
       proof.result = P.validate(raw, live.content, proof.level);
@@ -369,7 +370,8 @@
     const w = find(st.id); if(!w || st.busy) return;
     st.busy = true; st.draw();
     try{
-      const raw = await callTeachAI(P.prompt(w.content, st.level), {temperature:0.05, maxTokens:4000, allowPartial:false, continueOnLength:false});
+      const m = aiMasker(w.studentNum);
+      const raw = unmaskProofRaw(await callTeachAI(P.prompt(m.mask(w.content), st.level), {temperature:0.05, maxTokens:4000, allowPartial:false, continueOnLength:false, privacy:m}), m);
       const live = find(st.id);
       if(!live || sig(live) !== st.basis) throw new Error('학생이 글을 고쳤어요. 창을 닫고 다시 열어 주세요.');
       st.result = P.validate(raw, live.content, st.level);

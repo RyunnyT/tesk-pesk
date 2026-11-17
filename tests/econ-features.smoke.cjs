@@ -32,6 +32,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
    window._fsOnSnapshot=()=>()=>{};
    Object.entries({'pesk-room-id':'test','pesk-student-num':'1','pesk-student-name':'테스트 학생','pesk-account-uid':'student1','pesk-session-version':'1','pesk-login-id':'test','pesk-class-name':'테스트 학급'}).forEach(([k,v])=>localStorage.setItem(k,v));
    window.confirm=()=>true;window.alert=m=>{(window.__alerts=window.__alerts||[]).push(m);};
+   // 실제 앱처럼 돈 문서 보호(shared/econ-guard.js)를 켠다
+   document.addEventListener('DOMContentLoaded',()=>window.EconGuard&&EconGuard.install(window));
   });
   await context.route('**/*',async route=>{
    const u=new URL(route.request().url());if(u.hostname!=='127.0.0.1')return route.abort();
@@ -85,6 +87,9 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   
   const overflow=await page.evaluate(()=>({w:document.documentElement.clientWidth,s:document.documentElement.scrollWidth}));
   assert.ok(overflow.s<=overflow.w+1,'가로 스크롤 없음');
+  // 돈 문서는 모두 읽은 뒤 rev 를 올려 썼다 (덮어쓰기 방지 규칙과 맞는다)
+  assert.deepEqual(await page.evaluate(()=>EconGuard.problems),[]);
+  assert.ok(Number(docs[root+'tesk-students']?.rev)>=1,'잔액 문서 rev 가 올랐다');
   assert.deepEqual(errors,[]);
   console.log('PASS student economy: fund hidden, auction escrow/refund, seat auction chart (one seat, amounts only), tax receipt, deposit rules, class fund listing, mobile width');
  }finally{await browser.close();}

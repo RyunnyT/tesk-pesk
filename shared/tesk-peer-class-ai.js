@@ -38,8 +38,9 @@
   const state=snapshot(round);if(!state.packet.facts[0].value.응답)return;
   busy.add(k);mount({roundId:round,roundLabel:state.packet.roundLabel});
   try{
-   const raw=await callTeachAI(AI.prompt(state.packet),{temperature:0.15,maxTokens:16384,thinkingBudget:4096,json:true,responseSchema:AI.schema(state.packet),allowPartial:false,continueOnLength:false,timeoutMs:180000});
-   const value=AI.validate(raw,state.packet);
+   const m=aiMasker(null),mp=m.maskDeep(state.packet);   // 자유 서술에 적힌 이름을 가린다
+   const raw=await callTeachAI(AI.prompt(mp),{temperature:0.15,maxTokens:16384,thinkingBudget:4096,json:true,responseSchema:AI.schema(mp),allowPartial:false,continueOnLength:false,timeoutMs:180000,privacy:m});
+   const value=m.unmaskDeep(AI.validate(raw,mp));
    if(room!==TESK_ROOM||snapshot(round).signature!==state.signature)throw Error('분석 중 학급이나 설문 자료가 바뀌었어요. 최신 자료로 다시 분석해주세요.');
    results.set(k,{value,signature:state.signature});
    if(friendRoundView===round)showToast('학급 전체 분석을 만들었어요. 근거와 함께 확인해주세요.');

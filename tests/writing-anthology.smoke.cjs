@@ -47,7 +47,7 @@ fs.mkdirSync(path.join(ROOT,'output','writing-anthology'),{recursive:true});
  for(let i=0;i<6;i++)await page.locator('#d'+i).fill(String(i+1));await page.locator('#code-btn').click();
  await page.locator('#login-id').fill('test');await page.locator('#login-pw').fill('pass');await page.locator('#login-btn').click();
  await page.waitForURL('**/pesk.html');await page.waitForFunction(()=>document.querySelector('#panel-home .today-list'));
- await page.evaluate(()=>document.getElementById('morning-overlay')?.remove());
+ await page.addStyleTag({content:'#morning-overlay{display:none!important}'});   /* 아침 팝업은 600ms 뒤에 떠서 지우기만 하면 다시 나타난다 */
  const home=await page.locator('#panel-home .today-list').innerText();
  console.log('HOME has anthology card:',home.includes('모음집 맞춤법 확인'));
  assert.ok(home.includes('모음집 맞춤법 확인'));

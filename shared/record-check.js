@@ -196,6 +196,24 @@
   return out.sort((a,b)=>(a.level==='error'?0:1)-(b.level==='error'?0:1));
  }
 
- return {schoolYear,lint,RULES,BANDS,gradeBand,gradeFromClassName,recordFields,
+ // ── 다른 학생 기록과 비슷한 문장 ── 어절 3개 묶음이 많이 겹치면(자카드 유사도) 알려 준다. 같은 문장(findRepeats)보다 넓게 본다.
+ function shingles(s){const w=normSentence(s).length?String(s).replace(/[.,!?·'"“”‘’()~\-]/g,' ').split(/\s+/).filter(Boolean):[];const out=new Set();for(let i=0;i+3<=w.length;i++)out.add(w.slice(i,i+3).join(' '));return out;}
+ function findSimilar(text,num,entries,opts){
+  const th=(opts&&opts.threshold)||0.5,out=[],mine=sentences(text).filter(s=>normSentence(s).length>=MIN_SENTENCE);
+  const others=(entries||[]).filter(e=>String(e.num)!==String(num)).flatMap(e=>sentences(e.text).filter(s=>normSentence(s).length>=MIN_SENTENCE).map(s=>({num:String(e.num),s,sh:shingles(s)})));
+  for(const s of mine){const a=shingles(s);if(a.size<2)continue;
+   for(const o of others){if(normSentence(o.s)===normSentence(s))continue;let n=0;a.forEach(x=>{if(o.sh.has(x))n++;});const score=n/(a.size+o.sh.size-n);
+    if(score>=th){out.push({sentence:s,otherNum:o.num,otherSentence:o.s,score:Math.round(score*100)/100});break;}}}
+  return out;
+ }
+ // 문장 끝 두 어절("태도가 돋보임") 가운데 반에서 자주 쓴 것 — AI에 "피할 맺음말"로 넘긴다
+ function commonEndings(texts,limit){
+  const count=new Map();
+  (texts||[]).forEach(t=>sentences(t).forEach(s=>{const w=s.replace(/[.!?。]+$/,'').trim().split(/\s+/);if(w.length<3)return;const e=w.slice(-2).join(' ');count.set(e,(count.get(e)||0)+1);}));
+  return [...count.entries()].filter(([,n])=>n>=2).sort((a,b)=>b[1]-a[1]).slice(0,limit||15).map(([e])=>e);
+ }
+ // NEIS 바이트: 한글 3, 줄바꿈 2, 그 밖 1
+ function neisBytes(str){let b=0;for(const ch of String(str||'')){b+=ch==='\n'||ch==='\r'?2:ch.charCodeAt(0)>127?3:1;}return b;}
+ return {schoolYear,lint,RULES,findSimilar,commonEndings,neisBytes,BANDS,gradeBand,gradeFromClassName,recordFields,
   sentences,buildSentenceIndex,findRepeats,MASK,maskName,suggestAreas};
 });

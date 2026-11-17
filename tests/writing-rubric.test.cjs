@@ -7,12 +7,9 @@ const slice=(from,to)=>{
  assert.ok(a>=0&&b>a,'슬라이스 경계를 찾지 못했습니다: '+from);
  return source.slice(a,b);
 };
-const ctx={};vm.createContext(ctx);
-[ slice('const WRITING_RUBRIC_DOMAINS = [','function buildWritingRubricPrompt('),
-  slice('function buildWritingRubricPrompt(','function buildWritingFeedbackOnlyPrompt('),
-  slice('function blockedWritingRubric(scope){','async function analyzeWritingRubricAI(w){'),
-  slice('function _rubricDomainScoreTo100(score){','function fallbackWritingRubric(w){'),
-  slice('function fallbackWritingRubric(w){','async function analyzeWritingRubricAI(w){'),
+// 루브릭 규칙은 shared/writing-rubric.js 로 옮겼고, 교사 화면에는 그것을 부르는 얇은 함수만 남아 있다.
+const ctx={WritingRubric:require('../shared/writing-rubric.js'),RecordCheck:require('../shared/record-check.js'),settings:{className:'4학년 2반'},writingTopicCfg:()=>({history:[]})};vm.createContext(ctx);
+[ slice('/* 루브릭 영역·분량 기준·프롬프트·결과 정리는 shared/writing-rubric.js','async function analyzeWritingRubricAI(w){'),
   slice('function _writingRubricAverages(rows){','function _renderWritingRubricMini(rows){'),
   slice('function _writingRubricExportText(rubric){','function _studentFriendSignals(')
 ].forEach(code=>vm.runInContext(code,ctx));
@@ -20,7 +17,9 @@ const {normalizeWritingRubric,fallbackWritingRubric,_hydrateRubric,_writingRubri
 // const 선언은 vm 컨텍스트의 속성이 되지 않아 식으로 꺼냅니다.
 const WRITING_RUBRIC_DOMAINS=vm.runInContext('WRITING_RUBRIC_DOMAINS',ctx);
 const RUBRIC_MIN_WRITING=vm.runInContext('RUBRIC_MIN_WRITING',ctx);
-const {writingRubricScope,measureWriting,buildWritingRubricPrompt,blockedWritingRubric}=ctx;
+const {writingRubricScope,measureWriting,blockedWritingRubric}=ctx;
+// 프롬프트는 {system, user} 로 나뉜다. 시험에서는 한 글로 이어 붙여 본다.
+const buildWritingRubricPrompt=(...a)=>{const p=ctx.buildWritingRubricPrompt(...a);return typeof p==='string'?p:p.system+String.fromCharCode(10,10)+p.user;};
 
 const full=()=>{const d={};WRITING_RUBRIC_DOMAINS.forEach((x,i)=>{d[x.key]={score:(i%5)+1,evidence:'근거',advice:'조언'};});return {total:60,domains:d};};
 

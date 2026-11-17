@@ -77,3 +77,12 @@ test('note area suggestions respect the grade band', ()=>{
  assert.ok(!RC.suggestAreas('영어 노래를 부름',['subj_korean']).length);
  assert.deepEqual(RC.suggestAreas(''),[]);
 });
+
+test('비슷한 문장·자주 쓴 맺음말·NEIS 바이트',()=>{
+  const R=require('../shared/record-check.js');
+  assert.equal(R.findSimilar('독서 토론에서 근거를 들어 의견을 말하는 태도가 돋보임.',1,[{num:2,text:'독서 토론에서 근거를 들어 의견을 말하는 모습이 돋보임.'}]).length,1);
+  assert.equal(R.findSimilar('리코더 합주에서 어려운 부분을 따로 연습함.',1,[{num:2,text:'피구 경기에서 끝까지 공을 피하며 활약함.'}]).length,0);
+  assert.equal(R.findSimilar('같은 학생 문장은 비교하지 않는 경우를 확인함.',1,[{num:1,text:'같은 학생 문장은 비교하지 않는 경우를 확인함.'}]).length,0);
+  assert.deepEqual(R.commonEndings(['수업에 참여하는 태도가 돋보임.','발표하는 태도가 돋보임.','친구를 돕는 마음이 큼.']),['태도가 돋보임']);
+  assert.equal(R.neisBytes('가a\n'),6);
+});

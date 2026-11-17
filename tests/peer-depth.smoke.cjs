@@ -5,7 +5,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   const page=await browser.newPage({viewport:{width:1365,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());
   await page.goto('http://127.0.0.1:8765/_teacher_ui_preview.html');const frame=await page.locator('iframe').elementHandle().then(x=>x.contentFrame());
-  await frame.waitForFunction(()=>window.PeerTeacher&&document.querySelectorAll('.attention-row').length===2);
+  await frame.waitForFunction(()=>window.PeerTeacher&&document.querySelectorAll('.attention-row').length>=2);
   await frame.evaluate(()=>{
    students=[{num:1,name:'하늘'},{num:2,name:'다온'},{num:3,name:'가람'}];friendData=[];friendRoundView='r2';activePeskSurveyRoundId='r2';
    peskSurveyRounds={r1:{label:'1회차',createdAt:'2026-09-01'},r2:{label:'2회차',createdAt:'2026-09-19'}};

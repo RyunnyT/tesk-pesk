@@ -9,7 +9,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     await page.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1' || /fonts\.|cdn.jsdelivr/.test(r.request().url()) ? r.continue() : r.abort());
     await page.goto('http://127.0.0.1:8765/_teacher_ui_preview.html');
     let frame=await page.locator('iframe').elementHandle().then(x=>x.contentFrame());
-    await frame.waitForFunction(()=>window.TeskUI && document.querySelectorAll('.attention-row').length===2);
+    await frame.waitForFunction(()=>window.TeskUI && document.querySelectorAll('.attention-row').length>=2);
     await frame.evaluate(()=>{goPage('economy');openClassRewardFormT();});
     assert.equal(await frame.locator('#shop-name').inputValue(),'체육 시간 1회');
     assert.equal(await frame.locator('#shop-boss-reward').isChecked(),true);

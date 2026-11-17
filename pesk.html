@@ -27,6 +27,11 @@
 <script src="shared/pesk-writing-store.js?v=20261021sem1"></script>
 <script src="shared/pesk-quiz-store.js?v=20261006split1"></script>
 <script src="shared/stock-list.js?v=20261116names"></script>
+<script src="shared/version.js?v=20261117a"></script>
+<script src="shared/error-report.js?v=20261117a"></script>
+<script src="shared/site-notice.js?v=20261117a"></script>
+<script src="shared/econ-guard.js?v=20261117a"></script>
+<script src="shared/usage-meter.js?v=20261117a"></script>
 <script src="shared/econ-core.js?v=20261112auc"></script>
 <script src="shared/pesk-econ-ui.js?v=20261112auc"></script>
 <script src="shared/pesk-seat-auction.js?v=20261009seat3"></script>
@@ -37,7 +42,7 @@
 <script src="shared/pesk-shooter.js?v=20261005map1"></script>
 <script src="shared/pesk-subjects.js"></script>
 <script src="shared/todo-schedule.js?v=20261004todo2"></script>
-<script src="shared/literacy-core.js?v=20261005lit2"></script>
+<script src="shared/literacy-core.js?v=20261117b"></script>
 <script src="shared/pesk-progression.js?v=20261004grow1"></script>
 <script src="shared/economy-ownership.js?v=20260930bank1"></script>
 <script src="shared/pesk-boss-catalog.js?v=20260910rpg2"></script>
@@ -80,7 +85,7 @@ window._forceLocalSignOut = ()=>new Promise((resolve, reject)=>{
 window._db=db; window._fsDoc=doc; window._fsGetDoc=getDoc;
 window._fsGetDocs=getDocs;
 window._fsSetDoc=setDoc; window._fsOnSnapshot=onSnapshot;
-window._fsCollection=collection; window._fsRunTxn=runTransaction; window._fbReady=true;
+window._fsCollection=collection; window._fsRunTxn=runTransaction; window.ErrorReport?.install(window,{app:'pesk'}); window.EconGuard?.install(window); window.UsageMeter?.install(window,{onExhausted:()=>window.peskQuotaExhausted?.()}); window._fbReady=true;
 // 경제 로직 서버 API (USE_SERVER_ECONOMY 플래그가 켜진 경우 사용)
 import("./shared/pesk-economy-api.js").then(m => { window._economyApi = m; });
 window._studentAuthReady = import("./shared/pesk-student-auth.js").then(m=>{window._studentAuthApi=m;}).catch(()=>{});
@@ -1240,6 +1245,8 @@ function waitFirebase(cb, tries=0){
   else renderError('Firebase 연결 실패. 새로고침해주세요.');
 }
 
+// 하루 무료 사용량을 다 쓰면(쓰는 중에) 한 번만 알린다
+window.peskQuotaExhausted=function(){ if(window.__quotaShown) return; window.__quotaShown=true; try{ showFeedbackNotice('오늘은 사용량이 많아 저장이 잠시 안 돼요. 내일 다시 해 주세요. 쓰던 글은 이 기기에 남아 있어요.'); }catch(_e){} };
 function renderError(msg){
   document.getElementById('app').innerHTML='<div class="loading">'+msg+'</div>';
 }
@@ -1292,8 +1299,12 @@ async function loadData(){
                 'pesk-writing-topic','pesk-writing-duty','pesk-class-boss','pesk-todo-schedule','pesk-literacy','pesk-quest-config',
                 'tesk-bank-settings','tesk-wealth-tax','pesk-auctions','pesk-features'];
     // 거래 로그(pesk-purchase-log)는 큰 문서라 시작할 때 읽지 않는다 — 상점을 열 때 가져온다 (pullShopEconomy)
+    // 화면에서 쓰지 않는 문서는 읽지 않는다 (무료 한도): 미션·배지(기능 없음), 배지 이율(제거됨), 공동 기금(꺼 둔 동안)
+    const SKIP = new Set(['tesk-missions','tesk-student-badges','tesk-bank-badge-bonus']);
+    if(!(window.EconCore && window.EconCore.FEATURES && window.EconCore.FEATURES.fund)) SKIP.add('pesk-class-fund');
+    const missing = {exists:()=>false, data:()=>({})};
     const snaps=await Promise.all(keys.map(k=>
-      window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data',k))
+      SKIP.has(k) ? Promise.resolve(missing) : window._fsGetDoc(window._fsDoc(db,'classrooms',roomId,'data',k))
     ));
     students         = snaps[0].exists() ? snaps[0].data().value : [];
     missions         = snaps[1].exists() ? snaps[1].data().value : [];
@@ -1376,6 +1387,7 @@ async function loadData(){
     _myWritingSignature = getMyWritingSignature(peskWritings);
   }catch(e){
     console.warn('데이터 로드 실패:', e);
+    window._peskLoadError = e;   // 시작할 때 '0 코인' 화면 대신 안내를 띄운다
     students=[]; missions=[]; studentBadges={}; jobs=[];
     peskWritings=[]; classAnthology=[]; stockPrices={}; myPortfolio=[]; mySurvey=null; myPurchases=[]; applyClassBossPurchases([]); myDeposits=[];
     checklistItems=[]; checklistRecords={}; classChallenges={manual:[]}; challengeSubmissions={}; challengeAwards={}; purchaseLogs=[]; economyRestrictions={}; peskFeatures={};
@@ -3521,7 +3533,7 @@ async function submitCounselRequest(){
     const ref = window._fsDoc(db,'classrooms',roomId,'data','tesk-counsel-requests');
     const newReq = {
       id: uid(), studentNum: myStudentNum, studentName: myStudentName, accountUid: myAccountUid,
-      reason: reason + (urgency>0 ? ' ['+urgencyLabels[urgency]+']' : ''),
+      reason: reason + (urgency>0 ? ' ['+urgencyLabels[urgency]+']' : ''), urgency,
       date: new Date().toLocaleDateString('ko-KR'), status: 'pending'
     };
     // 트랜잭션으로 덧붙인다 — 그 사이 선생님이 읽음 처리한 신청을 옛 목록으로 덮어쓰지 않게
@@ -4100,6 +4112,8 @@ function buyShopItem(...args){return economyOnce('shop-buy',()=>_buyShopItem(...
 function useMyItem(...args){return economyOnce('shop-use',()=>_useMyItem(...args));}
 function buyStockPesk(...args){return economyOnce('stock-buy',()=>_buyStockPesk(...args));}
 function sellStockPesk(...args){return economyOnce('stock-sell',()=>_sellStockPesk(...args));}
+// 규칙이 rev 검사로 거절하면(옛 화면) 새로고침을 권한다
+window.addEventListener('unhandledrejection', e=>{ const m=String(e?.reason?.code||e?.reason?.message||''); if(/permission-denied|PERMISSION_DENIED/.test(m) && !window.__permNoticeShown){ window.__permNoticeShown=true; try{ showFeedbackNotice('새 버전이 나왔어요. 화면을 새로고침해 주세요.'); }catch(_e){} } });
 async function economyAfterCommit(run){try{await run();}catch(e){console.warn('거래 저장 완료 후 화면 갱신 실패',e);showFeedbackNotice('거래는 저장됐어요. 화면을 새로고침해 확인해주세요.');}}
 async function _buyShopItem(itemId){
   if(!(await ensureActiveStudentSession(false))) return;
@@ -9764,6 +9778,14 @@ waitFirebase(async()=>{
   }
   await Promise.all([loadData(), _loadQuotes(), avPreload()]);
   _appStarted = true;
+  if(window._peskLoadError){
+    const quota = window.UsageMeter && UsageMeter.isExhausted(window._peskLoadError);
+    renderError((quota ? '오늘은 우리 학교 Pesk 사용량이 많아 잠시 쉬어요.<br>내일 다시 열려요. 쓰던 글은 이 기기에 저장돼 있어요.'
+      : '자료를 불러오지 못했어요.<br>인터넷 연결을 확인하고 다시 시도해 주세요.')
+      + '<br><br><button type="button" class="pesk-btn primary" style="width:auto;padding:10px 18px;" onclick="location.reload()">다시 시도</button>');
+    return;
+  }
+  window.SiteNotice?.show(window,{student:true});
   if(students.find(s=>s.num===myStudentNum)){
     renderDashboard();
   } else {

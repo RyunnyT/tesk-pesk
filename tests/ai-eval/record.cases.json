@@ -1,0 +1,20 @@
+{"note":"가상 학생 6명. rich=근거 많음, thin=근거 적음.",
+"cases":[
+ {"id":"r-rich-1","studentNum":1,"kind":"rich","notes":[
+   {"date":"2026-04-12","areaTags":["subj_korean"],"text":"독서 토론에서 책 속 인물의 선택에 대해 근거 두 가지를 들어 의견을 말함"},
+   {"date":"2026-05-20","areaTags":["cea_auto_club"],"text":"학급 회의에서 급식 잔반 줄이기 캠페인을 제안하고 포스터를 박다온과 함께 만듦"},
+   {"date":"2026-09-03","areaTags":["comprehensive"],"text":"모둠 활동에서 의견이 갈리자 각자의 의견을 칠판에 정리해 보자고 제안함"},
+   {"date":"2026-10-15","areaTags":["subj_science"],"text":"식물 기르기 관찰 일지를 2주 동안 빠짐없이 쓰고 잎의 변화를 그림으로 기록함"}]},
+ {"id":"r-rich-2","studentNum":2,"kind":"rich","notes":[
+   {"date":"2026-04-02","areaTags":["subj_math"],"text":"분수의 크기 비교를 색종이 접기로 설명하는 방법을 친구들 앞에서 발표함"},
+   {"date":"2026-06-11","areaTags":["subj_pe"],"text":"줄넘기 2단 뛰기를 처음에는 못 했으나 쉬는 시간마다 연습해 한 달 뒤 10회 성공함"},
+   {"date":"2026-09-22","areaTags":["comprehensive"],"text":"전학 온 친구에게 학교 시설을 안내하고 점심시간에 함께 앉음"},
+   {"date":"2026-10-30","areaTags":["cea_career"],"text":"직업 탐구 시간에 수의사를 조사하고 동물을 돌보는 일에 관심을 보임"}]},
+ {"id":"r-rich-3","studentNum":3,"kind":"rich","notes":[
+   {"date":"2026-05-08","areaTags":["subj_music"],"text":"리코더 합주에서 어려운 부분을 따로 연습해 와서 모둠 연주를 이끎"},
+   {"date":"2026-07-01","areaTags":["subj_korean"],"text":"시 쓰기에서 비 오는 날 운동장을 '빗방울이 줄넘기를 한다'고 표현함"},
+   {"date":"2026-09-17","areaTags":["comprehensive"],"text":"청소 당번이 아닌 날에도 교실 뒤 정리를 스스로 함"}]},
+ {"id":"r-thin-1","studentNum":4,"kind":"thin","notes":[{"date":"2026-06-02","areaTags":["comprehensive"],"text":"수업 시간에 조용히 참여함"}]},
+ {"id":"r-thin-2","studentNum":5,"kind":"thin","notes":[{"date":"2026-09-09","areaTags":["subj_art"],"text":"그림 그리기 시간에 색을 다양하게 씀"}]},
+ {"id":"r-thin-3","studentNum":6,"kind":"thin","notes":[{"date":"2026-05-15","areaTags":["subj_pe"],"text":"피구 경기에 적극적으로 참여함"}]}
+]}

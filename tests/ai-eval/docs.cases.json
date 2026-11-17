@@ -1,0 +1,10 @@
+{"note":"교사 도우미 문서 입력. titleOnly 는 제목만 준 경우(지어내기가 가장 잘 생긴다).",
+"cases":[
+ {"id":"d-gm-1","kind":"gongmun","input":{"title":"2026학년도 현장체험학습 실시","content":"4학년 현장체험학습을 실시하고자 함","detail":"12월 4일, 과학관","rels":[],"atts":["현장체험학습 운영 계획"]}},
+ {"id":"d-gm-title","kind":"gongmun","titleOnly":true,"input":{"title":"학생 안전교육 실시 보고","content":"안전교육 실시 결과 보고","detail":"","rels":[],"atts":[]}},
+ {"id":"d-pl-1","kind":"plan","input":{"title":"학급 독서 주간 운영 계획","content":"12월 첫째 주, 아침 독서 20분, 독서 골든벨"}},
+ {"id":"d-pl-title","kind":"plan","titleOnly":true,"input":{"title":"학교폭력 예방 교육 계획","content":""}},
+ {"id":"d-pm-1","kind":"pumi","input":{"title":"학급 운영 물품 구입","type":"물품","related":"","budget":"학급운영비","purpose":"학급 환경 구성","extra":"","items":[{"name":"색지","spec":"A4","unit":"권","qty":3,"price":4500,"ceiledPrice":4500,"sum":13500},{"name":"풀","spec":"","unit":"개","qty":10,"price":990,"ceiledPrice":1000,"sum":10000}]}},
+ {"id":"d-lt-1","kind":"letter","input":{"school":"","title":"학부모 상담 주간 안내","content":"12월 1일부터 5일까지 상담 주간 운영, 신청서는 11월 27일까지 제출"}},
+ {"id":"d-lt-title","kind":"letter","titleOnly":true,"input":{"school":"","title":"겨울방학 안내","content":"방학 기간 안내"}}
+]}

@@ -202,14 +202,15 @@ const JSZip=require('jszip');
           if(u.startsWith('https://generativelanguage.googleapis.com/')){window._seen.gemini={url:u,headers:opts.headers};
             return json({candidates:[{content:{parts:[{text:'가정통신문 본문입니다.'}]},finishReason:'STOP'}]});}
           return window._realFetch(url,opts);};});
-      await frame.evaluate(()=>{localStorage.setItem('tesk-api-provider','claude-sonnet-5');localStorage.setItem('tesk-api-key','test-key-for-smoke');goPage('ai-assist');switchAiTab(0);});
+      await frame.evaluate(()=>{settings.aiNotice={version:1,at:'2026-11-17'};localStorage.setItem('tesk-api-provider','claude-sonnet-5');localStorage.setItem('tesk-api-key','test-key-for-smoke');goPage('ai-assist');switchAiTab(0);});
       assert.equal(await frame.locator('#ai-tb0').getAttribute('aria-selected'),'true');
       await frame.locator('#gm-title').fill('학생 자치회 임원 선거 실시');await frame.locator('#gm-content').fill('임원 선거를 안내합니다.');
       await frame.locator('#gm-btn').click();
       await frame.waitForFunction(()=>document.querySelector('#gm-result mark.ai-check'));
       const seen=await frame.evaluate(()=>window._seen);
       assert.equal(seen.claude.headers['anthropic-dangerous-direct-browser-access'],'true');
-      assert.equal(seen.claude.body.model,'claude-sonnet-5');assert.equal('temperature' in seen.claude.body,false);assert.equal(seen.claude.body.output_config.effort,'medium');
+      assert.equal(seen.claude.body.model,'claude-sonnet-5-5','옛 Sonnet 5 설정은 Sonnet 5.5로 옮긴다');assert.equal('temperature' in seen.claude.body,false);assert.equal(seen.claude.body.output_config.effort,'medium');
+      assert.equal(seen.claude.body.fallbacks,'default');assert.equal(seen.claude.headers['anthropic-beta'],'server-side-fallback-2026-07-01');
       assert.match(await frame.locator('#gm-result-meta').innerText(),/확인 필요 1곳/);
       assert.equal(await frame.locator('#gm-result').getAttribute('contenteditable')!==null,true);
       // 은퇴한 모델 설정은 옮기고, Gemini 키는 주소가 아닌 헤더로 보냅니다.
@@ -217,8 +218,8 @@ const JSZip=require('jszip');
       await frame.locator('#lt-title').fill('현장체험학습 안내');await frame.locator('#lt-content').fill('일시: 5월 15일');
       await frame.locator('#lt-btn').click();await frame.waitForFunction(()=>document.getElementById('lt-result').textContent.includes('가정통신문 본문'));
       Object.assign(seen,await frame.evaluate(()=>window._seen));
-      assert.ok(!seen.gemini.url.includes('key='));assert.equal(seen.gemini.headers['x-goog-api-key'],'test-key-for-smoke');assert.ok(seen.gemini.url.includes('gemini-2.5-flash'));
-      assert.equal(await frame.evaluate(()=>localStorage.getItem('tesk-api-provider')),'gemini-2.5-flash');
+      assert.ok(!seen.gemini.url.includes('key='));assert.equal(seen.gemini.headers['x-goog-api-key'],'test-key-for-smoke');assert.ok(seen.gemini.url.includes('gemini-3.6-flash'));
+      assert.equal(await frame.evaluate(()=>localStorage.getItem('tesk-api-provider')),'gemini-3.6-flash');
       // 큰 붙임 PDF(400KB)도 읽혀서 ZIP에 담길 준비가 됩니다.
       await frame.evaluate(()=>switchAiTab(0));
       await frame.locator('#gm-att-list input[type=file]').first().setInputFiles({name:'운영계획.pdf',mimeType:'application/pdf',buffer:Buffer.alloc(400*1024,65)});
