@@ -5277,7 +5277,12 @@ function renderPeskFeaturesT(){
     + '</div>'
     + '<label class="qz-switch" style="display:flex;justify-content:flex-start;align-items:flex-start;padding:10px 12px;margin-top:10px;border-color:var(--tesk);">'
     + '<input type="checkbox" data-feat-write-first' + (cur.writeFirst === true ? ' checked' : '') + ' onchange="savePeskFeaturesT(this)" style="margin-top:2px;">'
-    + '<span><span style="font-size:12.5px;color:var(--text);">✍️ 글쓰기 먼저</span><br><small style="font-weight:600;color:var(--hint);">글쓰기 요일에는 오늘 글을 내야 다른 메뉴가 열려요. 글쓰기 요일은 「학생 할 일 요일표」를 따르고, 글쓰기 의무에서 뺀 학생은 잠기지 않아요.</small></span></label>';
+    + '<span><span style="font-size:12.5px;color:var(--text);">✍️ 글쓰기 먼저</span><br><small style="font-weight:600;color:var(--hint);">글쓰기 요일에는 오늘 글을 내야 다른 메뉴가 열려요. 글쓰기 요일은 「학생 할 일 요일표」를 따르고, 글쓰기 의무에서 뺀 학생은 잠기지 않아요.</small></span></label>'
+    // 🧪 아르카 연대기 체험판 — ⚔️ 모험과 따로인 베타. 처음엔 꺼져 있고, 켠 학급에만 학생 메뉴에 보인다.
+    + '<label class="qz-switch" style="display:flex;justify-content:flex-start;align-items:flex-start;padding:10px 12px;margin-top:10px;border-color:#7F77DD;">'
+    + '<input type="checkbox" data-feat-arca' + (cur.arcaBeta === true ? ' checked' : '') + ' onchange="savePeskFeaturesT(this)" style="margin-top:2px;">'
+    + '<span><span style="font-size:12.5px;color:var(--text);">🧪 아르카 연대기 (베타 체험판)</span><br><small style="font-weight:600;color:var(--hint);">수학 단원 RPG 체험판이에요. ⚔️ 모험과는 따로라 코인·경험치·모험 기록에 영향이 없어요. 학년은 🎓 모험 학습 설정의 학년을 따르고, 진행·학습 기록은 학생이 쓰는 그 기기에만 저장돼요(같은 태블릿을 써도 학생마다 따로). '
+    + '<a href="arca.html?p=teacher" target="_blank" rel="noopener">선생님이 먼저 해 보기</a> · <a href="arca-teacher.html" target="_blank" rel="noopener">학습 기록 모아 보기</a></small></span></label>';
 }
 function savePeskFeaturesT(input){
   const box = document.getElementById('pesk-features-panel');
@@ -5285,7 +5290,13 @@ function savePeskFeaturesT(input){
   const next = {};
   box.querySelectorAll('[data-feat]').forEach(b => { if(!b.checked) next[b.dataset.feat] = false; });
   if(box.querySelector('[data-feat-write-first]')?.checked) next.writeFirst = true;
+  if(box.querySelector('[data-feat-arca]')?.checked) next.arcaBeta = true;
   save('pesk-features', next);
+  if(input && input.hasAttribute('data-feat-arca')){
+    showToast(input.checked ? '🧪 아르카(베타)를 켰어요 — 학생 메뉴에 「아르카」가 생겨요' : '🧪 아르카(베타)를 껐어요');
+    addActivity('📱 Pesk 아르카(베타) ' + (input.checked ? '켜기' : '끄기'));
+    return;
+  }
   if(input && input.hasAttribute('data-feat-write-first')){
     showToast(input.checked ? '✍️ 글쓰기 먼저를 켰어요 — 오늘 글을 내야 다른 메뉴가 열려요' : '✍️ 글쓰기 먼저를 껐어요');
     addActivity('📱 Pesk 글쓰기 먼저 ' + (input.checked ? '켜기' : '끄기'));

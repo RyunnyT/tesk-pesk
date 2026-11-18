@@ -10,12 +10,14 @@
   파일 순서를 바꾸거나 새 파일을 넣을 때는 `index.html` 의 `<script>` 순서를 지킨다(앞 파일의 상수를 뒤 파일이 쓴다).
 - 파일 하나가 필요하면 `python tools/build_single.py` → `dist/arca-chronicles.html`.
 - 외부 의존성은 Google Fonts(Gowun Batang, Gowun Dodum)뿐. 없어도 기본 글꼴로 동작.
-- 저장소(tesk-pesk) 안의 `arca/` 폴더에 있다. 상위 폴더의 `../quiz-bank.js`(Pesk 문제 은행)를 불러오므로 저장소째로 연다. 이 폴더는 Cloudflare 배포 스크립트에 들어가지 않는다.
+- 저장소(tesk-pesk) 안의 `arca/` 폴더에 있다. 상위 폴더의 `../quiz-bank.js`(Pesk 문제 은행)를 불러오므로 저장소째로 연다.
+- **Pesk 안 베타 체험판(2026-11-17, 선생님 요청)**: `deploy-cloudflare.bat` 의 [4.5/6] 이 `build_single.py` 로 묶은 파일을 `arca.html`·`arca-teacher.html` 로 함께 올린다. 학생 앱 `pesk.html` 의 「🧪 아르카(베타)」(`openArca`, 선생님이 `pesk-features.arcaBeta` 를 켠 학급만)가 `arca.html?p=학급-번호&g=학년` 을 전체 화면 틀로 연다. ⚔️ 모험과는 연결하지 않는다. 운영 안내 `docs/Pesk_베타_운영.md`. Pesk 파일(`pesk.html`·`tesk_teacher_v2.html`·`deploy-cloudflare.bat`)은 이 연결 부분만 고쳤다(그 밖은 여전히 읽기만). 운영 배포는 선생님이 직접.
 - 지문 은행을 고친 뒤에는 `node arca/tools/build_passages.cjs` 로 `data/passages.js` 를 다시 만든다.
 
 ## 파일 지도
 | 파일 | 내용 |
 |---|---|
+| `src/00-pesk-beta.js` | Pesk 안 베타 체험판(2026-11-17): 맨 먼저 불러옴. 주소 `?p=학급-번호` 가 있으면 "arca…" 저장 이름 뒤에 `@p` 를 붙여(Storage 감싸기) 같은 태블릿의 학생마다 저장을 나누고, `?g=` 학년을 선생님 설정에 넣고, 제목·설명·「처음부터」·「선생님 설정」을 숨김(`html.arca-beta`). 닫을 때 저장 `arcaSaveNow`(pagehide·Pesk 의 closeArca). `p` 가 없으면 아무것도 안 함. 검사 `tools/check/pesk.cjs` |
 | `src/01-core.js` | 캔버스(320×180, 타일 16px, 그릴 때만 3배 `HDS`), 그리기 도우미 `P`(사각형)·`disc`, 해시 `hsh`, 디더 `dith`, 지형 테마 `TH`, 맵 도우미 `nm`·`FL`·`border`·`picks` |
 | `src/02-town1-and-home.js` | 저장 `save`(localStorage `arca-v2`), 1부 퀘스트 `QS`, 1부 루멘 마을 `bT1`, 마이룸 `bHome`·가구 `FURD`, 1부 길목 r1·r2·r3·막다른 숲 d1 (손으로 만든 맵) |
 | `src/03-tiles.js` | 충돌 `blk`, 타일 그리기 `ground`·`objDraw`, 건물 `bldDraw`, 맵 굽기 `paintMap` |
