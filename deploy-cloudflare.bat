@@ -38,6 +38,19 @@ REM 루트(/)에서 학생/교사 진입점인 landing 이 뜨도록 index.html 
 REM (위젯 전용 index.html 은 위 [1/6]에서 이미 제외했습니다.)
 if exist "%DEPLOY_DIR%\landing.html" copy "%DEPLOY_DIR%\landing.html" "%DEPLOY_DIR%\index.html" >nul
 
+echo [4.5/6] 아르카 연대기(베타 체험판) 파일 하나로 묶어 복사...
+REM arca\dist 는 git 에 없으므로 배포할 때마다 새로 만든다(python 이 있어야 함).
+REM 학생 앱의 「🧪 아르카(베타)」 메뉴가 arca.html 을 연다. 선생님 대시보드의 「학습 기록 모아 보기」는 arca-teacher.html.
+if exist "%~dp0arca\tools\build_single.py" (
+    python "%~dp0arca\tools\build_single.py" >nul 2>nul
+    if errorlevel 1 py "%~dp0arca\tools\build_single.py" >nul 2>nul
+)
+if exist "%~dp0arca\dist\arca-chronicles.html" (
+    copy "%~dp0arca\dist\arca-chronicles.html" "%DEPLOY_DIR%\arca.html" >nul
+    copy "%~dp0arca\dist\teacher.html" "%DEPLOY_DIR%\arca-teacher.html" >nul
+) else (
+    echo   [알림] 아르카 파일을 만들지 못했어요. python 을 설치하거나 arca\tools\build_single.py 를 먼저 실행하세요. 나머지는 그대로 배포합니다.
+)
 echo [5/6] 배포 대상:
 dir /b "%DEPLOY_DIR%"
 echo.
@@ -63,5 +76,6 @@ echo   배포 완료. 위 URL 확인:
 echo     /          - 학생/교사 로그인(landing)
 echo     /teacher   - 교사 대시보드
 echo     /master    - 마스터 관리자
+echo     /arca      - 아르카 연대기 체험판(베타)
 echo ============================================
 pause

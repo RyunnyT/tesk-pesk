@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>아르카 연대기 도트 견본</title>
+<style>
+  body { margin: 0; padding: 16px; background: #eef3fa; color: #263040; font-family: "Gowun Dodum", "Malgun Gothic", sans-serif; }
+  .wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+  h1 { font-size: 22px; margin: 0; }
+  h2 { font-size: 16px; margin: 8px 0 0; }
+  p { margin: 0; font-size: 14px; color: #556070; }
+  canvas { width: 100%; height: auto; display: block; image-rendering: pixelated; image-rendering: crisp-edges; border-radius: 10px; border: 2px solid #263040; background: #fff; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>아르카 연대기 · 도트 견본 2</h1>
+  <p>보내 주신 그림의 느낌(2등신 도트, 큰 눈, 여러 단계 명암, 짙은 색 테두리, 큰 나무와 발판 배경)을 참고해 새로 그렸어요. 모두 코드로 한 점씩 그렸고 외부 그림 파일은 없어요.</p>
+  <h2>1. 큰 나무 마을 (옆에서 본 장면, 움직여요)</h2>
+  <canvas id="scene" width="480" height="270"></canvas>
+  <h2>2. 캐릭터: 직업 4가지 · 마을 사람 · 표정 · 펫 · 몬스터 (4배 확대)</h2>
+  <canvas id="lineup" width="240" height="80"></canvas>
+</div>
+<script>
+"use strict";
+/* ═══════════════ 도트 그리기 도구 ═══════════════
+   스프라이트 = 칸마다 색(또는 비어 있음)을 가진 작은 격자.
+   1) 모양(타원·사각형·다각형)을 칠할 때 빛(왼쪽 위)과의 각도로 4단계 색(ramp)을 고른다 → 둥근 명암
+   2) 다 칠한 뒤 바깥 둘레에 「이웃 색을 어둡게 한 색」으로 테두리를 두른다(검정 테두리보다 부드럽다)
+   3) 눈·볼·입은 한 점씩 직접 찍는다 */
+const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const toHex = (r, g, b) => "#" + [r, g, b].map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0")).join("");
+const darken = (h, k) => { const [r, g, b] = hex(h); return toHex(r * k * 0.95, g * k * 0.95, b * k + 18 * (1 - k)); };
+/* ramp: [그늘, 기본, 밝음, 반짝] */
+const RAMP = (base) => { const [r, g, b] = hex(base); return [toHex(r * 0.68, g * 0.66, b * 0.78 + 12), base, toHex(r + (255 - r) * 0.28, g + (255 - g) * 0.28, b + (255 - b) * 0.22), toHex(r + (255 - r) * 0.6, g + (255 - g) * 0.6, b + (255 - b) * 0.55)]; };
+function Spr(w, h) { return { w, h, px: new Array(w * h).fill(null) }; }
+function put(s, x, y, c) { x = Math.round(x); y = Math.round(y); if (x < 0 || y < 0 || x >= s.w || y >= s.h || !c) return; s.px[y * s.w + x] = c; }
+function lit(nx, ny, ramp, hi) {
+  // 빛은 왼쪽 위. 넓은 면은 기본·밝은 색, 그늘은 오른쪽 아래 가장자리에만
+  const l = -nx * 0.5 - ny * 0.86;
+  return ramp[l > (hi || 0.72) ? 3 : l > 0.08 ? 2 : l > -0.62 ? 1 : 0];
+}
+function ell(s, cx, cy, rx, ry, ramp, hi) {
+  for (let y = Math.floor(cy - ry); y <= cy + ry; y++)
+    for (let x = Math.floor(cx - rx); x <= cx + rx; x++) {
+      const nx = (x + 0.5 - cx) / rx, ny = (y + 0.5 - cy) / ry;
+      if (nx * nx + ny * ny <= 1) put(s, x, y, lit(nx, ny, ramp, hi));
+    }
+}
+function box(s, x0, y0, w, h, ramp) {
+  for (let y = y0; y < y0 + h; y++)
+    for (let x = x0; x < x0 + w; x++) {
+      const nx = ((x + 0.5 - x0) / w) * 2 - 1, ny = ((y + 0.5 - y0) / h) * 2 - 1;
+      put(s, x, y, lit(nx * 0.35, ny * 0.75, ramp, 0.95));
+    }
+}
+function poly(s, pts, ramp, cx, cy, rx, ry) {
+  let y0 = 1e9, y1 = -1e9;
+  pts.forEach((p) => { y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); });
+  for (let y = Math.floor(y0); y <= y1; y++) {
+    const xs = [];
+    for (let i = 0; i < pts.length; i++) {
+      const [ax, ay] = pts[i], [bx, by] = pts[(i + 1) % pts.length];
+      if ((ay <= y + 0.5 && by > y + 0.5) || (by <= y + 0.5 && ay > y + 0.5)) xs.push(ax + ((y + 0.5 - ay) / (by - ay)) * (bx - ax));
+    }
+    xs.sort((a, b) => a - b);
+    for (let k = 0; k + 1 < xs.length; k += 2)
+      for (let x = Math.ceil(xs[k] - 0.5); x <= xs[k + 1] - 0.5; x++)
+        put(s, x, y, Array.isArray(ramp) ? lit((x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry, ramp) : ramp);
+  }
+}
+function line(s, x0, y0, x1, y1, c) {
+  const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+  for (let i = 0; i <= n; i++) put(s, x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n, c);
+}
+function outline(s) {
+  const o = s.px.slice();
+  for (let y = 0; y < s.h; y++)
+    for (let x = 0; x < s.w; x++) {
+      if (s.px[y * s.w + x]) continue;
+      let c = null;
+      for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1]]) {
+        const xx = x + dx, yy = y + dy;
+        if (xx >= 0 && yy >= 0 && xx < s.w && yy < s.h && s.px[yy * s.w + xx]) { c = s.px[yy * s.w + xx]; break; }
+      }
+      if (c) o[y * s.w + x] = darken(c, 0.42);
+    }
+  s.px = o;
+}
+const CACHE = new Map();
+function blit(ctx, s, x, y, flip) {
+  for (let j = 0; j < s.h; j++)
+    for (let i = 0; i < s.w; i++) {
+      const c = s.px[j * s.w + (flip ? s.w - 1 - i : i)];
+      if (c) { ctx.fillStyle = c; ctx.fillRect(x + i, y + j, 1, 1); }
+    }
+}
+function cached(key, make) {
+  if (!CACHE.has(key)) {
+    const s = make(), c = document.createElement("canvas");
+    c.width = s.w; c.height = s.h;
+    blit(c.getContext("2d"), s, 0, 0);
+    CACHE.set(key, c);
+  }
+  return CACHE.get(key);
+}
+
+/* ═══════════════ 2등신 캐릭터 (44×60) ═══════════════
+   발바닥 가운데 = (22, 59). 머리 30 · 몸 14 · 다리 12 정도. 오른쪽(보는 사람 기준)을 살짝 본다. */
+const SKIN = RAMP("#ffd9be");
+function chibi(look, walk, blink, face) {
+  const s = Spr(44, 60), L = look, st = walk; // st: -2..2 걸음
+  const hair = RAMP(L.hair), top = RAMP(L.top), bot = RAMP(L.bot || "#4a5a86"), shoe = RAMP(L.shoe || "#7a4a2e");
+  // 뒷머리 · 등 뒤 물건
+  if (L.quiver) { box(s, 7, 33, 6, 13, RAMP("#8a5a35")); line(s, 8, 31, 8, 34, "#f3f0e6"); line(s, 11, 30, 11, 34, "#f3f0e6"); }
+  if (L.cape) poly(s, [[12, 34], [32, 34], [35, 52], [9, 52]], RAMP(L.cape), 22, 40, 14, 12);
+  if (L.long) poly(s, [[6, 18], [38, 18], [37, 42], [7, 42]], hair, 22, 24, 18, 18);
+  ell(s, 22, 19, 18, 16, hair);
+  // 다리 · 신발 (걸을 때 앞뒤로)
+  if (!L.robe) {
+    box(s, 15 - st, 46, 6, 8, bot); box(s, 23 + st, 46, 6, 8, bot);
+  }
+  box(s, 14 - st, 53, 8, 5, shoe); box(s, 22 + st, 53, 8, 5, shoe);
+  // 몸통
+  if (L.robe) poly(s, [[14, 33], [30, 33], [34, 55], [10, 55]], top, 22, 40, 14, 14);
+  else box(s, 14, 33, 16, 14, top);
+  if (L.trim) { box(s, 14, 44, 16, 3, RAMP(L.trim)); put(s, 22, 45, "#ffe58a"); put(s, 21, 45, "#ffe58a"); }
+  if (L.chest) box(s, 16, 34, 12, 8, RAMP(L.chest));
+  if (L.collar) { put(s, 19, 33, L.collar); put(s, 20, 34, L.collar); put(s, 25, 33, L.collar); put(s, 24, 34, L.collar); }
+  // 팔 (뒷팔은 몸 뒤에서 살짝)
+  box(s, 10, 34 - Math.max(0, st), 5, 10, RAMP(L.sleeve || L.top));
+  ell(s, 12.5, 45 - Math.max(0, st), 2.6, 2.4, SKIN);
+  // 얼굴
+  for (let y = 9; y <= 36; y++)
+    for (let x = 7; x <= 37; x++) {
+      const nx = (x + 0.5 - 22) / 15, ny = (y + 0.5 - 22) / 13.5, d = nx * nx + ny * ny;
+      if (d <= 1) put(s, x, y, d > 0.72 && nx + ny > 0.5 ? SKIN[0] : nx < -0.35 && ny < 0.2 ? SKIN[2] : SKIN[1]);
+    }
+  // 앞머리 (들쭉날쭉한 아랫선)
+  poly(s, [[6, 21], [7, 10], [13, 4], [22, 2], [31, 4], [37, 10], [38, 21], [35, 14], [31, 17], [28, 11], [24, 16], [20, 10], [16, 17], [12, 12], [9, 18]], hair, 22, 14, 18, 14);
+  for (let x = 10; x <= 34; x++) if (!s.px[18 * s.w + x] || s.px[18 * s.w + x] === SKIN[1] || s.px[18 * s.w + x] === SKIN[2]) put(s, x, 18, SKIN[0]); // 앞머리 아래 그늘 한 줄
+  if (L.side) { poly(s, [[6, 18], [10, 18], [9, 31], [6, 28]], hair, 8, 22, 4, 10); poly(s, [[34, 18], [38, 18], [38, 28], [35, 31]], hair, 36, 22, 4, 10); }
+  // 머리 윤기
+  put(s, 13, 9, hair[3]); put(s, 14, 8, hair[3]); put(s, 15, 8, hair[3]); put(s, 16, 7, hair[3]);
+  // 눈 (크고 반짝이게): 위 속눈썹 → 짙은 눈동자 → 아래로 갈수록 밝게 → 흰 빛 두 점
+  const eye = (x0, w) => {
+    // 큰 눈: 위 속눈썹 → 짙은 눈동자 → 아래로 밝아짐, 모서리는 둥글게, 흰 빛 두 점
+    const ir = L.eye || "#4a3a6a", irr = RAMP(ir);
+    if (blink) { for (let i = 0; i < w; i++) put(s, x0 + i, 25, "#3a2a2a"); put(s, x0 - 1, 24, "#3a2a2a"); return; }
+    for (let i = -1; i <= w; i++) put(s, x0 + i, 20, "#2e2230");
+    put(s, x0 - 1, 21, "#2e2230");
+    for (let y = 21; y <= 27; y++)
+      for (let i = 0; i < w; i++) {
+        if (y === 27 && (i === 0 || i === w - 1)) continue;
+        put(s, x0 + i, y, y < 22 ? "#2e2230" : y < 24 ? irr[0] : y < 26 ? ir : irr[2]);
+      }
+    const big = face === "wow" ? 1 : 0;
+    put(s, x0 + 1, 22, "#ffffff"); put(s, x0 + 2, 22, "#ffffff"); put(s, x0 + 1, 23, "#ffffff"); put(s, x0 + 2, 23, "#ffffff"); put(s, x0 + 1, 24, "#ffffff");
+    if (big) { put(s, x0 + 2, 22, "#ffffff"); put(s, x0 + 2, 23, "#ffffff"); put(s, x0, 24, "#ffffff"); }
+    put(s, x0 + w - 2, 26, "#ffffff");
+  };
+  if (face === "smile") {
+    [[14, 24], [15, 23], [16, 23], [17, 24], [26, 24], [27, 23], [28, 23], [29, 24]].forEach(([a, b]) => put(s, a, b, "#2e2230"));
+  } else { eye(13, 5); eye(26, 5); }
+  // 볼 · 입
+  put(s, 12, 28, "#ffb3b8"); put(s, 13, 28, "#ffb3b8"); put(s, 30, 28, "#ffb3b8"); put(s, 31, 28, "#ffb3b8");
+  if (face === "wow") { put(s, 22, 30, "#a8484e"); put(s, 22, 31, "#a8484e"); put(s, 23, 30, "#a8484e"); put(s, 23, 31, "#a8484e"); }
+  else { put(s, 21, 30, "#a8484e"); put(s, 22, 30, "#a8484e"); put(s, 23, 30, "#a8484e"); }
+  // 모자
+  if (L.hat === "helm") {
+    poly(s, [[6, 15], [8, 6], [15, 1], [29, 1], [36, 6], [38, 15]], RAMP("#c9d3e2"), 22, 9, 16, 9);
+    box(s, 5, 14, 34, 3, RAMP("#8f9bb4"));
+    poly(s, [[20, 1], [24, -1], [27, -5], [21, -4]], RAMP("#e2524c"), 23, -2, 4, 4);
+  }
+  if (L.hat === "band") { box(s, 6, 9, 32, 3, RAMP("#e2524c")); poly(s, [[6, 10], [1, 15], [3, 9]], RAMP("#e2524c"), 4, 11, 3, 3); }
+  if (L.hat === "witch") {
+    poly(s, [[11, 9], [33, 9], [26, -14], [20, -11]], RAMP("#7b63d1"), 22, -2, 10, 12);
+    ell(s, 22, 10, 21, 3.4, RAMP("#6650b8"));
+    box(s, 13, 6, 18, 2, RAMP("#ffd86b"));
+  }
+  if (L.hat === "cap") {
+    ell(s, 22, 9, 17, 8, RAMP("#5fae6c"));
+    poly(s, [[36, 10], [43, 12], [36, 13]], RAMP("#4f9a5c"), 39, 11, 4, 2);
+    poly(s, [[10, 4], [4, -6], [8, -7], [13, 3]], RAMP("#fff8ea"), 8, -1, 4, 5);
+  }
+  // 앞팔 + 무기
+  if (L.wp === "sword") { line(s, 33, 46, 41, 28, "#e8eef6"); line(s, 34, 46, 42, 28, "#b8c4d4"); box(s, 31, 44, 6, 2, RAMP("#ffcf5a")); }
+  if (L.wp === "axe") { line(s, 33, 48, 39, 26, "#8a5a35"); poly(s, [[37, 26], [44, 24], [44, 34], [38, 31]], RAMP("#d5dbe4"), 41, 29, 4, 5); }
+  if (L.wp === "staff") { line(s, 34, 50, 38, 20, "#a8743f"); ell(s, 38.5, 18, 3.4, 3.4, RAMP("#bfa8ff"), 0.4); put(s, 38, 17, "#fff6c9"); }
+  if (L.wp === "bow") { for (let a = -1.1; a <= 1.1; a += 0.08) put(s, 30 + Math.cos(a) * 12, 40 + Math.sin(a) * 13, "#c9894a"); line(s, 35, 28, 35, 52, "#fff8ea"); }
+  if (L.wp === "bread") ell(s, 35, 45, 5, 3, RAMP("#e8b56a"));
+  box(s, 29, 34 + Math.max(0, -st), 5, 10, RAMP(L.sleeve || L.top));
+  ell(s, 31.5, 45 + Math.max(0, -st), 2.6, 2.4, SKIN);
+  outline(s);
+  return s;
+}
+const CAST = {
+  knight: { hair: "#7a4a2e", top: "#4f86d9", sleeve: "#c9d3e2", chest: "#d9e1ec", trim: "#2f5fae", cape: "#e2524c", hat: "helm", wp: "sword", eye: "#3a5a9a" },
+  warrior: { hair: "#c0563f", top: "#e08a4a", trim: "#7a4a2e", bot: "#5a4030", hat: "band", wp: "axe", eye: "#6a3a2a" },
+  mage: { hair: "#efe6ff", long: 1, top: "#8f7be0", robe: 1, trim: "#6650b8", hat: "witch", wp: "staff", eye: "#6a4ab0" },
+  archer: { hair: "#e8b85a", top: "#6fbf7a", bot: "#7a5a3a", trim: "#4f9a5c", hat: "cap", wp: "bow", quiver: 1, eye: "#3a7a4a" },
+  me: { hair: "#2a2430", side: 1, top: "#f4f2f8", sleeve: "#f4f2f8", collar: "#d9434a", bot: "#4a6aa6", shoe: "#d9d4e0", wp: "sword", eye: "#5a5070" },
+  marta: { hair: "#f4f0ea", top: "#e58fb0", robe: 1, trim: "#ffffff", wp: "bread", eye: "#6a4a3a" },
+};
+
+/* ═══════════════ 펫 · 몬스터 ═══════════════ */
+function foxSpr(f) {
+  const s = Spr(30, 24), o = RAMP("#f08a3c"), w = RAMP("#fff6ea"), k = f % 2;
+  poly(s, [[3, 13], [0, 6], [7, 9], [10, 14]], o, 5, 10, 5, 5); put(s, 1, 7, "#fff6ea"); put(s, 2, 8, "#fff6ea");
+  box(s, 8 + k, 17, 3, 5, o); box(s, 17 - k, 17, 3, 5, o);
+  ell(s, 13, 15, 8, 5, o);
+  ell(s, 21, 10, 6.5, 6, o);
+  poly(s, [[16, 6], [17, 0], [20, 5]], o, 18, 3, 2, 3); poly(s, [[22, 5], [25, 0], [26, 6]], o, 24, 3, 2, 3);
+  ell(s, 24, 13, 4, 2.6, w);
+  put(s, 28, 12, "#2e2230"); put(s, 22, 9, "#2e2230"); put(s, 22, 10, "#2e2230"); put(s, 21, 9, "#ffffff");
+  outline(s);
+  return s;
+}
+function slimeSpr(f, base) {
+  const s = Spr(30, 24), sq = [0, 1, 2, 1][f % 4], r = RAMP(base);
+  ell(s, 15, 15 + sq * 0.5, 12 + sq, 8 - sq, r, 0.5);
+  poly(s, [[12, 7 + sq], [15, 2 + sq], [18, 7 + sq]], r, 15, 7, 4, 5);
+  put(s, 11, 14, "#2e2230"); put(s, 11, 15, "#2e2230"); put(s, 19, 14, "#2e2230"); put(s, 19, 15, "#2e2230");
+  put(s, 11, 13, "#ffffff"); put(s, 19, 13, "#ffffff");
+  put(s, 9, 17, "#ffb3c8"); put(s, 21, 17, "#ffb3c8");
+  put(s, 14, 18, "#2e2230"); put(s, 15, 19, "#2e2230"); put(s, 16, 18, "#2e2230");
+  outline(s);
+  return s;
+}
+
+/* ═══════════════ 배경 (480×270, 한 번 그려 둔다) ═══════════════ */
+function hs(a, b) { let h = (a * 73856093) ^ (b * 19349663); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+function paintBg() {
+  const W = 480, H = 270, s = Spr(W, H);
+  // 하늘: 띠 모양 그러데이션
+  const sky = ["#7cc4f0", "#8ccdf2", "#9dd5f4", "#b0ddf5", "#c4e6f6"];
+  for (let y = 0; y < 170; y++) for (let x = 0; x < W; x++) put(s, x, y, sky[Math.min(4, Math.floor(y / 34))]);
+  // 먼 산 두 겹
+  const ridge = (base, amp, ofs, col) => { for (let x = 0; x < W; x++) { const top = base - amp * (0.5 + 0.5 * Math.sin(x / 47 + ofs)) - 8 * Math.sin(x / 13 + ofs * 3); for (let y = Math.floor(top); y < 210; y++) put(s, x, y, col[y - top < 3 ? 2 : hs(x, y) > 0.985 ? 0 : 1]); } };
+  ridge(150, 40, 1.3, ["#86a8c8", "#9bb8d4", "#b4cbe0"]);
+  ridge(170, 26, 4.1, ["#6f9a9a", "#82adaa", "#9cc2b8"]);
+  // 들판 (마을이 서 있는 언덕)
+  for (let y = 196; y < 238; y++) for (let x = 0; x < W; x++) put(s, x, y, y < 199 ? "#b8e08a" : y < 210 ? "#9ed27a" : y < 224 ? "#8ac86a" : "#78bb5e");
+  // 마을 (작은 집과 나무)
+  for (let i = 0; i < 9; i++) {
+    const hx = 20 + i * 55 + Math.floor(hs(i, 3) * 20), hy = 192 + Math.floor(hs(i, 5) * 8);
+    if (hx > 140 && hx < 340) continue;
+    box(s, hx, hy, 18, 10, RAMP("#f2e2c4"));
+    poly(s, [[hx - 3, hy + 1], [hx + 9, hy - 9], [hx + 21, hy + 1]], RAMP("#e0703a"), hx + 9, hy - 3, 11, 6);
+    put(s, hx + 8, hy + 5, "#7a5a3a"); put(s, hx + 8, hy + 6, "#7a5a3a"); put(s, hx + 4, hy + 3, "#8fd0f0"); put(s, hx + 13, hy + 3, "#8fd0f0");
+    ell(s, hx + 28, hy + 2, 7, 8, RAMP("#5aa85c"));
+  }
+  // 큰 나무 줄기 (가운데) — 세로 결무늬
+  const bark = ["#5a3a24", "#7a5234", "#946a44", "#b08458", "#c9a06e"];
+  for (let y = 40; y < 250; y++) {
+    const t = (y - 40) / 210, half = 64 + t * 18 + (y > 225 ? (y - 225) * 2.4 : 0), cx = 240;
+    for (let x = Math.floor(cx - half); x <= cx + half; x++) {
+      const nx = (x - cx) / half;
+      let k = nx < -0.75 ? 0 : nx < -0.2 ? 3 : nx < 0.35 ? 2 : nx < 0.75 ? 1 : 0;
+      if (Math.floor(x / 3 + Math.sin(y / 11 + x) * 1.5) % 7 === 0) k = Math.max(0, k - 1);
+      if (nx > -0.55 && nx < -0.35 && hs(x, y >> 2) > 0.6) k = 4;
+      put(s, x, y, bark[k]);
+    }
+  }
+  [[214, 150, 9, 13], [272, 95, 7, 10], [258, 215, 8, 6]].forEach(([a, b, rx, ry]) => { ell(s, a, b, rx, ry, ["#3e2614", "#5a3a24", "#7a5234", "#946a44"]); ell(s, a, b, rx - 4, ry - 5, ["#2e1c10", "#3e2614", "#4a2e1a", "#5a3a24"]); });
+  // 나뭇잎 덩어리
+  const leaf = RAMP("#5fb84a"), leafD = RAMP("#3f9a40");
+  // 큰 덩어리 그림자 → 작은 잎 뭉치 수백 개(위쪽일수록 밝은 뭉치)
+  for (let i = 0; i < 16; i++) ell(s, 80 + hs(i, 1) * 320, 18 + hs(i, 2) * 40, 26 + hs(i, 3) * 14, 18, ["#2f7a34", "#3a8a3c", "#3f9a40", "#4aa846"], 0.9);
+  for (let i = 0; i < 420; i++) {
+    const a = 64 + hs(i, 21) * 352, b = 2 + hs(i, 22) * 64, up = b < 34 || hs(i, 23) > 0.6;
+    const r = 4 + hs(i, 24) * 4;
+    ell(s, a, b, r, r * 0.8, up ? leaf : leafD, 0.55);
+  }
+  for (let i = 0; i < 70; i++) { const a = 70 + hs(i, 9) * 340, b = 4 + hs(i, 8) * 60; put(s, a, b, "#c8f08a"); put(s, a + 1, b, "#a6e070"); }
+  // 나무판 발판 2층 (받침대 · 매달린 이끼)
+  const plank = (y, x0, x1) => {
+    for (let x = x0; x < x1; x++) {
+      put(s, x, y, "#e8c48a"); put(s, x, y + 1, "#d4a86a");
+      for (let j = 2; j < 7; j++) put(s, x, y + j, j < 5 ? "#b88a52" : "#8a6038");
+      if ((x - x0) % 22 === 0) for (let j = 1; j < 7; j++) put(s, x, y + j, "#6a4628");
+    }
+    for (let j = 0; j < 7; j++) { put(s, x0, y + j, "#5a3a24"); put(s, x1, y + j, "#5a3a24"); }
+    [x0 + 40, x1 - 40].forEach((bx) => { poly(s, [[bx - 4, y + 7], [bx + 4, y + 7], [bx + 1, y + 20], [bx - 1, y + 20]], RAMP("#7a5234"), bx, y + 12, 4, 7); });
+    for (let i = 0; i < 9; i++) {
+      const mx = x0 + 12 + i * ((x1 - x0 - 20) / 8) + hs(i, y) * 6;
+      ell(s, mx, y + 1, 5, 3, RAMP("#6cc44e"), 0.5);
+      const len = 3 + Math.floor(hs(i, y + 1) * 10);
+      for (let j = 0; j < len; j++) put(s, mx + Math.sin(j / 2) * 1, y + 7 + j, j % 3 ? "#4fa83e" : "#8ad86a");
+    }
+  };
+  plank(108, 108, 372);
+  plank(182, 92, 388);
+  // 땅 · 앞쪽 덤불 · 꽃 · 버섯
+  for (let y = 238; y < H; y++) for (let x = 0; x < W; x++) put(s, x, y, y < 241 ? "#8ad86a" : y < 246 ? "#5fb84a" : (x + y) % 11 === 0 ? "#3f8a3a" : "#4a9a3e");
+  for (let i = 0; i < 160; i++) { const a = hs(i, 31) * W, b = 248 + hs(i, 32) * 22, r = 4 + hs(i, 33) * 5; ell(s, a, b, r, r * 0.8, b < 256 ? RAMP("#4fae4a") : RAMP("#3a8f40"), 0.55); }
+  for (let i = 0; i < 40; i++) { const a = hs(i, 11) * W, b = 244 + hs(i, 12) * 22, c = ["#ffffff", "#ffd86b", "#ff9fc0", "#b7a6ff"][i % 4]; put(s, a, b, c); put(s, a + 1, b, c); put(s, a, b - 1, c); put(s, a, b + 1, "#ffb02e"); }
+  [[60, 236, "#e0603a"], [420, 238, "#e0603a"], [440, 241, "#c9a24a"]].forEach(([a, b, c]) => { box(s, a - 2, b, 5, 7, RAMP("#f6efe0")); ell(s, a, b, 8, 5, RAMP(c), 0.4); put(s, a - 3, b - 2, "#ffffff"); put(s, a + 2, b - 3, "#ffffff"); put(s, a + 4, b - 1, "#ffffff"); });
+  // 나뭇잎·발판·버섯에 테두리
+  outline(s);
+  const c = document.createElement("canvas"); c.width = W; c.height = H; blit(c.getContext("2d"), s, 0, 0); return c;
+}
+function cloudSpr() {
+  const s = Spr(70, 26), r = ["#d8ecf8", "#eef7fc", "#ffffff", "#ffffff"];
+  ell(s, 20, 16, 16, 9, r, 0.3); ell(s, 36, 12, 14, 11, r, 0.3); ell(s, 52, 17, 14, 8, r, 0.3);
+  return s;
+}
+
+/* ═══════════════ 장면 ═══════════════ */
+const sc = document.getElementById("scene").getContext("2d"), BG = paintBg(), CLOUD = cached("cloud", cloudSpr);
+const spr = (key, mk) => cached(key, mk);
+function drawChar(ctx, name, x, y, t, walk, flip, face) {
+  const st = walk ? [0, 1, 2, 1, 0, -1, -2, -1][Math.floor(t * 10) % 8] : 0, bl = (t * 0.7 + x * 0.01) % 4 > 3.88;
+  const c = spr(name + st + bl + (face || ""), () => chibi(CAST[name], st, bl, face));
+  const bob = walk ? Math.abs(st) === 2 ? 0 : -1 : Math.sin(t * 2.4 + x) > 0.6 ? -1 : 0;
+  ctx.save();
+  ctx.fillStyle = "rgba(40,30,20,0.22)"; ctx.fillRect(Math.round(x) - 9, Math.round(y) - 1, 18, 2);
+  if (flip) { ctx.translate(Math.round(x) + 22, 0); ctx.scale(-1, 1); ctx.drawImage(c, 0, Math.round(y) - 60 + bob); }
+  else ctx.drawImage(c, Math.round(x) - 22, Math.round(y) - 60 + bob);
+  ctx.restore();
+}
+function label(ctx, txt, x, y) {
+  ctx.font = "8px sans-serif"; const w = Math.ceil(ctx.measureText(txt).width) + 6;
+  ctx.fillStyle = "rgba(30,30,50,0.75)"; ctx.fillRect(Math.round(x - w / 2), y, w, 10);
+  ctx.fillStyle = "#fff"; ctx.textBaseline = "top"; ctx.fillText(txt, Math.round(x - w / 2) + 3, y + 1);
+}
+function drawScene(t) {
+  sc.drawImage(BG, 0, 0);
+  [[30, 18, 6], [210, 34, 4], [380, 12, 5]].forEach(([a, b, v]) => sc.drawImage(CLOUD, Math.round((a + t * v) % 560) - 70, b));
+  sc.drawImage(BG, 0, 40, 480, 230, 0, 40, 480, 230); // 나무가 구름 앞에 오게 다시 덮기
+  // 위층: 마법사(가만히) · 마르타
+  drawChar(sc, "mage", 170, 108, t, false, false);
+  drawChar(sc, "marta", 320, 108, t, false, true);
+  label(sc, "마법사", 170, 110); label(sc, "마르타 할머니", 320, 110);
+  // 아래층: 주인공이 왔다 갔다, 여우가 따라옴
+  const ph = (t * 0.09) % 2, k = ph < 1 ? ph : 2 - ph, px = 130 + k * 220, dir = ph < 1 ? 1 : -1;
+  const fx = px - dir * 30, fc = spr("fox" + (Math.floor(t * 10) % 2), () => foxSpr(Math.floor(t * 10) % 2));
+  sc.save(); if (dir < 0) { sc.translate(Math.round(fx) + 15, 0); sc.scale(-1, 1); sc.drawImage(fc, 0, 182 - 24); } else sc.drawImage(fc, Math.round(fx) - 15, 182 - 24); sc.restore();
+  drawChar(sc, "me", px, 182, t, true, dir < 0);
+  label(sc, "나", px, 184);
+  // 땅: 슬라임 두 마리 · 기사
+  [[90, "#9ad0f8"], [400, "#b6a6ec"]].forEach(([a, c], i) => { const f = Math.floor(t * 6 + i * 2) % 4, sp = spr("sl" + c + f, () => slimeSpr(f, c)); sc.drawImage(sp, a - 15, 238 - 24 - (f === 2 ? 3 : 0)); });
+  label(sc, "안개 슬라임", 90, 240);
+  drawChar(sc, "knight", 200, 240, t, false, false);
+  drawChar(sc, "archer", 290, 240, t, false, true);
+}
+/* ═══════════════ 캐릭터 모음 ═══════════════ */
+const lc = document.getElementById("lineup").getContext("2d");
+function drawLineup(t) {
+  lc.fillStyle = "#f4f8fd"; lc.fillRect(0, 0, 240, 80);
+  lc.fillStyle = "#dceccf"; lc.fillRect(0, 66, 240, 14);
+  [["knight"], ["warrior"], ["mage"], ["archer"], ["me"]].forEach(([n], i) => drawChar(lc, n, 18 + i * 34, 70, t, false, false));
+  drawChar(lc, "me", 194, 70, t, false, false, "wow");
+  const fc = spr("fox0", () => foxSpr(0)); lc.drawImage(fc, 206, 46);
+  const sp = spr("slx", () => slimeSpr(Math.floor(t * 6) % 4, "#9ad0f8")); lc.drawImage(sp, 208, 6);
+}
+let T0 = null;
+function loop(ms) { if (T0 === null) T0 = ms; const t = (ms - T0) / 1000 + 1; drawScene(t); drawLineup(t); requestAnimationFrame(loop); }
+window.__draw = (t) => { drawScene(t); drawLineup(t); };
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

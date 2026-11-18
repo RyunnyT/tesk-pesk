@@ -1,0 +1,288 @@
+{
+ "slime": {
+  "id": "4ffb1234-2200-438c-8a79-089d231efe9d",
+  "anim": "squishing bounce in place",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "mush": {
+  "id": "9068ff12-7269-4398-ae3e-8872784d1024",
+  "anim": "hopping in place",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "jelly": {
+  "id": "4ca17150-500e-46f0-a1e1-ca56fba33d32",
+  "anim": "floating up and down, tentacles waving",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "shade": {
+  "id": "4065635b-e67f-421a-b590-87fe353bf4fb",
+  "anim": "squishing bounce in place",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "crab": {
+  "id": "f19af81d-48c3-421f-9ea6-015a8542f7e1",
+  "anim": "snapping claws, scuttling",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "bog": {
+  "id": "0cd5fa91-0b19-46f2-a303-dedf8d0313a6",
+  "anim": "wobbling and bubbling",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "wolf": {
+  "id": "c686c294-b38f-41ad-bfdd-8d5b38eac47b",
+  "anim": "walking in place",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "gear": {
+  "id": "3decf7a1-306f-4eae-8a4e-b80026979b09",
+  "anim": "crawling, gears turning",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "fire": {
+  "id": "85b0d421-2b7d-4fe1-9bcb-b85da10ca166",
+  "anim": "flickering flames",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "scare": {
+  "id": "68d19bc3-c775-45ba-b24b-ddb3982ba941",
+  "anim": "swaying side to side",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "moth": {
+  "id": "fc736169-176a-4905-8ab3-aaa980a41290",
+  "anim": "flapping wings",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "ice": {
+  "id": "1b18daf3-6838-4f98-92f8-cd67c8701c07",
+  "anim": "floating up and down, sparkling",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "eraser": {
+  "id": "0a04822e-f195-418d-b259-852addb324ab",
+  "anim": "hopping in place",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "rat": {
+  "id": "30b375b2-6819-4262-9444-668a903c2371",
+  "anim": "scurrying in place",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "bat": {
+  "id": "39fa6a48-9054-4abc-833c-8ff26adb2cf4",
+  "anim": "flapping wings",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "hog": {
+  "id": "61f232c3-269c-465f-913c-754a6f315989",
+  "anim": "waddling in place",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "windup": {
+  "id": "95be0611-2ceb-4623-aa10-da293a66e40f",
+  "anim": "marching in place, key turning",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "ink": {
+  "id": "b15a3d1e-ac5b-470c-88a4-67cbe830599d",
+  "anim": "wobbling, ink dripping",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "wisp": {
+  "id": "d08a1d03-2426-453d-b254-a14c6f08063f",
+  "anim": "flickering and floating",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "crow": {
+  "id": "b1450477-9f1a-438b-9f5b-c0a29d9363d4",
+  "anim": "hopping, flapping wings",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "sheep": {
+  "id": "1877e3bf-f211-4486-b1cf-44579514afbc",
+  "anim": "bouncing softly",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "ghost": {
+  "id": "de8e0bd1-8b28-48b5-ad9c-7d8ae971b259",
+  "anim": "floating up and down",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "dog": {
+  "id": "160480fe-ee67-4dcc-a1c4-f7588a6dc84c",
+  "anim": "walking",
+  "kind": "pets",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "cat": {
+  "id": "e72d6594-9dfc-400c-bbf4-8d315a25aab5",
+  "anim": "walking",
+  "kind": "pets",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "fox": {
+  "id": "096678ef-2bce-46cb-9828-4655c29f70a2",
+  "anim": "walking",
+  "kind": "pets",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "rabbit": {
+  "id": "bfe0605d-27ce-4561-9962-56c0766450a2",
+  "anim": "hopping",
+  "kind": "pets",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "chick": {
+  "id": "934f8d6f-e55c-474c-b713-27fea693b610",
+  "anim": "walking",
+  "kind": "pets",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "momo": {
+  "id": "8d304e0c-9ffc-47a2-9174-fb1d40659e51",
+  "anim": "blinking and bobbing",
+  "kind": "npc",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "icowl": {
+  "id": "63d91bdc-1cbd-40f4-bab9-b3b7ac320803",
+  "anim": "blinking and bobbing",
+  "kind": "npc",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "starcat": {
+  "id": "0d9b42ab-845a-49e7-b190-a67d2152c25f",
+  "anim": "tail swishing",
+  "kind": "misc",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "chest": {
+  "id": "28f42ed5-a505-4ae8-be22-a3ecbede45ad",
+  "anim": null,
+  "kind": "misc",
+  "done": 1
+ },
+ "dust": {
+  "id": "50114289-943b-4c83-a791-fc270fe6d572",
+  "anim": "sparkling",
+  "kind": "misc",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "queen": {
+  "id": "a916d77d-ba59-4522-86f3-3359d7bc42a0",
+  "anim": "floating, tentacles waving",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "golem": {
+  "id": "2389a72d-6744-4921-a5fe-e7648c4fa4db",
+  "anim": "stomping in place, gears turning",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "gate": {
+  "id": "6746a465-139f-4cac-a0fe-1cc44e52eeb2",
+  "anim": "breathing heavily, mist swirling",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ },
+ "warden": {
+  "id": "5c2f9704-7208-46b9-974a-d3c9bb891104",
+  "anim": "stomping in place",
+  "kind": "mons",
+  "animQ": 1,
+  "nf": 4,
+  "done": 1
+ }
+}

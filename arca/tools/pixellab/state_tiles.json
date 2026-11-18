@@ -1,0 +1,102 @@
+{
+ "town-path": {
+  "id": "8af0eed0-b5bd-4723-baf2-ae74fa6b5c4c",
+  "done": 1
+ },
+ "town-water": {
+  "id": "9b2f8ed6-b775-4404-903e-860c46e8cc71",
+  "done": 1
+ },
+ "coast-path": {
+  "id": "0f0e2e53-d2cd-4fda-811d-4fe7f27c9e6f",
+  "done": 1
+ },
+ "coast-water": {
+  "id": "0002befd-e6c7-4bbc-91f8-af2ee592d9f8",
+  "done": 1
+ },
+ "forest-path": {
+  "id": "5ee5e592-9e83-424a-88d7-0dcda50c0a33",
+  "done": 1
+ },
+ "forest-water": {
+  "id": "db0c8e79-63fa-4e01-b9c3-32d5861e7ec2",
+  "done": 1
+ },
+ "dead-path": {
+  "id": "11ff2628-b3aa-4f78-ae5c-0c582ca7aac8",
+  "done": 1
+ },
+ "dead-water": {
+  "id": "e1d1d2a9-c5d1-481c-a974-547e8055b9c3",
+  "done": 1
+ },
+ "garden-path": {
+  "id": "fa9aad22-788a-4864-870d-b07fd828c0e8",
+  "done": 1
+ },
+ "garden-water": {
+  "id": "473544b1-61b9-47b6-b73c-5d56eb9c6a03",
+  "done": 1
+ },
+ "stone-path": {
+  "id": "434edec3-e14e-4a58-b178-aeee3962c898",
+  "done": 1
+ },
+ "stone-water": {
+  "id": "45860812-432e-4bfc-b8bf-3b423cd8ddec",
+  "done": 1
+ },
+ "gold-path": {
+  "id": "9b49faaa-1386-46be-85c8-0716d6ea6627",
+  "done": 1
+ },
+ "gold-water": {
+  "id": "9903b40a-d9d1-4f26-aa7e-cd29728ff357",
+  "done": 1
+ },
+ "dream-path": {
+  "id": "2ec1f88b-3e7d-40b7-9cf1-d359f8157c2a",
+  "done": 1
+ },
+ "dream-water": {
+  "id": "d35856b3-6a64-4a97-b521-e1e7d3d8f917",
+  "done": 1
+ },
+ "white-path": {
+  "id": "bc96f5fa-860b-4871-bcfd-a78a10c2d2c6",
+  "done": 1
+ },
+ "white-water": {
+  "id": "2c073c7e-9208-4c47-8044-adeb91c901d9",
+  "done": 1
+ },
+ "snow-path": {
+  "id": "6c7510d9-875a-4b64-ab9c-dc4f3d3b61b7",
+  "done": 1
+ },
+ "snow-water": {
+  "id": "1122b55d-eae8-4369-bc86-2aaebfeebd22",
+  "done": 1
+ },
+ "town-sand": {
+  "id": "c4dd8aeb-5a8c-4e7e-a21a-fcc6190e62df",
+  "done": 1
+ },
+ "town-sea": {
+  "id": "45d894ba-93ab-4cdb-a97b-20bb1806b106",
+  "done": 1
+ },
+ "coast-sand": {
+  "id": "e5141f7f-da5e-414f-8c89-f89b38c92508",
+  "done": 1
+ },
+ "coast-sea": {
+  "id": "ee46ecc4-506c-4212-a4d9-f71b15950caa",
+  "done": 1
+ },
+ "solid": {
+  "id": "51876824-f37f-4b2a-837d-b45b042acc18",
+  "done": 1
+ }
+}

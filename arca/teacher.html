@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>학급 모아 보기</title>
+    <!-- 아르카 연대기 · 학급 모아 보기 (프롬프트 D). 학생이 게임의 '학습 보고서 → 기록 내보내기'로 만든 JSON 을 모아 보는 선생님용 페이지.
+         파일은 이 브라우저 안에서만 읽어요(어디로도 보내지 않아요). 게임과 따로 열어요. -->
+    <style>
+      :root {
+        --bg: #f4f2fb;
+        --ink: #1e1b3f;
+        --sub: #57507a;
+        --line: #d3cce7;
+        --card: #ffffff;
+        --acc: #5b4bc4;
+        --low: #fde8e8;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --bg: #14112a;
+          --ink: #ece8f7;
+          --sub: #a59ec6;
+          --line: #2d2750;
+          --card: #1f1a3d;
+          --acc: #a99cf5;
+          --low: #4a1f2c;
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme="dark"] {
+        --bg: #14112a;
+        --ink: #ece8f7;
+        --sub: #a59ec6;
+        --line: #2d2750;
+        --card: #1f1a3d;
+        --acc: #a99cf5;
+        --low: #4a1f2c;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Gowun Dodum", system-ui, sans-serif;
+        font-size: 15px;
+      }
+      main {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px 16px 40px;
+      }
+      h1 {
+        font-size: 24px;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 17px;
+        margin: 24px 0 6px;
+      }
+      p.sub {
+        color: var(--sub);
+        margin: 0 0 14px;
+        font-size: 14px;
+      }
+      .drop {
+        border: 2px dashed var(--line);
+        border-radius: 12px;
+        background: var(--card);
+        padding: 18px;
+        text-align: center;
+      }
+      .drop.on {
+        border-color: var(--acc);
+      }
+      .drop button,
+      .bar button {
+        font: inherit;
+        font-size: 14px;
+        padding: 5px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--ink);
+        cursor: pointer;
+      }
+      textarea {
+        width: 100%;
+        margin-top: 10px;
+        font-size: 12px;
+        background: var(--bg);
+        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+      .bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-top: 10px;
+      }
+      .msg {
+        color: var(--sub);
+        font-size: 13px;
+      }
+      .wrapT {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--card);
+        font-size: 14px;
+      }
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 5px 8px;
+        text-align: left;
+        white-space: nowrap;
+      }
+      th {
+        cursor: pointer;
+        user-select: none;
+      }
+      tr.low td {
+        background: var(--low);
+        font-weight: 700;
+      }
+      .note {
+        color: var(--sub);
+        font-size: 12px;
+      }
+      .meter {
+        display: inline-block;
+        width: 60px;
+        height: 8px;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        vertical-align: middle;
+        margin-right: 6px;
+        overflow: hidden;
+      }
+      .meter i {
+        display: block;
+        height: 100%;
+        background: var(--acc);
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>학급 모아 보기</h1>
+      <p class="sub">아르카 연대기 · 학생들이 「학습 보고서 → 기록 내보내기」로 만든 파일을 모아 봐요. 파일은 이 브라우저 안에서만 읽고 어디로도 보내지 않아요.</p>
+      <div class="drop" id="drop">
+        <p>학생 기록 파일(.json)을 여기에 <b>끌어다 놓거나</b> 골라요. 여러 개를 한 번에 넣어도 돼요.</p>
+        <input type="file" id="file" accept=".json,application/json" multiple hidden />
+        <button type="button" id="pick">파일 고르기</button>
+        <details>
+          <summary>글로 붙여 넣기(파일 저장이 막혔을 때)</summary>
+          <textarea id="paste" rows="4" placeholder="학생이 복사한 기록 글을 붙여 넣어요. 여러 명이면 한 줄에 한 명씩."></textarea>
+          <div class="bar"><button type="button" id="addp">붙여 넣은 기록 더하기</button></div>
+        </details>
+      </div>
+      <div class="bar"><span class="msg" id="msg">아직 넣은 기록이 없어요.</span><button type="button" id="csv" hidden>학급 표 CSV 저장</button><button type="button" id="clear" hidden>모두 지우기</button></div>
+
+      <section id="out" hidden>
+        <h2>학생별</h2>
+        <div class="wrapT"><table id="tS"></table></div>
+        <p class="note">▼ = 20문제 이상 풀었는데 정답률 60% 아래. 표 머리를 누르면 정렬해요.</p>
+        <h2>단원별 학급 평균</h2>
+        <div class="wrapT"><table id="tU"></table></div>
+        <p class="note">학급 정답률 = 그 단원 전체 맞힌 수 ÷ 전체 푼 수. ▼ = 정답률 60% 아래(다시 가르칠 후보).</p>
+      </section>
+    </main>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+      const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
+      const meter = (p) => '<span class="meter" aria-hidden="true"><i style="width:' + p + '%"></i></span>' + p + "%";
+      const STU = [];
+      // 게임(src/19-log.js)의 logRows 와 같은 계산
+      const rowsOf = (L) => {
+        const r = Object.values(L.agg || {}).map((g) => ({ ...g }));
+        (L.recent || []).forEach((e) => r.push({ d: e.d, p: e.p, u: e.u, k: e.k, n: 1, ok: e.ok, t: e.t, re: e.re }));
+        return r;
+      };
+      function add(o, src) {
+        if (!o || o.app !== "arca" || !o.log || !o.log.v) throw new Error("아르카 기록이 아니에요");
+        const rows = rowsOf(o.log),
+          n = rows.reduce((a, r) => a + r.n, 0),
+          ok = rows.reduce((a, r) => a + r.ok, 0),
+          days = [...new Set(rows.map((r) => r.d))].sort();
+        const s = { nick: o.nick || "이름 없음", grade: o.grade, at: o.at, pr: o.progress || {}, rows, n, ok, days: days.length, last: days[days.length - 1] || "-" };
+        // 같은 별명 + 같은 첫날이면 같은 학생: 새 것으로 바꿈
+        const key = s.nick + "|" + (days[0] || "");
+        const i = STU.findIndex((x) => x.key === key);
+        s.key = key;
+        if (i >= 0) STU[i] = s;
+        else STU.push(s);
+      }
+      function parseText(t, src) {
+        let got = 0,
+          bad = 0;
+        const tryOne = (x) => {
+          try {
+            add(JSON.parse(x), src);
+            got++;
+          } catch (e) {
+            bad++;
+          }
+        };
+        const s = t.trim();
+        if (!s) return [0, 0];
+        try {
+          const o = JSON.parse(s);
+          (Array.isArray(o) ? o : [o]).forEach((x) => {
+            try {
+              add(x, src);
+              got++;
+            } catch (e) {
+              bad++;
+            }
+          });
+        } catch (e) {
+          s.split(/\n+/).forEach((l) => l.trim() && tryOne(l.trim()));
+        }
+        return [got, bad];
+      }
+      let sortS = { k: "nick", d: 1 };
+      function render() {
+        $("out").hidden = !STU.length;
+        $("csv").hidden = $("clear").hidden = !STU.length;
+        $("msg").textContent = STU.length ? "학생 " + STU.length + "명의 기록" : "아직 넣은 기록이 없어요.";
+        if (!STU.length) return;
+        const val = (s, k) => ({ nick: s.nick, n: s.n, rate: pct(s.ok, s.n), days: s.days, part: s.pr.part || 0, towns: s.pr.towns || 0, lv: s.pr.lv || 0, recov: s.pr.recov || 0, caps: (s.pr.caps || []).length, last: s.last })[k];
+        const L = STU.slice().sort((a, b) => {
+          const x = val(a, sortS.k),
+            y = val(b, sortS.k);
+          return (x < y ? -1 : x > y ? 1 : 0) * sortS.d;
+        });
+        const H = [
+          ["nick", "별명"],
+          ["n", "푼 문제"],
+          ["rate", "정답률"],
+          ["days", "공부한 날"],
+          ["part", "진도(부)"],
+          ["towns", "되살린 마을"],
+          ["lv", "Lv"],
+          ["recov", "되찾은 기억"],
+          ["caps", "마무리 ★"],
+          ["last", "마지막 날"],
+        ];
+        $("tS").innerHTML =
+          "<thead><tr>" + H.map((h) => '<th data-k="' + h[0] + '">' + h[1] + (sortS.k === h[0] ? (sortS.d > 0 ? " ↑" : " ↓") : "") + "</th>").join("") + "</tr></thead><tbody>" +
+          L.map((s) => {
+            const r = pct(s.ok, s.n),
+              low = s.n >= 20 && r < 60;
+            return '<tr class="' + (low ? "low" : "") + '"><td>' + esc(s.nick) + "</td><td>" + s.n + "</td><td>" + (low ? "▼ " : "") + meter(r) + "</td><td>" + s.days + "</td><td>" + (s.pr.part || "-") + "부</td><td>" + (s.pr.towns || 0) + "/12</td><td>" + (s.pr.lv || "-") + "</td><td>" + (s.pr.recov || 0) + "</td><td>" + (s.pr.caps || []).length + "/12</td><td>" + esc(s.last) + "</td></tr>";
+          }).join("") +
+          "</tbody>";
+        // 단원별 학급 평균
+        const U = {};
+        STU.forEach((s) =>
+          s.rows.forEach((r) => {
+            const u = U[r.u] || (U[r.u] = { u: r.u, k: r.k, p: r.p || 99, n: 0, ok: 0, t: 0, who: new Set() });
+            u.n += r.n;
+            u.ok += r.ok;
+            u.t += r.t;
+            u.p = Math.min(u.p, r.p || 99);
+            u.who.add(s.key);
+          }),
+        );
+        const K = { math: "수학", eng: "영어", read: "지문" };
+        const UL = Object.values(U).sort((a, b) => a.p - b.p || b.n - a.n);
+        $("tU").innerHTML =
+          "<thead><tr><th>부</th><th>단원</th><th>유형</th><th>푼 학생</th><th>문제 수</th><th>학급 정답률</th><th>평균 시간</th></tr></thead><tbody>" +
+          UL.map((u) => {
+            const r = pct(u.ok, u.n),
+              low = u.n >= 10 && r < 60;
+            return '<tr class="' + (low ? "low" : "") + '"><td>' + (u.p < 99 ? u.p : "-") + "</td><td>" + esc(u.u) + "</td><td>" + (K[u.k] || u.k) + "</td><td>" + u.who.size + "명</td><td>" + u.n + "</td><td>" + (low ? "▼ " : "") + meter(r) + "</td><td>" + (u.t / u.n).toFixed(1) + "초</td></tr>";
+          }).join("") +
+          "</tbody>";
+      }
+      $("tS").addEventListener("click", (e) => {
+        const th = e.target.closest("th[data-k]");
+        if (!th) return;
+        sortS = { k: th.dataset.k, d: sortS.k === th.dataset.k ? -sortS.d : th.dataset.k === "nick" ? 1 : -1 };
+        render();
+      });
+      const readFiles = async (files) => {
+        let got = 0,
+          bad = 0;
+        for (const f of files) {
+          const [g, b] = parseText(await f.text(), f.name);
+          got += g;
+          bad += b;
+        }
+        render();
+        $("msg").textContent += " · 이번에 " + got + "개 넣음" + (bad ? ", 읽지 못한 것 " + bad + "개" : "");
+      };
+      $("pick").onclick = () => $("file").click();
+      $("file").onchange = (e) => readFiles([...e.target.files]);
+      const dz = $("drop");
+      dz.addEventListener("dragover", (e) => (e.preventDefault(), dz.classList.add("on")));
+      dz.addEventListener("dragleave", () => dz.classList.remove("on"));
+      dz.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dz.classList.remove("on");
+        readFiles([...e.dataTransfer.files]);
+      });
+      $("addp").onclick = () => {
+        const [g, b] = parseText($("paste").value, "붙여 넣기");
+        render();
+        $("msg").textContent += " · 이번에 " + g + "개 넣음" + (b ? ", 읽지 못한 것 " + b + "개" : "");
+        if (g) $("paste").value = "";
+      };
+      $("clear").onclick = () => {
+        STU.length = 0;
+        render();
+      };
+      $("csv").onclick = () => {
+        const q = (s) => '"' + String(s).replace(/"/g, '""') + '"';
+        const t =
+          "﻿별명,푼 문제,정답률,공부한 날,진도(부),되살린 마을,Lv,되찾은 기억,마무리 도장,마지막 날\n" +
+          STU.map((s) => [q(s.nick), s.n, pct(s.ok, s.n) + "%", s.days, s.pr.part || "", s.pr.towns || 0, s.pr.lv || "", s.pr.recov || 0, (s.pr.caps || []).length, s.last].join(",")).join("\n");
+        // 틀 안(플레이 링크 같은 곳)에서는 파일 저장이 막혀 있어 글 상자로 보여 준다
+        let inFrame = true;
+        try {
+          inFrame = window.self !== window.top;
+        } catch (e) {}
+        if (inFrame) {
+          document.querySelector("details").open = true;
+          $("paste").value = t;
+          $("msg").textContent = "이 화면에서는 파일 저장이 막혀 있어요. 아래 글을 복사해 메모장에 붙여 넣고 .csv 로 저장해요.";
+          return;
+        }
+        try {
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(new Blob([t], { type: "text/csv" }));
+          a.download = "arca-학급-" + new Date().toISOString().slice(0, 10) + ".csv";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        } catch (e) {
+          $("paste").value = t;
+        }
+      };
+    </script>
+  </body>
+</html>

@@ -920,6 +920,7 @@ function _applyFeatures(raw){
   peskFeatures = {};
   PESK_FEATURE_IDS.forEach(id => { if(v[id] === false) peskFeatures[id] = false; });
   if(v.writeFirst === true) peskFeatures.writeFirst = true;
+  if(v.arcaBeta === true) peskFeatures.arcaBeta = true;   // 🧪 아르카(베타) — 선생님이 켰을 때만(기본 꺼짐)
 }
 function writeFirstLocked(){
   if(!peskFeatures.writeFirst || !todoOn('writing')) return false;
@@ -953,6 +954,8 @@ function applyFeatureUI(){
   if(quest) quest.style.display = featOn('adventure') ? '' : 'none';
   const chal = document.getElementById('student-challenge-wrap');
   if(chal) chal.style.display = featOn('challenge') ? '' : 'none';
+  ['tab-arca','more-tab-arca'].forEach(id => { const el = document.getElementById(id); if(el){ el.style.display = peskFeatures.arcaBeta ? '' : 'none'; el.classList.toggle('wlocked', !!peskFeatures.arcaBeta && writeFirstLocked()); } });
+  if(!peskFeatures.arcaBeta) closeArca();
   // 더보기 안이 모두 꺼졌으면 더보기 버튼도 숨긴다
   const anyMore = !!document.querySelector('#bottom-more-menu .bottom-more-item:not([style*="display: none"])');
   ['tab-more','bottom-tab-more'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = anyMore ? '' : 'none'; });
@@ -2084,6 +2087,7 @@ function renderDashboard(){
     + '<button class="tab-btn active" id="tab-home" onclick="showTab(\'home\')">🏠 오늘</button>'
     + (window.RPG ? '<button class="tab-btn" id="tab-adventure" onclick="openAdventure()">⚔️ 모험</button>' : '')
     + (window.RPG ? '<button class="tab-btn" id="tab-boss" onclick="openAdventure(\'boss\')">🗿 보스</button>' : '')
+    + '<button class="tab-btn" id="tab-arca" style="display:none" onclick="openArca()" title="아르카 연대기 체험판">🧪 아르카<sup style="font-size:9px;margin-left:2px;">베타</sup></button>'
     + '<button class="tab-btn" id="tab-shop" onclick="showTab(\'shop\')">🏪 매점</button>'
     + '<button class="tab-btn" id="tab-myroom" onclick="showTab(\'myroom\')">🧍 마이룸</button>'
     + '<button class="tab-btn" id="tab-writing" onclick="showTab(\'writing\')">✍️ 글쓰기</button>'
@@ -2108,6 +2112,7 @@ function renderDashboard(){
     + '</div>'
     + '</div>'
     + '<div class="bottom-more-menu" id="bottom-more-menu">'
+    + '<button class="bottom-more-item" id="more-tab-arca" style="display:none" onclick="openArca()"><span class="mi">🧪</span><span>아르카(베타)</span></button>'
     + '<button class="bottom-more-item" id="more-tab-myroom" onclick="showTab(\'myroom\')"><span class="mi">🧍</span><span>마이룸</span></button>'
     + '<button class="bottom-more-item" id="more-tab-counsel" onclick="showTab(\'counsel\')"><span class="mi">💬</span><span>상담</span></button>'
     + '<button class="bottom-more-item" id="more-tab-stock" onclick="showTab(\'stock\')"><span class="mi">🏦</span><span>학급은행</span></button>'
@@ -2261,6 +2266,36 @@ function markWritingFeedbackSeen(){
   try{ localStorage.setItem(TODAY_FB_SEEN_KEY(), JSON.stringify([...seen].slice(-200))); }catch(_e){}
 }
 
+/* 🧪 아르카 연대기(베타) — Pesk 의 ⚔️ 모험과는 따로인 체험판. 같은 사이트의 arca.html 을 전체 화면 창으로 연다.
+   · ?p=학급-번호 : 학교 태블릿을 같이 써도 학생마다 저장이 따로(진행·기록은 그 기기에만, 서버 저장은 체험 뒤)
+   · ?g=학년 : 우리 반 문제 학년(🎓 모험 학습 설정의 학년)
+   · 선생님이 「📱 학생 Pesk 메뉴」에서 켰을 때만 보인다(기본 꺼짐). 글쓰기 먼저가 켜져 있으면 글을 낸 뒤 열린다. */
+function openArca(){
+  if(!peskFeatures.arcaBeta) return showFeedbackNotice('🔒 선생님이 아직 아르카 체험판을 켜지 않았어요.');
+  if(writeFirstLocked()){ showTab('writing'); return showFeedbackNotice('✍️ 오늘 글을 먼저 내면 아르카가 열려요.'); }
+  if(document.getElementById('arca-overlay')) return;
+  const prof = (String(roomId || 'room') + '-' + String(myStudentNum || 0)).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 60);
+  let g = 5;
+  try { g = Number(qzCfg().grade) || 5; } catch(e){}
+  const ov = document.createElement('div');
+  ov.id = 'arca-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#14112a;display:flex;flex-direction:column;';
+  ov.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#221d44;color:#fff6d6;font-size:13px;font-weight:700;">'
+    + '<span>🧪 아르카 연대기 <small style="opacity:.7;font-weight:600;">체험판 · 기록은 이 기기에만 저장돼요</small></span>'
+    + '<button type="button" onclick="closeArca()" style="margin-left:auto;border:1px solid #ffd86b;background:#3d3570;color:#fff6d6;border-radius:10px;padding:5px 12px;font:inherit;cursor:pointer;">✕ Pesk 로 돌아가기</button></div>'
+    + '<iframe src="arca.html?p=' + encodeURIComponent(prof) + '&g=' + g + '" title="아르카 연대기" allow="autoplay; fullscreen" style="flex:1;width:100%;border:0;background:#14112a;"></iframe>';
+  document.body.appendChild(ov);
+  document.body.style.overflow = 'hidden';
+  const f = ov.querySelector('iframe');
+  f.addEventListener('load', () => { try { f.contentWindow.focus(); } catch(e){} });
+}
+function closeArca(){
+  const ov = document.getElementById('arca-overlay');
+  if(!ov) return;
+  try { const w = ov.querySelector('iframe').contentWindow; if(typeof w.arcaSaveNow === 'function') w.arcaSaveNow(); } catch(e){}
+  ov.remove();
+  document.body.style.overflow = '';
+}
 /* 모험·보스 탭 — 마이룸과 분리된 독립 탭을 연다 */
 let advMode = 'rpg';          // 모험 탭 안의 화면: 'rpg'(모험) | 'lit'(오늘의 지문)
 let _litOpening = false;
