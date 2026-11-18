@@ -5,9 +5,9 @@
    plan(...) 은 지울 경로 목록만 만드는 순수 함수(테스트용), run(...) 이 실제로 지운다. */
 (function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.ClassErase=factory();})(typeof window!=='undefined'?window:globalThis,function(){
 'use strict';
-const version='2026-11-17.1';
+const version='2026-11-18.1';
 // data 아래 하위 컬렉션이 있는 문서
-const SUBS={'pesk-writings':['items'],'pesk-quiz-progress':['students']};
+const SUBS={'pesk-writings':['items'],'pesk-quiz-progress':['students'],'arca-save':['students'],'arca-log':['students']};
 async function run({fs, db, room, classCode, studentNums=[], loginKeys=[], onProgress}){
   const done=[],failed=[];
   const del=async parts=>{try{await fs.deleteDoc(fs.doc(db,...parts));done.push(parts.join('/'));}catch(e){failed.push({path:parts.join('/'),error:String(e&&e.message||e)});}};

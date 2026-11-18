@@ -45,8 +45,9 @@
 <script src="quiz-bank.js?v=20261004grow1"></script>
 <script src="shared/pesk-writing-store.js?v=20261021sem1"></script>
 <script src="shared/pesk-quiz-store.js?v=20261006split1"></script>
+<script src="shared/pesk-arca-store.js?v=20261118arca1"></script>
 <script src="shared/version.js?v=20261117a"></script>
-<script src="shared/class-erase.js?v=20261117a"></script>
+<script src="shared/class-erase.js?v=20261118a"></script>
 <script src="shared/student-auth-free-core.js?v=20260930free1"></script>
 <script src="shared/error-report.js?v=20261117a"></script>
 <script src="shared/site-notice.js?v=20261117a"></script>
@@ -5528,8 +5529,78 @@ function renderPeskFeaturesT(){
     // 🧪 아르카 연대기 체험판 — ⚔️ 모험과 따로인 베타. 처음엔 꺼져 있고, 켠 학급에만 학생 메뉴에 보인다.
     + '<label class="qz-switch" style="display:flex;justify-content:flex-start;align-items:flex-start;padding:10px 12px;margin-top:10px;border-color:#7F77DD;">'
     + '<input type="checkbox" data-feat-arca' + (cur.arcaBeta === true ? ' checked' : '') + ' onchange="savePeskFeaturesT(this)" style="margin-top:2px;">'
-    + '<span><span style="font-size:12.5px;color:var(--text);">🧪 아르카 연대기 (베타 체험판)</span><br><small style="font-weight:600;color:var(--hint);">수학 단원 RPG 체험판이에요. ⚔️ 모험과는 따로라 코인·경험치·모험 기록에 영향이 없어요. 학년은 「📚 출제 범위」의 학년을 따르고, 진행·학습 기록은 학생이 쓰는 그 기기에만 저장돼요(같은 태블릿을 써도 학생마다 따로). '
-    + '<a href="arca.html?p=teacher" target="_blank" rel="noopener">선생님이 먼저 해 보기</a> · <a href="arca-teacher.html" target="_blank" rel="noopener">학습 기록 모아 보기</a></small></span></label>';
+    + '<span><span style="font-size:12.5px;color:var(--text);">🧪 아르카 연대기 (베타 체험판)</span><br><small style="font-weight:600;color:var(--hint);">수학 단원 RPG 체험판이에요. ⚔️ 모험과는 따로라 코인·경험치·모험 기록에 영향이 없어요. 학년은 「📚 출제 범위」의 학년을 따르고, 진행·학습 기록은 학생마다 Pesk 서버에 저장돼서 어느 기기에서든 이어 하고, 학습 기록은 1년 보관해요. '
+    + '<a href="arca.html?p=teacher" target="_blank" rel="noopener">선생님이 먼저 해 보기</a></small></span></label>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">'
+    + '<button type="button" class="btn btn-sm" onclick="arcaRecordsT()">📊 아르카 학습 기록 보기</button>'
+    + '<button type="button" class="btn btn-sm" onclick="arcaEraseT()" style="color:var(--hint);">🗑 아르카 기록 지우기</button></div>'
+    + '<div id="arca-records-t" style="margin-top:8px;"></div>';
+}
+/* 🧪 아르카(베타) 학습 기록 — 학생마다 arca-log 문서의 요약(sum)만 읽는다(누를 때 한 번, 학생 수만큼 읽기).
+   실명은 명렬표(tesk-students)에서 붙인다. 서버에는 번호만 있다. shared/pesk-arca-store.js */
+let _arcaRowsT = [];
+async function arcaRecordsT(){
+  const box = document.getElementById('arca-records-t');
+  if(!box) return;
+  if(!window.PeskArcaStore || !window._db){ box.innerHTML = '<small style="color:var(--hint);">서버에 연결되지 않았어요.</small>'; return; }
+  box.innerHTML = '<small style="color:var(--hint);">불러오는 중…</small>';
+  let data = {};
+  try { data = await window.PeskArcaStore.loadClass(window, TESK_ROOM); }
+  catch(e){ box.innerHTML = '<small style="color:var(--danger,#c33);">불러오지 못했어요: ' + escHtml(e.message || e) + '</small>'; return; }
+  const roster = (load('tesk-students', []) || []).slice().sort((a, b) => Number(a.num) - Number(b.num));
+  const nums = [...new Set([...roster.map(s => String(s.num)), ...Object.keys(data)])].sort((a, b) => Number(a) - Number(b));
+  const pct = (ok, n) => n ? Math.round(ok * 100 / n) : null;
+  const unitsAll = {};
+  _arcaRowsT = nums.map(num => {
+    const d = data[num], st = roster.find(s => String(s.num) === num) || {};
+    const row = {num, name: st.name || '', nick: d ? d.nick || '' : '', played: !!d};
+    if(d){
+      Object.assign(row, {part: d.part || 0, lv: d.lv || 0, n: d.n || 0, ok: d.ok || 0, last: d.last || '', solved: d.solved || 0});
+      row.rate = pct(row.ok, row.n);
+      row.weak = Object.entries(d.units || {}).filter(([, u]) => u.n >= 5 && u.ok / u.n < 0.6).map(([u, x]) => u + ' ' + pct(x.ok, x.n) + '%');
+      row.miss = (d.miss || []).slice(0, 2).map(m => m.q + ' (정답 ' + m.a + ', ' + m.n + '번)');
+      Object.entries(d.units || {}).forEach(([u, x]) => { const a = unitsAll[u] || (unitsAll[u] = {n: 0, ok: 0, kids: 0}); a.n += x.n; a.ok += x.ok; a.kids++; });
+    }
+    return row;
+  });
+  const played = _arcaRowsT.filter(r => r.played);
+  const th = 'style="text-align:left;padding:4px 6px;border-bottom:1px solid var(--border);font-size:11.5px;"', td = 'style="padding:4px 6px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:top;"';
+  const units = Object.entries(unitsAll).sort((a, b) => b[1].n - a[1].n);
+  box.innerHTML = '<div style="font-size:12px;color:var(--hint);margin-bottom:6px;">해 본 학생 ' + played.length + '명 / ' + _arcaRowsT.length + '명 · 학습 기록은 1년 보관 · ▼ = 5문제 이상 풀었는데 정답률 60% 아래'
+    + ' <button type="button" class="btn btn-sm" onclick="arcaCsvT()" style="margin-left:6px;">CSV 내려받기</button></div>'
+    + (units.length ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">' + units.map(([u, a]) => {
+        const r = pct(a.ok, a.n), low = a.n >= 10 && r < 60;
+        return '<span style="font-size:11.5px;padding:3px 8px;border-radius:99px;border:1px solid var(--border);' + (low ? 'background:#fde8e8;' : '') + '">' + (low ? '▼ ' : '') + escHtml(u) + ' <b>' + r + '%</b> <small>(' + a.n + '문제·' + a.kids + '명)</small></span>';
+      }).join('') + '</div>' : '')
+    + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>'
+    + ['번호', '이름', '게임 별명', '진도', '푼 문제', '정답률', '최근', '약한 단원', '자주 틀린 문제'].map(h => '<th ' + th + '>' + h + '</th>').join('')
+    + '</tr></thead><tbody>'
+    + _arcaRowsT.map(r => '<tr>' + (r.played
+      ? [r.num, escHtml(r.name), escHtml(r.nick), r.part + '부 · Lv ' + r.lv, r.n, (r.rate == null ? '-' : r.rate + '%'), escHtml(r.last),
+         r.weak.length ? '▼ ' + escHtml(r.weak.join(', ')) : '', escHtml(r.miss.join(' / '))]
+      : [r.num, escHtml(r.name), '', '<small style="color:var(--hint);">아직 안 함</small>', '', '', '', '', '']).map(v => '<td ' + td + '>' + v + '</td>').join('') + '</tr>').join('')
+    + '</tbody></table></div>';
+}
+function arcaCsvT(){
+  if(!_arcaRowsT.length) return showToast('먼저 학습 기록을 불러와 주세요');
+  const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const lines = [['번호', '이름', '게임 별명', '진도(부)', '레벨', '푼 문제', '맞힌 문제', '정답률(%)', '최근', '약한 단원', '자주 틀린 문제'].map(q).join(',')]
+    .concat(_arcaRowsT.map(r => [r.num, r.name, r.nick, r.part || '', r.lv || '', r.n || 0, r.ok || 0, r.rate == null ? '' : r.rate, r.last || '', (r.weak || []).join(' / '), (r.miss || []).join(' / ')].map(q).join(',')));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + lines.join('\r\n')], {type: 'text/csv;charset=utf-8'}));
+  a.download = '아르카_학습기록_' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+async function arcaEraseT(){
+  if(!window.PeskArcaStore || !window._db) return showToast('서버에 연결되지 않았어요');
+  if(!confirm('우리 반 학생들의 아르카 진행과 학습 기록을 서버에서 모두 지울까요?\n(학생 기기에 남은 진행은 다음에 열 때 다시 올라갈 수 있어요)')) return;
+  if(!confirm('정말 지울까요? 되돌릴 수 없어요.')) return;
+  try {
+    const n = await window.PeskArcaStore.eraseClass(window, TESK_ROOM);
+    showToast('🗑 아르카 기록 ' + n + '개를 지웠어요');
+    addActivity('🧪 아르카 기록 지우기 (' + n + '개)');
+    const box = document.getElementById('arca-records-t'); if(box) box.innerHTML = '';
+  } catch(e){ showToast('지우지 못했어요: ' + (e.message || e)); }
 }
 function savePeskFeaturesT(input){
   const box = document.getElementById('pesk-features-panel');

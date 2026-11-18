@@ -26,6 +26,7 @@
 <script src="boss-sprites.js"></script>
 <script src="shared/pesk-writing-store.js?v=20261021sem1"></script>
 <script src="shared/pesk-quiz-store.js?v=20261006split1"></script>
+<script src="shared/pesk-arca-store.js?v=20261118arca1"></script>
 <script src="shared/stock-list.js?v=20261116names"></script>
 <script src="shared/version.js?v=20261117a"></script>
 <script src="shared/error-report.js?v=20261117a"></script>
@@ -2270,32 +2271,111 @@ function markWritingFeedbackSeen(){
    · ?p=학급-번호 : 학교 태블릿을 같이 써도 학생마다 저장이 따로(진행·기록은 그 기기에만, 서버 저장은 체험 뒤)
    · ?g=학년 : 우리 반 문제 학년(🎓 모험 학습 설정의 학년)
    · 선생님이 「📱 학생 Pesk 메뉴」에서 켰을 때만 보인다(기본 꺼짐). 글쓰기 먼저가 켜져 있으면 글을 낸 뒤 열린다. */
-function openArca(){
+async function openArca(){
   if(!peskFeatures.arcaBeta) return showFeedbackNotice('🔒 선생님이 아직 아르카 체험판을 켜지 않았어요.');
   if(writeFirstLocked()){ showTab('writing'); return showFeedbackNotice('✍️ 오늘 글을 먼저 내면 아르카가 열려요.'); }
   if(document.getElementById('arca-overlay')) return;
   const prof = (String(roomId || 'room') + '-' + String(myStudentNum || 0)).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 60);
   let g = 5;
   try { g = Number(qzCfg().grade) || 5; } catch(e){}
+  const url = 'arca.html?p=' + encodeURIComponent(prof) + '&g=' + g;
   const ov = document.createElement('div');
   ov.id = 'arca-overlay';
   ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#14112a;display:flex;flex-direction:column;';
-  ov.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#221d44;color:#fff6d6;font-size:13px;font-weight:700;">'
-    + '<span>🧪 아르카 연대기 <small style="opacity:.7;font-weight:600;">체험판 · 기록은 이 기기에만 저장돼요</small></span>'
+  ov.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#221d44;color:#fff6d6;font-size:13px;font-weight:700;flex-wrap:wrap;">'
+    + '<span>🧪 아르카 연대기 <small style="opacity:.7;font-weight:600;">체험판</small></span>'
+    + '<small id="arca-sync" style="font-weight:600;opacity:.85;"></small>'
     + '<button type="button" onclick="closeArca()" style="margin-left:auto;border:1px solid #ffd86b;background:#3d3570;color:#fff6d6;border-radius:10px;padding:5px 12px;font:inherit;cursor:pointer;">✕ Pesk 로 돌아가기</button></div>'
-    + '<iframe src="arca.html?p=' + encodeURIComponent(prof) + '&g=' + g + '" title="아르카 연대기" allow="autoplay; fullscreen" style="flex:1;width:100%;border:0;background:#14112a;"></iframe>';
+    + '<div id="arca-note" style="display:none;padding:7px 12px;background:#3d3570;color:#fff6d6;font-size:12.5px;font-weight:600;"></div>'
+    + '<div id="arca-wait" style="flex:1;display:flex;align-items:center;justify-content:center;color:#c9c5d8;font-size:14px;">진행을 불러오는 중…</div>'
+    + '<iframe title="아르카 연대기" allow="autoplay; fullscreen" style="flex:1;width:100%;border:0;background:#14112a;display:none;"></iframe>';
   document.body.appendChild(ov);
   document.body.style.overflow = 'hidden';
   const f = ov.querySelector('iframe');
   f.addEventListener('load', () => { try { f.contentWindow.focus(); } catch(e){} });
+  // ☁️ 서버 저장(학생마다 진행·학습 기록 문서, shared/pesk-arca-store.js). 연결이 없으면 기기 저장만으로 논다.
+  if(window.PeskArcaStore && window._db && roomId && Number(myStudentNum) > 0){
+    const st = window.PeskArcaStore.create(window, roomId, Number(myStudentNum), {prof, onState: arcaSyncState, onConflict: arcaConflict});
+    ov._store = st;
+    try {
+      const pick = await st.prepare();
+      if(pick && pick.note) arcaNote(pick.note);
+    } catch(e){ arcaSyncState('offline'); }
+    ov._timer = setInterval(() => arcaPush(false), 60000);
+  } else arcaSyncState('local');
+  if(!document.getElementById('arca-overlay')) return;   // 불러오는 동안 닫았으면
+  ov.querySelector('#arca-wait').remove();
+  f.style.display = '';
+  f.src = url;
+}
+/* 아르카 안의 최신 진행을 기기에 저장한 뒤, 바뀐 것만 서버로 */
+function arcaPush(force){
+  const ov = document.getElementById('arca-overlay');
+  if(!ov || !ov._store || ov._conflict) return;   // 어느 기기 진행으로 할지 고르는 동안은 올리지 않음
+  try { const w = ov.querySelector('iframe').contentWindow; if(w && typeof w.arcaSaveNow === 'function') w.arcaSaveNow(); } catch(e){}
+  ov._store.flush(!!force).catch(() => arcaSyncState('offline'));
+}
+function arcaSyncState(s){
+  const el = document.getElementById('arca-sync');
+  if(!el) return;
+  const t = new Date(), hm = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+  el.textContent = {ready: '☁️ Pesk 에 저장돼요', saving: '☁️ 저장하는 중…', saved: '☁️ 저장됨 ' + hm,
+    offline: '⚠️ 인터넷이 없어 이 기기에 저장 중 (다시 연결되면 올라가요)', error: '⚠️ 서버 저장이 안 돼서 이 기기에 저장 중',
+    local: '이 기기에 저장돼요', conflict: '⚠️ 다른 기기에서 이어 했어요'}[s] || '';
+}
+function arcaNote(msg, buttons){
+  const el = document.getElementById('arca-note');
+  if(!el) return;
+  el.style.display = '';
+  el.innerHTML = '';
+  const sp = document.createElement('span');
+  sp.textContent = msg;
+  el.appendChild(sp);
+  (buttons || [['알겠어요', () => { el.style.display = 'none'; }]]).forEach(([label, fn]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = label;
+    b.style.cssText = 'margin-left:8px;border:1px solid #ffd86b;background:#221d44;color:#fff6d6;border-radius:8px;padding:3px 10px;font:inherit;cursor:pointer;';
+    b.onclick = fn;
+    el.appendChild(b);
+  });
+}
+/* 다른 기기(태블릿)에서 더 나중에 저장했을 때 — 고르게 한다 */
+function arcaConflict(c){
+  const ov = document.getElementById('arca-overlay');
+  if(!ov || !ov._store) return;
+  if(ov._conflict) return;
+  ov._conflict = true;
+  const f = ov.querySelector('iframe'), url = f.getAttribute('src') || f.src;
+  arcaNote('다른 기기에서 이 학생의 아르카를 이어 했어요. 어느 진행으로 할까요?', [
+    ['다른 기기 진행으로 열기', async () => {
+      f.src = 'about:blank';                       // 지금 화면이 닫히며 저장하는 것을 먼저 끝낸 뒤
+      await new Promise(r => setTimeout(r, 300));
+      await ov._store.resolve(true, c);           // 서버 진행을 기기에 넣고
+      f.src = url;                                // 다시 연다
+      document.getElementById('arca-note').style.display = 'none';
+      ov._conflict = false;
+      arcaSyncState('saved');
+    }],
+    ['이 기기 진행 유지', async () => {
+      document.getElementById('arca-note').style.display = 'none';
+      ov._conflict = false;
+      await ov._store.resolve(false, c);
+    }]
+  ]);
 }
 function closeArca(){
   const ov = document.getElementById('arca-overlay');
   if(!ov) return;
-  try { const w = ov.querySelector('iframe').contentWindow; if(typeof w.arcaSaveNow === 'function') w.arcaSaveNow(); } catch(e){}
+  try { const w = ov.querySelector('iframe').contentWindow; if(w && typeof w.arcaSaveNow === 'function') w.arcaSaveNow(); } catch(e){}
+  if(ov._timer) clearInterval(ov._timer);
+  if(ov._store) ov._store.flush(false).catch(() => {});   // 기기 저장을 읽은 뒤 서버로(틀을 지워도 계속됨)
   ov.remove();
   document.body.style.overflow = '';
 }
+// 창을 숨기거나(다른 앱·화면 끄기) 닫을 때도 올린다
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') arcaPush(false); });
+window.addEventListener('pagehide', () => arcaPush(false));
 /* 모험·보스 탭 — 마이룸과 분리된 독립 탭을 연다 */
 let advMode = 'rpg';          // 모험 탭 안의 화면: 'rpg'(모험) | 'lit'(오늘의 지문)
 let _litOpening = false;

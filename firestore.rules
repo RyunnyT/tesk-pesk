@@ -128,6 +128,20 @@ service cloud.firestore {
         'tesk-teacher-notif'
       ];
     }
+    // 🧪 아르카 연대기(베타) — 학생마다 진행(arca-save)·학습 기록(arca-log) 문서 하나 (arca/docs/설계_서버저장.md).
+    // 전환한 학급의 학생은 자기 번호 문서만. 저장할 때마다 rev 가 정확히 1 늘어야 한다(두 기기 동시 저장 막기).
+    function isArcaKey(key) {
+      return key in ['arca-save', 'arca-log'];
+    }
+    function arcaUser(roomId, studentId) {
+      return isMaster() || ownsRoom(roomId) || !isSecuredRoom(roomId)
+        || (isStudentOfRoom(roomId) && studentId == string(member(roomId).get('studentNum', -1)));
+    }
+    function arcaBodyOk() {
+      return request.resource.data.rev is int
+        && request.resource.data.json is string
+        && request.resource.data.json.size() < 900000;
+    }
     // 교사만 읽는 문서: 상담·생활기록부(누가기록)·관찰 기록·자리배치 근거
     function isTeacherOnlyKey(key) {
       return key in ['tesk-accounts', 'tesk-counsels', 'tesk-friends', 'tesk-activities',
@@ -249,6 +263,13 @@ service cloud.firestore {
             || !isSecuredRoom(roomId) || isStudentOfRoom(roomId));
           allow write: if key == 'pesk-quiz-progress' && (isMaster() || ownsRoom(roomId)
             || !isSecuredRoom(roomId) || isStudentOfRoom(roomId));
+          // 🧪 아르카(베타)
+          allow read: if isArcaKey(key) && arcaUser(roomId, studentId);
+          allow create: if isArcaKey(key) && arcaUser(roomId, studentId) && arcaBodyOk()
+            && request.resource.data.rev == 1;
+          allow update: if isArcaKey(key) && arcaUser(roomId, studentId) && arcaBodyOk()
+            && request.resource.data.rev == resource.data.rev + 1;
+          allow delete: if isArcaKey(key) && (isMaster() || ownsRoom(roomId));
         }
         // 글은 개별 문서에 저장한다.
         match /items/{writingId} {
