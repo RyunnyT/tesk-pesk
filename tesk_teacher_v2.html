@@ -4028,22 +4028,43 @@ let counselRequests=load('tesk-counsel-requests',[]); // Pesk에서 온 상담 �
 let safetyAcks=load('tesk-safety-acks',[]);
 function safetyItems(){
   if(!window.SafetySignals) return [];
-  return SafetySignals.collect({writings:typeof peskWritingsAll!=='undefined'?peskWritingsAll:[], requests:(counselRequests||[]).filter(r=>r.status!=='dismissed'), acks:safetyAcks});
+  // 삭제(del)한 알림은 글이 바뀌어도 다시 띄우지 않는다. 읽음(sig)은 글에 새 표현이 생기면 다시 뜬다.
+  const removed=new Set(safetyAcks.filter(a=>a&&a.del&&a.item).map(a=>a.item));
+  return SafetySignals.collect({writings:typeof peskWritingsAll!=='undefined'?peskWritingsAll:[], requests:(counselRequests||[]).filter(r=>r.status!=='dismissed'), acks:safetyAcks})
+    .filter(x=>!removed.has(safetyItemKey(x)));
 }
+function safetyItemKey(x){ return (x.kind==='writing'?'w:':x.kind==='request'?'r:':(x.kind||'o')+':')+x.id; }
 function safetyFor(kind,id){ return safetyItems().find(x=>x.kind===kind&&String(x.id)===String(id))||null; }
+// onclick 안의 JS 문자열 인자: JS 이스케이프 → HTML 이스케이프 순서(학생 글에서 나온 따옴표가 들어갈 수 있다)
+function safetyArg(v){ return escHtml(String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n')); }
+function safetyButtonsHtml(item){
+  return '<button class="btn btn-sm btn-secondary" title="알림만 닫아요. 글에 새 표현이 생기면 다시 떠요." onclick="readSafety(\''+safetyArg(item.sig)+'\')">읽음</button>'
+    + '<button class="btn btn-sm btn-secondary" title="이 글의 알림을 지워요. 학생 글은 지워지지 않아요." onclick="deleteSafety(\''+safetyArg(item.sig)+'\',\''+safetyArg(safetyItemKey(item))+'\')">알림 삭제</button>';
+}
 function safetyBannerHtml(item){
   if(!item) return '';
   return '<div class="safety-banner" role="alert"><b>⚠ 학생의 글에 걱정되는 표현이 있어요</b>'
     + item.signals.map(s=>'<p>「'+escHtml(s.match)+'」 · '+escHtml(s.label)+'<br><span>'+escHtml(s.action)+'</span></p>').join('')
-    + '<button class="btn btn-sm btn-secondary" onclick="ackSafety(\''+escHtml(item.sig).replace(/'/g,'&#39;')+'\')">확인했어요</button></div>';
+    + '<div class="safety-actions">'+safetyButtonsHtml(item)+'</div></div>';
 }
-async function ackSafety(sig){
-  const note=await openAppFormModal({title:'확인했어요',help:'학생을 만나 확인한 내용을 짧게 남겨 두면 좋아요(선택). 이 기록은 선생님만 봐요.',submitText:'저장',
-    fields:[{name:'note',label:'메모 (선택)',type:'textarea',rows:3,placeholder:'예: 11/17 점심시간에 이야기 나눔. 상담교사와 공유함.'}]});
-  if(!note) return;
-  safetyAcks=[...safetyAcks.filter(a=>a.sig!==sig),{sig,at:new Date().toISOString(),note:String(note.note||'').slice(0,300)}].slice(-300);
+function saveSafetyAcks(entries,msg){
+  const keys=new Set(entries.map(e=>e.sig));
+  safetyAcks=[...safetyAcks.filter(a=>!keys.has(a.sig)),...entries].slice(-500);
   save('tesk-safety-acks',safetyAcks);
-  showToast('확인했어요. 첫 화면에서 뺐어요.');
+  showToast(msg);
+  rerenderSafetyPage();
+}
+function readSafety(sig){ saveSafetyAcks([{sig,at:new Date().toISOString()}],'읽음으로 표시했어요.'); }
+function deleteSafety(sig,item){ saveSafetyAcks([{sig,item,del:true,at:new Date().toISOString()}],'알림을 지웠어요. 학생 글은 그대로 있어요.'); }
+function readAllSafety(){
+  const items=safetyItems();
+  if(!items.length) return;
+  const at=new Date().toISOString();
+  saveSafetyAcks(items.map(x=>({sig:x.sig,at})),'알림 '+items.length+'건을 모두 읽음으로 표시했어요.');
+}
+// 예전 [확인했어요] 단추(메모 남기기)와 같은 이름을 남겨 둔다
+async function ackSafety(sig){ readSafety(sig); }
+function rerenderSafetyPage(){
   const page=document.querySelector('.page.active')?.id?.replace('page-','')||'home';
   if(page==='writing' && typeof _peskFeedbackId!=='undefined' && _peskFeedbackId) renderPeskWritingDetail(_peskFeedbackId);
   else renderPage(page);
@@ -4051,12 +4072,13 @@ async function ackSafety(sig){
 function safetyListHtml(){
   const items=safetyItems();
   if(!items.length) return '';
-  return '<div class="card safety-card"><div class="card-title">⚠ 바로 확인이 필요한 글 '+items.length+'건</div>'
+  return '<div class="card safety-card"><div class="card-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px">⚠ 바로 확인이 필요한 글 '+items.length+'건'
+    + (items.length>1?'<button class="btn btn-sm btn-secondary" onclick="readAllSafety()">모두 읽음</button>':'')+'</div>'
     + '<p class="safety-help">학생이 쓴 글에서 걱정되는 표현을 찾았어요. 판정이 아니에요 — 오늘 안에 학생을 직접 만나 이야기를 들어 주세요.</p>'
     + items.map(x=>'<div class="safety-item"><div><b>'+escHtml(x.studentName||'이름 없음')+'</b> · '+(x.kind==='writing'?'글쓰기':'상담 신청')+' · '+escHtml(x.date||'')
       + '<div class="safety-match">'+x.signals.map(s=>'「'+escHtml(s.match)+'」 '+escHtml(s.label)).join(' · ')+'</div></div>'
       + '<div class="safety-actions">'+(x.kind==='writing'?'<button class="btn btn-sm btn-primary" onclick="goPage(\'writing\');openPeskWritingFeedback(\''+escHtml(x.id)+'\')">글 열기</button>':'')
-      + '<button class="btn btn-sm btn-secondary" onclick="ackSafety(\''+escHtml(x.sig).replace(/'/g,'&#39;')+'\')">확인했어요</button></div></div>').join('')
+      + safetyButtonsHtml(x)+'</div></div>').join('')
     + '</div>';
 }
 // 긴급 상담 알림 (교사 화면이 열려 있을 때만, 권한을 준 경우에만). 화면 공유 중일 수 있어 이름·내용은 넣지 않는다.
